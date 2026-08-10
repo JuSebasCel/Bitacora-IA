@@ -1,0 +1,25 @@
+# Documentos internos de planeación (no se publican en el repositorio remoto)
+CLAUDE.md
+PRD.md
+PLAN.md
+
+# Dependencias
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Entornos
+.env
+.env.local
+
+# Build
+dist/
+build/
+.next/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
