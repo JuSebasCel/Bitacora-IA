@@ -1,7 +1,6 @@
 export {
   PantallaCargarConferencia,
   PantallaCatalogo,
-  PantallaConferencias,
   PantallaConfiguracion,
   PantallaMemorias,
   PantallaPlantillas,

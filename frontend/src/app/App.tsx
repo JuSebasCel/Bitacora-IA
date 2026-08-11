@@ -5,10 +5,10 @@ import { SessionProvider } from '@/features/auth/session'
 import { ShellLayout } from '@/app/layout'
 import { RutaProtegida } from '@/app/RutaProtegida'
 import { RutaPublica } from '@/app/RutaPublica'
+import { PantallaConferencias } from '@/features/conferencias/screens'
 import {
   PantallaCargarConferencia,
   PantallaCatalogo,
-  PantallaConferencias,
   PantallaConfiguracion,
   PantallaMemorias,
   PantallaPlantillas,

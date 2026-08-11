@@ -3,14 +3,18 @@ import { describe, expect, it } from 'vitest'
 import {
   PantallaCargarConferencia,
   PantallaCatalogo,
-  PantallaConferencias,
   PantallaConfiguracion,
   PantallaMemorias,
   PantallaPlantillas,
 } from './index'
 
+/*
+  Conferencias salió de esta lista al construirse F2: su pantalla real tiene sus
+  propias pruebas de política en `features/conferencias/screens/politica.test.tsx`,
+  con las mismas reglas menos las palabras que en ese módulo son vocabulario de
+  dominio y no lenguaje de obra en curso.
+*/
 const PANTALLAS = [
-  { titulo: 'Conferencias', Pantalla: PantallaConferencias },
   { titulo: 'Cargar conferencia', Pantalla: PantallaCargarConferencia },
   { titulo: 'Catálogo', Pantalla: PantallaCatalogo },
   { titulo: 'Memorias', Pantalla: PantallaMemorias },

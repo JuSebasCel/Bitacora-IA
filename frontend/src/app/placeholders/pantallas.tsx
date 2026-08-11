@@ -5,14 +5,10 @@ import { PantallaDeModulo } from './PantallaDeModulo'
   en términos del producto, el trabajo que se hace en esa sección.
 */
 
-export function PantallaConferencias() {
-  return (
-    <PantallaDeModulo
-      titulo="Conferencias"
-      descripcion="Reúne las conferencias propias y las compartidas contigo, con su tema principal, su estado de procesamiento y el número de fichas obtenidas."
-    />
-  )
-}
+/*
+  Conferencias ya no está aquí: F2 la sustituyó por la pantalla real, que vive
+  en `features/conferencias/screens`.
+*/
 
 export function PantallaCargarConferencia() {
   return (

@@ -1,0 +1,1 @@
+export { PantallaConferencias } from './PantallaConferencias'
