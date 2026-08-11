@@ -1,3 +1,5 @@
+import { motion, useReducedMotion } from 'motion/react'
+import { useId } from 'react'
 import type { Segmento } from '../query'
 
 /*
@@ -7,6 +9,11 @@ import type { Segmento } from '../query'
   `aria-pressed`: es una elección entre tres opciones excluyentes, que es
   exactamente lo que un grupo de radios comunica al teclado y al lector de
   pantalla sin que haya que explicárselo.
+
+  El indicador que se desliza detrás de la opción activa usa el mismo
+  `layoutId` en una sola instancia a la vez (solo la opción activa lo
+  renderiza), así que Motion anima la transición de posición sola, sin medir
+  nada a mano.
 */
 
 type PropiedadesSegmentacion = {
@@ -21,31 +28,35 @@ const OPCIONES: readonly { valor: Segmento; texto: string }[] = [
 ]
 
 export function SegmentacionDeOrigen({ segmento, alCambiar }: PropiedadesSegmentacion) {
-  return (
-    <fieldset className="flex flex-col gap-1.5">
-      <legend className="text-sm font-medium text-texto">Origen</legend>
+  const idIndicador = useId()
+  const reducirMovimiento = useReducedMotion()
 
-      <div className="flex flex-wrap gap-1">
+  return (
+    <fieldset className="flex items-center">
+      <legend className="sr-only">Origen</legend>
+
+      <div className="inline-flex w-fit items-center gap-0.5 rounded-md bg-fondo p-0.5">
         {OPCIONES.map((opcion) => {
           const activa = opcion.valor === segmento
 
           return (
             <label
               key={opcion.valor}
-              className={`relative cursor-pointer rounded-md border px-2.5 py-1 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
-                activa
-                  ? 'border-acento bg-acento-tenue font-medium text-acento'
-                  : 'border-filete-fuerte text-texto-tenue hover:border-acento hover:text-acento'
+              className={`relative isolate cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
+                activa ? 'text-acento' : 'text-texto-tenue hover:text-texto'
               }`}
             >
-              {/*
-                El control nativo se hace transparente y cubre toda la etiqueta,
-                en vez de esconderse con `sr-only` en un rincón de un píxel.
-                Escondido, el punto donde hay que pulsar queda tapado por la
-                propia etiqueta: el teclado y el lector de pantalla funcionaban,
-                pero un clic dirigido al control lo interceptaba la etiqueta.
-                Así el control sigue siendo nativo y además es lo que se pulsa.
-              */}
+              {activa ? (
+                <motion.span
+                  layoutId={`indicador-de-origen-${idIndicador}`}
+                  className="absolute inset-0 -z-10 rounded-md bg-panel shadow-sm"
+                  transition={
+                    reducirMovimiento
+                      ? { duration: 0 }
+                      : { type: 'spring', stiffness: 500, damping: 34 }
+                  }
+                />
+              ) : null}
               <input
                 type="radio"
                 name="origen"

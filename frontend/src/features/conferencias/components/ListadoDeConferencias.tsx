@@ -1,6 +1,10 @@
+import { motion, useReducedMotion } from 'motion/react'
 import { Button, EstadoVacio, Esqueleto } from '@/shared/ui'
+import type { Etiqueta } from '../data'
 import type { ConferenciaVisible, Segmento } from '../query'
 import type { EtiquetaVisible } from '../tags'
+import { CONTENEDOR_DE_LISTADO } from './animaciones'
+import type { ResultadoCreacion } from './CreadorDeEtiqueta'
 import { FilaDeConferencia } from './FilaDeConferencia'
 
 /*
@@ -29,6 +33,9 @@ type PropiedadesListado = {
   segmento: Segmento
   busqueda: string
   alQuitarFiltros: () => void
+  misEtiquetas: readonly Etiqueta[]
+  alAlternarAsignacion: (idEtiqueta: string, idConferencia: string) => void
+  alCrearYAsignar: (nombre: string, idConferencia: string) => ResultadoCreacion
 }
 
 const VACIO_POR_SEGMENTO: Record<Segmento, { titulo: string; descripcion: string }> = {
@@ -59,7 +66,12 @@ export function ListadoDeConferencias({
   segmento,
   busqueda,
   alQuitarFiltros,
+  misEtiquetas,
+  alAlternarAsignacion,
+  alCrearYAsignar,
 }: PropiedadesListado) {
+  const reducirMovimiento = useReducedMotion()
+
   if (estado === 'cargando') {
     return <Esqueleto filas={4} etiqueta="Cargando las conferencias" />
   }
@@ -87,7 +99,13 @@ export function ListadoDeConferencias({
     <div className="flex flex-col gap-2">
       <p className="coordenada text-xs text-texto-tenue">{textoDeConteo(filas.length)}</p>
 
-      <ul aria-label="Conferencias" className="divide-y divide-filete border-t border-filete">
+      <motion.ul
+        aria-label="Conferencias"
+        variants={CONTENEDOR_DE_LISTADO}
+        initial={reducirMovimiento ? false : 'oculto'}
+        animate="visible"
+        className="flex flex-col gap-2"
+      >
         {filas.map((fila) => (
           <FilaDeConferencia
             key={fila.visible.conferencia.id}
@@ -95,9 +113,14 @@ export function ListadoDeConferencias({
             etiquetas={fila.etiquetas}
             numeroDeFichas={fila.numeroDeFichas}
             busqueda={busqueda}
+            misEtiquetas={misEtiquetas}
+            alAlternarAsignacion={(idEtiqueta) =>
+              alAlternarAsignacion(idEtiqueta, fila.visible.conferencia.id)
+            }
+            alCrearYAsignar={(nombre) => alCrearYAsignar(nombre, fila.visible.conferencia.id)}
           />
         ))}
-      </ul>
+      </motion.ul>
     </div>
   )
 }

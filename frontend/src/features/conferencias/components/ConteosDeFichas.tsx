@@ -16,6 +16,11 @@ import {
 
   Los conteos se calculan sobre lo que esa persona ve, así que en una
   conferencia compartida sin fichas pendientes no delatan cuántas hay ocultas.
+
+  Cada grupo vive en un bloque hundido (`bg-fondo`) dentro de la tarjeta que lo
+  contiene: el mismo vocabulario de superficies de los controles del listado,
+  aplicado aquí para separar "estado de validación" de "tipo de unidad" sin
+  una sola línea divisoria.
 */
 
 type PropiedadesConteos = {
@@ -24,21 +29,21 @@ type PropiedadesConteos = {
 
 function Cifra({ rotulo, valor }: { rotulo: string; valor: number }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
+    <div className="flex items-baseline justify-between gap-4">
       <span className="text-sm text-texto-tenue">{rotulo}</span>
-      <span className="coordenada text-sm text-texto">{valor}</span>
+      <span className="coordenada text-lg font-semibold text-texto">{valor}</span>
     </div>
   )
 }
 
 export function ConteosDeFichas({ resumen }: PropiedadesConteos) {
   return (
-    <div className="grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
-      <div className="flex flex-col">
-        <h3 className="pb-1 text-xs tracking-[0.14em] text-texto-tenue uppercase">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="flex flex-col gap-3 rounded-md bg-fondo p-4">
+        <h3 className="text-xs font-medium tracking-[0.14em] text-texto-tenue uppercase">
           Estado de validación
         </h3>
-        <div className="divide-y divide-filete border-t border-filete">
+        <div className="flex flex-col gap-2.5">
           {VALIDACIONES_EN_ORDEN.map((estado) => (
             <Cifra
               key={estado}
@@ -49,11 +54,11 @@ export function ConteosDeFichas({ resumen }: PropiedadesConteos) {
         </div>
       </div>
 
-      <div className="flex flex-col">
-        <h3 className="pb-1 text-xs tracking-[0.14em] text-texto-tenue uppercase">
+      <div className="flex flex-col gap-3 rounded-md bg-fondo p-4">
+        <h3 className="text-xs font-medium tracking-[0.14em] text-texto-tenue uppercase">
           Tipo de unidad
         </h3>
-        <div className="divide-y divide-filete border-t border-filete">
+        <div className="flex flex-col gap-2.5">
           {TIPOS_EN_ORDEN.map((tipo) => (
             <Cifra key={tipo} rotulo={TIPO_EN_PLURAL[tipo]} valor={resumen.porTipo[tipo]} />
           ))}

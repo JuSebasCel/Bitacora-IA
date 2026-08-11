@@ -5,11 +5,13 @@ import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { PanelDeError } from '@/shared/ui'
 import {
+  AsignadorDeEtiquetas,
   ConteosDeFichas,
   EditorDeEtiquetas,
   ListadoDeFichas,
   ResumenDeConferencia,
 } from '../components'
+import type { ResultadoCreacion } from '../components'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '../data'
 import { fichasVisibles, obtenerConferencia, privacidadEfectiva, resumirFichas } from '../query'
 import { espacioDe, etiquetasVisibles, useEtiquetas } from '../tags'
@@ -42,7 +44,7 @@ export function PantallaDetalleConferencia() {
   const idUsuario = usuario?.id ?? ''
   const ubicacion = useLocation()
 
-  const { espacio, quitar } = useEtiquetas(idUsuario)
+  const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
 
   const resultado = useMemo(
     () => obtenerConferencia(CONFERENCIAS_DE_EJEMPLO, idUsuario, idConferencia),
@@ -70,6 +72,37 @@ export function PantallaDetalleConferencia() {
     })
   }, [resultado, espacio])
 
+  const idsPropiasAsignadas = etiquetas
+    .filter((visible) => visible.propia)
+    .map((visible) => visible.etiqueta.id)
+
+  /** Poner o quitar una etiqueta propia sobre esta conferencia. */
+  function alAlternarAsignacion(idEtiqueta: string): void {
+    const yaAsignada = espacio.asignaciones.some(
+      (asignacion) =>
+        asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia,
+    )
+
+    if (yaAsignada) {
+      quitar(idEtiqueta, idConferencia)
+    } else {
+      asignar(idEtiqueta, idConferencia)
+    }
+  }
+
+  /** Crear una etiqueta nueva y asignarla de una vez a esta conferencia. */
+  function alCrearYAsignar(nombre: string): ResultadoCreacion {
+    const resultado = crear(nombre)
+
+    if (!resultado.ok) {
+      return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
+    }
+
+    asignar(resultado.etiqueta.id, idConferencia)
+
+    return { ok: true, etiqueta: resultado.etiqueta }
+  }
+
   if (!resultado.ok) {
     return (
       <div className="flex flex-col gap-5 border-t border-filete-fuerte pt-5">
@@ -85,15 +118,25 @@ export function PantallaDetalleConferencia() {
     visible.procedencia === 'compartida' && !privacidadEfectiva(visible).compartirFichasPendientes
 
   return (
-    <div className="flex flex-col gap-8 border-t border-filete-fuerte pt-5">
+    <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
       <EnlaceDeRegreso busqueda={ubicacion.search} />
 
-      <ResumenDeConferencia visible={visible} />
+      <section className="flex flex-col gap-5 rounded-md bg-panel p-6 shadow-sm">
+        <ResumenDeConferencia visible={visible} />
 
-      <EditorDeEtiquetas
-        etiquetas={etiquetas}
-        alQuitar={(idEtiqueta) => quitar(idEtiqueta, conferencia.id)}
-      />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <EditorDeEtiquetas
+            etiquetas={etiquetas}
+            alQuitar={(idEtiqueta) => quitar(idEtiqueta, conferencia.id)}
+          />
+          <AsignadorDeEtiquetas
+            misEtiquetas={espacio.etiquetas}
+            idsAsignadas={idsPropiasAsignadas}
+            alAlternar={alAlternarAsignacion}
+            alCrear={alCrearYAsignar}
+          />
+        </div>
+      </section>
 
       {conferencia.estado === 'fallida' ? (
         <PanelDeError mensaje={mensajeDeError('CONF_PROCESAMIENTO_FALLIDO')} />
@@ -105,7 +148,7 @@ export function PantallaDetalleConferencia() {
         ignorar las alertas que sí importan.
       */}
       {conferencia.estado === 'en-cola' || conferencia.estado === 'procesando' ? (
-        <p className="max-w-prose text-sm leading-relaxed text-texto-tenue">
+        <p className="max-w-prose rounded-md bg-panel p-5 text-sm leading-relaxed text-texto-tenue shadow-sm">
           Esta conferencia todavía se está procesando. Cuando termine, sus fichas aparecerán aquí
           con su coordenada y su estado de validación.
         </p>
@@ -113,8 +156,8 @@ export function PantallaDetalleConferencia() {
 
       {conferencia.estado === 'procesada' ? (
         <>
-          <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-medium text-texto">
+          <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
+            <h2 className="text-base font-semibold tracking-tight text-texto">
               {fichas.length === 1 ? '1 ficha' : `${fichas.length} fichas`}
             </h2>
 
@@ -128,7 +171,9 @@ export function PantallaDetalleConferencia() {
             ) : null}
           </section>
 
-          <ListadoDeFichas fichas={fichas} />
+          <section className="rounded-md bg-panel p-6 shadow-sm">
+            <ListadoDeFichas fichas={fichas} />
+          </section>
         </>
       ) : null}
     </div>

@@ -94,6 +94,25 @@ describe('buscar', () => {
   it('devuelve una lista vacía cuando no hay coincidencias', () => {
     expect(buscar(visiblesDe(ALCANTARA), 'termodinámica cuántica')).toHaveLength(0)
   })
+
+  /*
+    "IA" no aparece como palabra propia en ningún título, ponente o evento del
+    fixture (solo existe como nombre de etiqueta, que es un campo distinto). Si
+    la búsqueda fuera una coincidencia de subcadena sin límites de palabra,
+    "ia" aparecería igual dentro de "Mariana", "Lucía" o "Ingeniería", y la
+    persona vería conferencias que no tienen nada que ver con lo que escribió.
+  */
+  it('no confunde una subcadena a mitad de palabra con una coincidencia real', () => {
+    expect(buscar(visiblesDe(ALCANTARA), 'IA')).toHaveLength(0)
+  })
+
+  /*
+    El límite de palabra no debe impedir la búsqueda incremental de siempre:
+    "algorit" tiene que seguir encontrando "algorítmicos" mientras se escribe.
+  */
+  it('sigue encontrando por el inicio de una palabra, letra a letra', () => {
+    expect(ids(buscar(visiblesDe(ALCANTARA), 'algorit'))).toEqual(['cnf-alc-03'])
+  })
 })
 
 describe('filtrarPorEstado', () => {

@@ -19,9 +19,9 @@ export function EncabezadoDeSeccion({
   descripcion,
 }: PropsEncabezadoDeSeccion): ReactElement {
   return (
-    <section className="border-t border-filete-fuerte pt-5">
-      <h1 className="text-base font-medium tracking-tight text-texto">{titulo}</h1>
-      <p className="mt-2 max-w-prose text-sm leading-relaxed text-texto-tenue">{descripcion}</p>
+    <section className="border-t border-filete-fuerte pt-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-texto sm:text-3xl">{titulo}</h1>
+      <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-texto-tenue">{descripcion}</p>
     </section>
   )
 }
