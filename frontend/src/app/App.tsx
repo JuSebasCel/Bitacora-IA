@@ -5,7 +5,7 @@ import { SessionProvider } from '@/features/auth/session'
 import { ShellLayout } from '@/app/layout'
 import { RutaProtegida } from '@/app/RutaProtegida'
 import { RutaPublica } from '@/app/RutaPublica'
-import { PantallaConferencias } from '@/features/conferencias/screens'
+import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
 import {
   PantallaCargarConferencia,
   PantallaCatalogo,
@@ -42,7 +42,13 @@ export function App(): ReactElement {
           <Route element={<ShellLayout />}>
             <Route index element={<Navigate to="/conferencias" replace />} />
             <Route path="/conferencias" element={<PantallaConferencias />} />
+            {/*
+              React Router ordena por especificidad y no por declaración, así que
+              el segmento estático gana al dinámico sin importar el orden. Se
+              declara antes de todos modos, para que se lea igual que se resuelve.
+            */}
             <Route path="/conferencias/nueva" element={<PantallaCargarConferencia />} />
+            <Route path="/conferencias/:idConferencia" element={<PantallaDetalleConferencia />} />
             <Route path="/catalogo" element={<PantallaCatalogo />} />
             <Route path="/memorias" element={<PantallaMemorias />} />
             <Route path="/plantillas" element={<PantallaPlantillas />} />

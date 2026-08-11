@@ -19,12 +19,6 @@ export type SeccionDeNavegacion = {
   readonly ruta: string
   /** Icono de la sección (familia Phosphor, un solo peso en todo el shell). */
   readonly icono: Icon
-  /*
-    Si es true, la sección solo se marca activa en su ruta exacta. Conferencias
-    lo necesita porque "Cargar conferencia" cuelga de su misma ruta base y las
-    dos no pueden quedar marcadas a la vez.
-  */
-  readonly coincidenciaExacta: boolean
 }
 
 /** Un solo peso de icono en todo el shell, activo o no. */
@@ -38,36 +32,55 @@ export const SECCIONES_DE_NAVEGACION: readonly SeccionDeNavegacion[] = [
     etiqueta: 'Conferencias',
     ruta: '/conferencias',
     icono: MicrophoneIcon,
-    coincidenciaExacta: true,
   },
   {
     etiqueta: 'Cargar conferencia',
     ruta: '/conferencias/nueva',
     icono: UploadSimpleIcon,
-    coincidenciaExacta: false,
   },
   {
     etiqueta: 'Catálogo',
     ruta: '/catalogo',
     icono: CardsIcon,
-    coincidenciaExacta: false,
   },
   {
     etiqueta: 'Memorias',
     ruta: '/memorias',
     icono: BookOpenIcon,
-    coincidenciaExacta: false,
   },
   {
     etiqueta: 'Plantillas',
     ruta: '/plantillas',
     icono: LayoutIcon,
-    coincidenciaExacta: false,
   },
   {
     etiqueta: 'Configuración',
     ruta: '/configuracion',
     icono: GearIcon,
-    coincidenciaExacta: false,
   },
 ]
+
+/** Comprueba que la ruta sea la sección o algo colgado de ella, no solo que empiece igual. */
+function cuelgaDe(rutaActual: string, base: string): boolean {
+  return rutaActual === base || rutaActual.startsWith(`${base}/`)
+}
+
+/*
+  Qué sección está activa, por especificidad: gana la más profunda que coincida
+  con la ruta actual.
+
+  Sustituye al par `coincidenciaExacta` + `end` de NavLink que usaba F1, que
+  dejó de servir al entrar el detalle de conferencia. Con `end`,
+  /conferencias/cnf-alc-01 no marcaba ninguna sección; sin `end`, se marcaban
+  dos a la vez en /conferencias/nueva. La regla de especificidad resuelve los
+  dos casos y, al ser una función pura, se prueba sin montar el shell.
+*/
+export function esSeccionActiva(seccion: SeccionDeNavegacion, rutaActual: string): boolean {
+  if (!cuelgaDe(rutaActual, seccion.ruta)) {
+    return false
+  }
+
+  return !SECCIONES_DE_NAVEGACION.some(
+    (otra) => otra.ruta.length > seccion.ruta.length && cuelgaDe(rutaActual, otra.ruta),
+  )
+}

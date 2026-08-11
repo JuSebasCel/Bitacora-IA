@@ -33,6 +33,7 @@ function montarShell(rutaInicial = '/conferencias') {
             <Route element={<ShellLayout />}>
               <Route path="/conferencias" element={<p>Contenido de conferencias</p>} />
               <Route path="/conferencias/nueva" element={<p>Contenido de carga</p>} />
+              <Route path="/conferencias/:idConferencia" element={<p>Contenido del detalle</p>} />
               <Route path="/catalogo" element={<p>Contenido del catálogo</p>} />
               <Route path="/memorias" element={<p>Contenido de memorias</p>} />
               <Route path="/plantillas" element={<p>Contenido de plantillas</p>} />
@@ -118,6 +119,33 @@ describe('ShellLayout', () => {
 
     expect(activos).toHaveLength(1)
     expect(activos[0]).toHaveTextContent('Cargar conferencia')
+  })
+
+  /*
+    El detalle de una conferencia cuelga de /conferencias y no tiene sección
+    propia, así que la sección de origen tiene que seguir marcada: si no, el
+    índice diría que no estás en ninguna parte.
+  */
+  it('mantiene marcada la sección de origen dentro del detalle de una conferencia', () => {
+    montarShell('/conferencias/cnf-alc-01')
+
+    const enlaces = within(barraDeNavegacion()).getAllByRole('link')
+    const activos = enlaces.filter((enlace) => enlace.getAttribute('aria-current') === 'page')
+
+    expect(activos).toHaveLength(1)
+    expect(activos[0]).toHaveTextContent('Conferencias')
+    expect(screen.getByText('Contenido del detalle')).toBeInTheDocument()
+  })
+
+  /*
+    Regresión: el segmento estático tiene que seguir ganando al dinámico ahora
+    que las dos rutas conviven.
+  */
+  it('resuelve la carga de conferencia y no el detalle en /conferencias/nueva', () => {
+    montarShell('/conferencias/nueva')
+
+    expect(screen.getByText('Contenido de carga')).toBeInTheDocument()
+    expect(screen.queryByText('Contenido del detalle')).not.toBeInTheDocument()
   })
 
   it('muestra el nombre de la persona con sesión abierta', () => {
