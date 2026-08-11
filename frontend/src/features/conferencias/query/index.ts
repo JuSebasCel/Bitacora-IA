@@ -33,3 +33,5 @@ export {
 
 export type { ConteoPorEstado, ConteoPorTipo, ResumenDeFichas } from './resumen'
 export { resumirFichas } from './resumen'
+
+export { escribirCriterios, leerCriterios } from './parametros'
