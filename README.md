@@ -13,6 +13,8 @@ A partir de ese mismo origen se generan dos productos distintos:
 
 Cada usuario del grupo de investigación puede cargar sus propias conferencias, validar sus fichas (human-in-the-loop, según el riesgo del tipo de unidad) y compartir su información con otros miembros del grupo sin exponer su propia API key.
 
+Sobre cualquier conferencia que vea, propia o compartida, cada persona puede poner **etiquetas personales** de texto libre, creadas en el momento de usarlas: para agrupar por interés (`IA`) o para marcar material que piensa usar en un artículo concreto (`art1`). Son privadas, y al compartir una conferencia su dueño elige por separado si sus etiquetas viajan con ella y si el invitado ve también las fichas todavía sin validar.
+
 ## Cómo funciona
 
 1. **Carga** — se sube audio o transcripción de una charla.
@@ -70,9 +72,25 @@ El código se organiza por dominio, no por tipo de archivo:
 frontend/src/
   app/        # router, layout del shell, providers
   features/   # un directorio por dominio del producto
-  shared/     # primitivos de interfaz y utilidades transversales
+    auth/         # acceso, registro y sesión
+    conferencias/ # dashboard y detalle de conferencia
+  shared/     # primitivos de interfaz, catálogo de errores, almacenamiento
   styles/     # tokens de diseño
 ```
+
+Dentro de cada dominio, la separación es por responsabilidad y no por tipo de archivo:
+
+| Carpeta | Qué contiene |
+|---|---|
+| `data/` | Tipos del dominio y datos de ejemplo, con sus invariantes probadas |
+| `query/` | Reglas de acceso, filtrado, orden y conteo, como funciones puras sin React |
+| `tags/` | Etiquetas personales: operaciones, persistencia y su hook |
+| `components/` | Piezas de interfaz locales al dominio |
+| `screens/` | Las pantallas que el router monta |
+
+Las reglas viven en funciones puras y no dentro de los componentes, sobre todo las de acceso: quién puede ver qué no puede depender de que la interfaz decida no dibujar algo.
+
+El estado de los filtros del dashboard vive en la URL, no en estado local ni en almacenamiento del navegador, para que una vista filtrada se pueda compartir como enlace y sobreviva a un recargado.
 
 El tema claro y oscuro se resuelve con variables CSS definidas en `src/styles/index.css` y expuestas a Tailwind con `@theme inline`. Los componentes consumen los tokens semánticos (`bg-panel`, `text-texto`, `border-filete`, `bg-acento`) en lugar de colores literales, de modo que ambos temas funcionan sin duplicar clases.
 

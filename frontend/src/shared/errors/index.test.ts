@@ -49,3 +49,83 @@ describe('catálogo de errores', () => {
     }
   })
 })
+
+/*
+  Códigos que introduce F2 (dashboard de conferencias). Se listan aquí a mano, y
+  no derivados del catálogo, para que quitar uno por accidente rompa la prueba
+  en vez de pasar desapercibido.
+*/
+const CODIGOS_DE_F2 = [
+  'CONF_NO_ENCONTRADA',
+  'CONF_PROCESAMIENTO_FALLIDO',
+  'ETQ_NOMBRE_REQUERIDO',
+  'ETQ_YA_EXISTE',
+  'ETQ_NOMBRE_MUY_LARGO',
+  'ETQ_NO_EDITABLE',
+] as const
+
+/* Un código que el catálogo nunca va a conocer, para obtener el mensaje genérico. */
+const CODIGO_INEXISTENTE = 'CODIGO_QUE_NO_ESTA_EN_EL_CATALOGO'
+
+describe('códigos de error de F2', () => {
+  it('registra en el catálogo los códigos de conferencias y de etiquetas', () => {
+    for (const codigo of CODIGOS_DE_F2) {
+      expect(CODIGOS_DE_ERROR).toContain(codigo)
+    }
+  })
+
+  it('ningún código de F2 cae al mensaje genérico', () => {
+    const generico = mensajeDeError(CODIGO_INEXISTENTE)
+
+    for (const codigo of CODIGOS_DE_F2) {
+      expect(mensajeDeError(codigo)).not.toBe(generico)
+    }
+  })
+
+  it('traduce cada código de F2 a un mensaje accionable', () => {
+    for (const codigo of CODIGOS_DE_F2) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje.length).toBeGreaterThan(20)
+      expect(mensaje.trim()).toBe(mensaje)
+    }
+  })
+
+  it('ningún mensaje de F2 filtra un código ni detalle técnico', () => {
+    for (const codigo of CODIGOS_DE_F2) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje).not.toMatch(/_[A-Z]/)
+      expect(mensaje.toLowerCase()).not.toContain('undefined')
+      expect(mensaje.toLowerCase()).not.toContain('null')
+    }
+  })
+
+  /*
+    El detalle devuelve este código tanto para un identificador inventado como
+    para una conferencia ajena. Si el mensaje insinuara que la conferencia
+    existe pero es de otra persona, la pantalla se convertiría en un oráculo
+    para averiguar qué subió alguien más, que es justo lo que evita la regla de
+    aislamiento por fila de PLAN.md sección 6.3.
+  */
+  it('no revela si una conferencia no encontrada existe en manos de otra persona', () => {
+    const mensaje = mensajeDeError('CONF_NO_ENCONTRADA').toLowerCase()
+
+    expect(mensaje).not.toMatch(/permiso|autoriz|prohib|denegad|ajena|de otra persona|privada/)
+  })
+
+  it('indica el límite exacto en el mensaje de nombre de etiqueta demasiado largo', () => {
+    expect(mensajeDeError('ETQ_NOMBRE_MUY_LARGO')).toContain('24')
+  })
+
+  /*
+    Las etiquetas se crean al vuelo desde el propio filtro, así que un choque de
+    nombre no puede ser un callejón sin salida: el mensaje tiene que decir qué
+    hacer a continuación.
+  */
+  it('ofrece una salida en el mensaje de etiqueta ya existente', () => {
+    const mensaje = mensajeDeError('ETQ_YA_EXISTE').toLowerCase()
+
+    expect(mensaje).toMatch(/elíge|elige|usa|otro nombre|lista/)
+  })
+})

@@ -1,6 +1,11 @@
 import type { RefObject } from 'react'
-import { NavLink } from 'react-router'
-import { PESO_DE_ICONO, SECCIONES_DE_NAVEGACION, TAMANO_DE_ICONO } from './navegacion'
+import { Link, useLocation } from 'react-router'
+import {
+  PESO_DE_ICONO,
+  SECCIONES_DE_NAVEGACION,
+  TAMANO_DE_ICONO,
+  esSeccionActiva,
+} from './navegacion'
 
 type PropiedadesBarraLateral = {
   /** Identificador que el botón del cajón referencia con aria-controls. */
@@ -31,6 +36,7 @@ function clasesDelEnlace(activo: boolean): string {
 */
 export function BarraLateral({ id, abierta, alNavegar, refDelCajon }: PropiedadesBarraLateral) {
   const visibilidad = abierta ? 'flex' : 'hidden md:flex'
+  const ubicacion = useLocation()
 
   return (
     <nav
@@ -45,29 +51,31 @@ export function BarraLateral({ id, abierta, alNavegar, refDelCajon }: Propiedade
         Índice
       </p>
       <ul className="flex flex-col border-t border-filete">
+        {/*
+          Link y no NavLink: NavLink decide por su cuenta el aria-current a
+          partir de `end`, y la regla que necesita el shell es de especificidad
+          entre secciones, no de coincidencia exacta. Ver `esSeccionActiva`.
+        */}
         {SECCIONES_DE_NAVEGACION.map((seccion) => {
           const Icono = seccion.icono
+          const activa = esSeccionActiva(seccion, ubicacion.pathname)
 
           return (
             <li key={seccion.ruta}>
-              <NavLink
+              <Link
                 to={seccion.ruta}
-                end={seccion.coincidenciaExacta}
                 onClick={alNavegar}
-                className={({ isActive }) => clasesDelEnlace(isActive)}
+                aria-current={activa ? 'page' : undefined}
+                className={clasesDelEnlace(activa)}
               >
-                {({ isActive }) => (
-                  <>
-                    <Icono
-                      size={TAMANO_DE_ICONO}
-                      weight={PESO_DE_ICONO}
-                      aria-hidden="true"
-                      className={isActive ? 'text-acento' : 'text-texto-tenue'}
-                    />
-                    <span className="truncate">{seccion.etiqueta}</span>
-                  </>
-                )}
-              </NavLink>
+                <Icono
+                  size={TAMANO_DE_ICONO}
+                  weight={PESO_DE_ICONO}
+                  aria-hidden="true"
+                  className={activa ? 'text-acento' : 'text-texto-tenue'}
+                />
+                <span className="truncate">{seccion.etiqueta}</span>
+              </Link>
             </li>
           )
         })}
