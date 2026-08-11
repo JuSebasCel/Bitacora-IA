@@ -18,6 +18,8 @@ export type {
 } from './tipos'
 export { ESPACIO_DE_ETIQUETAS_VACIO } from './tipos'
 
+export { formatearDuracion, formatearFecha, formatearTimestamp } from './formato'
+
 export { CONFERENCIAS_DE_EJEMPLO } from './conferencias.fixture'
 export { FICHAS_DE_EJEMPLO } from './fichas.fixture'
 export { ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO } from './etiquetas.fixture'

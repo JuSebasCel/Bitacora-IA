@@ -12,3 +12,24 @@ export {
   obtenerConferencia,
   privacidadEfectiva,
 } from './acceso'
+
+export type {
+  CriteriosDeListado,
+  EntradaDeListado,
+  FiltroDeEstado,
+  OrdenDeListado,
+  Segmento,
+} from './filtros'
+export {
+  CRITERIOS_POR_DEFECTO,
+  buscar,
+  filtrarPorEstado,
+  filtrarPorEtiquetas,
+  filtrarPorSegmento,
+  listarConferencias,
+  normalizarTexto,
+  ordenar,
+} from './filtros'
+
+export type { ConteoPorEstado, ConteoPorTipo, ResumenDeFichas } from './resumen'
+export { resumirFichas } from './resumen'
