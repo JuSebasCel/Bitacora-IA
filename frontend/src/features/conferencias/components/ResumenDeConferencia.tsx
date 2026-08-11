@@ -19,11 +19,11 @@ export function ResumenDeConferencia({ visible }: PropiedadesResumen) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="text-lg leading-snug font-medium tracking-tight text-texto">
+      <h1 className="text-2xl leading-tight font-semibold tracking-tight text-texto sm:text-3xl">
         {conferencia.titulo}
       </h1>
 
-      <p className="text-sm text-texto">{conferencia.ponente}</p>
+      <p className="text-base font-medium text-texto">{conferencia.ponente}</p>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <span className="text-sm text-texto-tenue">{conferencia.evento}</span>
@@ -38,7 +38,9 @@ export function ResumenDeConferencia({ visible }: PropiedadesResumen) {
         </span>
       </div>
 
-      <p className="max-w-prose text-sm leading-relaxed text-texto-tenue">{conferencia.resumen}</p>
+      <p className="max-w-prose text-base leading-relaxed text-texto-tenue">
+        {conferencia.resumen}
+      </p>
 
       {procedencia === 'compartida' ? (
         <p className="text-xs text-texto-tenue">

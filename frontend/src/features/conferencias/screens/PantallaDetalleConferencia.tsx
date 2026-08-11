@@ -118,23 +118,25 @@ export function PantallaDetalleConferencia() {
     visible.procedencia === 'compartida' && !privacidadEfectiva(visible).compartirFichasPendientes
 
   return (
-    <div className="flex flex-col gap-8 border-t border-filete-fuerte pt-5">
+    <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
       <EnlaceDeRegreso busqueda={ubicacion.search} />
 
-      <ResumenDeConferencia visible={visible} />
+      <section className="flex flex-col gap-5 rounded-md bg-panel p-6 shadow-sm">
+        <ResumenDeConferencia visible={visible} />
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <EditorDeEtiquetas
-          etiquetas={etiquetas}
-          alQuitar={(idEtiqueta) => quitar(idEtiqueta, conferencia.id)}
-        />
-        <AsignadorDeEtiquetas
-          misEtiquetas={espacio.etiquetas}
-          idsAsignadas={idsPropiasAsignadas}
-          alAlternar={alAlternarAsignacion}
-          alCrear={alCrearYAsignar}
-        />
-      </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <EditorDeEtiquetas
+            etiquetas={etiquetas}
+            alQuitar={(idEtiqueta) => quitar(idEtiqueta, conferencia.id)}
+          />
+          <AsignadorDeEtiquetas
+            misEtiquetas={espacio.etiquetas}
+            idsAsignadas={idsPropiasAsignadas}
+            alAlternar={alAlternarAsignacion}
+            alCrear={alCrearYAsignar}
+          />
+        </div>
+      </section>
 
       {conferencia.estado === 'fallida' ? (
         <PanelDeError mensaje={mensajeDeError('CONF_PROCESAMIENTO_FALLIDO')} />
@@ -146,7 +148,7 @@ export function PantallaDetalleConferencia() {
         ignorar las alertas que sí importan.
       */}
       {conferencia.estado === 'en-cola' || conferencia.estado === 'procesando' ? (
-        <p className="max-w-prose text-sm leading-relaxed text-texto-tenue">
+        <p className="max-w-prose rounded-md bg-panel p-5 text-sm leading-relaxed text-texto-tenue shadow-sm">
           Esta conferencia todavía se está procesando. Cuando termine, sus fichas aparecerán aquí
           con su coordenada y su estado de validación.
         </p>
@@ -154,8 +156,8 @@ export function PantallaDetalleConferencia() {
 
       {conferencia.estado === 'procesada' ? (
         <>
-          <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-medium text-texto">
+          <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
+            <h2 className="text-base font-semibold tracking-tight text-texto">
               {fichas.length === 1 ? '1 ficha' : `${fichas.length} fichas`}
             </h2>
 
@@ -169,7 +171,9 @@ export function PantallaDetalleConferencia() {
             ) : null}
           </section>
 
-          <ListadoDeFichas fichas={fichas} />
+          <section className="rounded-md bg-panel p-6 shadow-sm">
+            <ListadoDeFichas fichas={fichas} />
+          </section>
         </>
       ) : null}
     </div>
