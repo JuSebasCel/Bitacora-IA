@@ -1,3 +1,4 @@
+import { borrarClave, escribirJson, leerJson } from '@/shared/storage/almacenamiento'
 import type { CuentaRegistrada, UsuarioSesion } from './tipos'
 
 /*
@@ -5,6 +6,11 @@ import type { CuentaRegistrada, UsuarioSesion } from './tipos'
   para que muera al cerrar la pestaña, y guarda únicamente la forma pública del
   usuario: id, nombre y correo. La contraseña nunca se persiste, ni en la
   sesión ni en las cuentas creadas, donde solo viaja su resumen.
+
+  El acceso tolerante a fallos del almacenamiento vive en `shared/storage`:
+  salió de aquí cuando las etiquetas personales de F2 necesitaron exactamente
+  el mismo try/catch. Lo que queda en este archivo son los guards propios de la
+  sesión.
 */
 
 export const CLAVE_SESION = 'bitacora-ai.sesion'
@@ -39,67 +45,6 @@ function esCuentaRegistrada(valor: unknown): valor is CuentaRegistrada {
     candidato['correo'].trim().length > 0 &&
     candidato['resumen'].trim().length > 0
   )
-}
-
-function almacenamientoDisponible(): Storage | null {
-  try {
-    return globalThis.sessionStorage ?? null
-  } catch {
-    /* Acceso bloqueado por la configuración del navegador. */
-    return null
-  }
-}
-
-/*
-  Lee y descarta en silencio cualquier valor corrupto. Toda la interacción con
-  el almacenamiento va dentro del try, incluida la lectura: en un iframe con
-  zona de pruebas o en ciertos webviews, getItem también puede lanzar, y esta
-  función corre dentro del inicializador de useState del provider. Si la
-  excepción escapara, la aplicación entera se quedaría en blanco.
-*/
-function leerJson(clave: string): unknown {
-  const almacenamiento = almacenamientoDisponible()
-  if (almacenamiento === null) {
-    return null
-  }
-
-  try {
-    const crudo = almacenamiento.getItem(clave)
-    if (crudo === null) {
-      return null
-    }
-
-    return JSON.parse(crudo)
-  } catch {
-    borrarClave(clave)
-    return null
-  }
-}
-
-function escribirJson(clave: string, valor: unknown): void {
-  const almacenamiento = almacenamientoDisponible()
-  if (almacenamiento === null) {
-    return
-  }
-
-  try {
-    almacenamiento.setItem(clave, JSON.stringify(valor))
-  } catch {
-    /* Cuota llena o modo privado: el estado sigue vivo en memoria. */
-  }
-}
-
-function borrarClave(clave: string): void {
-  const almacenamiento = almacenamientoDisponible()
-  if (almacenamiento === null) {
-    return
-  }
-
-  try {
-    almacenamiento.removeItem(clave)
-  } catch {
-    /* Nada que hacer: el estado en memoria ya se limpió. */
-  }
 }
 
 export function leerSesionGuardada(): UsuarioSesion | null {
