@@ -39,28 +39,42 @@ Cada usuario del grupo de investigación puede cargar sus propias conferencias, 
 
 ## Cómo correrlo localmente
 
-### Requisitos previos
-- Node.js 20+
-- Python 3.11+
-- Cuenta de Supabase (proyecto propio, con `pgvector` habilitado)
-- API key de OpenAI
+Requisitos: Node.js 22.22 o superior, que es el piso que declara React Router.
 
-### Frontend
 ```bash
 cd frontend
 npm install
-cp .env.example .env   # completar variables de Supabase
 npm run dev
 ```
 
-### Backend
-```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # completar API key de OpenAI, LangSmith y credenciales de Supabase
-uvicorn main:app --reload
+La aplicación queda en `http://localhost:5173`.
+
+### Comandos disponibles
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Compilación de producción |
+| `npm run preview` | Sirve la compilación de producción |
+| `npm run lint` | Análisis estático |
+| `npm run typecheck` | Verificación de tipos |
+| `npm run format` | Formato automático del código |
+| `npm test` | Pruebas unitarias y de componente |
+| `npm run test:e2e` | Pruebas end-to-end |
+
+## Convenciones del frontend
+
+El código se organiza por dominio, no por tipo de archivo:
+
 ```
+frontend/src/
+  app/        # router, layout del shell, providers
+  features/   # un directorio por dominio del producto
+  shared/     # primitivos de interfaz y utilidades transversales
+  styles/     # tokens de diseño
+```
+
+El tema claro y oscuro se resuelve con variables CSS definidas en `src/styles/index.css` y expuestas a Tailwind con `@theme inline`. Los componentes consumen los tokens semánticos (`bg-panel`, `text-texto`, `border-filete`, `bg-acento`) en lugar de colores literales, de modo que ambos temas funcionan sin duplicar clases.
 
 ## Uso
 
