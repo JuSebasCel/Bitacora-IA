@@ -30,7 +30,7 @@ export function EditorDeEtiquetas({ etiquetas, alQuitar }: PropiedadesEditor) {
             alQuitar={() => alQuitar(visible.etiqueta.id)}
           />
         ) : (
-          <Pastilla key={visible.etiqueta.id} nombre={visible.etiqueta.nombre} />
+          <Pastilla key={visible.etiqueta.id} nombre={visible.etiqueta.nombre} ajena />
         ),
       )}
     </div>

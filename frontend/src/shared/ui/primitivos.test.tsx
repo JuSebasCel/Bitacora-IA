@@ -110,6 +110,23 @@ describe('Pastilla', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
+  /*
+    Dos personas pueden tener una etiqueta con el mismo nombre sobre la misma
+    conferencia. Sin distinguirlas, la fila muestra dos pastillas idénticas y se
+    lee como un error de pintado. Lo detectó la revisión visual, no la suite.
+  */
+  it('distingue la etiqueta de otra persona de la propia', () => {
+    const { unmount } = render(<Pastilla nombre="IA" />)
+    expect(screen.getByText('IA').className).not.toContain('border-dashed')
+    unmount()
+
+    render(<Pastilla nombre="IA" ajena />)
+    const ajena = screen.getByText('IA')
+
+    expect(ajena.className).toContain('border-dashed')
+    expect(ajena).toHaveAttribute('title', expect.stringMatching(/compartió/i))
+  })
+
   it('ofrece un control de quitar con nombre accesible propio', async () => {
     const usuario = userEvent.setup()
     const alQuitar = vi.fn()

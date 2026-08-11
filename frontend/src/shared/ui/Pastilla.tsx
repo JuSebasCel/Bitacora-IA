@@ -18,18 +18,35 @@ export type PropsPastilla = {
   nombre: string
   /** Si se omite, la pastilla es estática y no ofrece control de quitar. */
   alQuitar?: () => void
+  /*
+    Marca las que puso quien compartió la conferencia. No es adorno: dos
+    personas pueden tener una etiqueta con el mismo nombre sobre la misma
+    conferencia, y sin distinguirlas la pantalla muestra dos pastillas idénticas
+    que se leen como un error de pintado en vez de como lo que son.
+  */
+  ajena?: boolean
 }
 
 const CLASES_BASE =
-  'inline-flex items-center gap-1 rounded-md border border-filete-fuerte bg-panel py-0.5 pl-2 text-xs text-texto-tenue'
+  'inline-flex items-center gap-1 rounded-md border bg-panel py-0.5 pl-2 text-xs text-texto-tenue'
 
-export function Pastilla({ nombre, alQuitar }: PropsPastilla): ReactElement {
+const AJENA = 'border-dashed border-filete-fuerte'
+const PROPIA = 'border-filete-fuerte'
+
+export function Pastilla({ nombre, alQuitar, ajena = false }: PropsPastilla): ReactElement {
+  const borde = ajena ? AJENA : PROPIA
+  const titulo = ajena ? 'Etiqueta de quien compartió la conferencia' : undefined
+
   if (alQuitar === undefined) {
-    return <span className={unirClases(CLASES_BASE, 'pr-2')}>{nombre}</span>
+    return (
+      <span className={unirClases(CLASES_BASE, borde, 'pr-2')} title={titulo}>
+        {nombre}
+      </span>
+    )
   }
 
   return (
-    <span className={unirClases(CLASES_BASE, 'pr-0.5')}>
+    <span className={unirClases(CLASES_BASE, borde, 'pr-0.5')} title={titulo}>
       {nombre}
       <button
         type="button"

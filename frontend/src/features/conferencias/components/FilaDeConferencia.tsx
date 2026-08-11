@@ -104,6 +104,7 @@ export function FilaDeConferencia({
               <Pastilla
                 key={visibleDeEtiqueta.etiqueta.id}
                 nombre={visibleDeEtiqueta.etiqueta.nombre}
+                ajena={!visibleDeEtiqueta.propia}
               />
             ))}
           </div>
