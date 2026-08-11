@@ -8,11 +8,22 @@
 */
 
 export type CodigoError =
+  /* Acceso y registro (F1). */
   | 'AUTH_CAMPO_REQUERIDO'
   | 'AUTH_CORREO_INVALIDO'
   | 'AUTH_CREDENCIALES_INVALIDAS'
   | 'AUTH_CORREO_YA_REGISTRADO'
   | 'AUTH_FALLO_INESPERADO'
+  /* Conferencias y etiquetas personales (F2). */
+  | 'CONF_NO_ENCONTRADA'
+  | 'CONF_PROCESAMIENTO_FALLIDO'
+  | 'ETQ_NOMBRE_REQUERIDO'
+  | 'ETQ_YA_EXISTE'
+  | 'ETQ_NOMBRE_MUY_LARGO'
+  | 'ETQ_NO_EDITABLE'
+
+/** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
+export const LARGO_MAXIMO_DE_ETIQUETA = 24
 
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
@@ -22,6 +33,22 @@ const MENSAJES: Record<CodigoError, string> = {
   AUTH_CORREO_YA_REGISTRADO:
     'Ya existe una cuenta con ese correo. Inicia sesión o usa otro correo.',
   AUTH_FALLO_INESPERADO: 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.',
+
+  /*
+    Este mensaje cubre a propósito dos situaciones: la conferencia no existe, o
+    existe y no está compartida con quien la pide. Distinguirlas convertiría el
+    detalle en una forma de averiguar qué subió otra persona, en contra de la
+    regla de aislamiento por fila de PLAN.md sección 6.3.
+  */
+  CONF_NO_ENCONTRADA:
+    'No encontramos esa conferencia entre las tuyas ni entre las compartidas contigo.',
+  CONF_PROCESAMIENTO_FALLIDO:
+    'El procesamiento de esta conferencia se interrumpió, así que todavía no tiene fichas. Vuelve a cargarla para reintentarlo.',
+  ETQ_NOMBRE_REQUERIDO: 'Escribe un nombre para la etiqueta antes de crearla.',
+  ETQ_YA_EXISTE: 'Ya tienes una etiqueta con ese nombre. Elígela de la lista o usa otro nombre.',
+  ETQ_NOMBRE_MUY_LARGO: `El nombre de la etiqueta admite hasta ${LARGO_MAXIMO_DE_ETIQUETA} caracteres. Acórtalo para guardarlo.`,
+  ETQ_NO_EDITABLE:
+    'Esa etiqueta la puso quien te compartió la conferencia, así que solo esa persona puede quitarla.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'
