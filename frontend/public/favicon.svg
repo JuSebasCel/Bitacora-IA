@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Bitácora AI">
+  <title>Bitácora AI</title>
+  <!--
+    Marca del producto: una página pautada y encuadernada, con una entrada
+    marcada. El lomo a la izquierda y las pautas a la derecha son el mismo
+    lenguaje que usa el panel de identidad de la aplicación. El azul es el
+    acento del sistema de diseño (oklch(0.48 0.17 262) en sRGB).
+  -->
+  <rect width="32" height="32" rx="7" fill="#2256bb" />
+  <g fill="#ffffff">
+    <rect x="7" y="8" width="3" height="16" rx="1.5" opacity="0.45" />
+    <rect x="13" y="8" width="12" height="3" rx="1.5" opacity="0.45" />
+    <rect x="13" y="14.5" width="12" height="3" rx="1.5" />
+    <rect x="13" y="21" width="8" height="3" rx="1.5" opacity="0.45" />
+  </g>
+</svg>

@@ -1,0 +1,182 @@
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+@import 'tailwindcss';
+
+/*
+  Bitácora AI — tokens de diseño.
+
+  Estrategia de tema: variables CSS (una sola estrategia en todo el proyecto,
+  no se mezcla con la variante `dark:` de Tailwind). Los valores se redefinen
+  bajo `prefers-color-scheme: dark` y se exponen a Tailwind con `@theme inline`.
+
+  Reglas de color del proyecto:
+  - Un solo acento (azul tinta) para todo lo interactivo y el anillo de foco.
+  - Los semánticos de validación no se solapan con el acento, y por eso el
+    acento no es verde: verde significa "validado", no "es un botón".
+  - Radio único en controles: `rounded-md`.
+*/
+
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* Superficies */
+  --bitacora-fondo: oklch(0.97 0.002 265);
+  --bitacora-panel: oklch(0.99 0.001 265);
+  --bitacora-filete: oklch(0.91 0.004 265);
+  --bitacora-filete-fuerte: oklch(0.82 0.006 265);
+
+  /* Texto */
+  --bitacora-texto: oklch(0.24 0.006 265);
+  --bitacora-texto-tenue: oklch(0.46 0.008 265);
+
+  /* Acento: azul tinta */
+  --bitacora-acento: oklch(0.48 0.17 262);
+  --bitacora-acento-fuerte: oklch(0.41 0.17 262);
+  --bitacora-acento-tenue: oklch(0.94 0.02 262);
+  --bitacora-acento-contraste: oklch(0.99 0.001 265);
+
+  /* Semánticos de validación de fichas */
+  --bitacora-validado: oklch(0.48 0.13 155);
+  --bitacora-pendiente: oklch(0.52 0.13 70);
+  --bitacora-automatico: oklch(0.46 0.008 265);
+
+  /* Error de formulario. Distinto de los semánticos de ficha: aquí no se habla
+     del estado de un dato, sino de una acción que no se pudo completar. */
+  --bitacora-error: oklch(0.5 0.19 25);
+  --bitacora-error-borde: oklch(0.58 0.17 25);
+
+  /* Superficie de marca: el panel de identidad de las pantallas públicas. Es un
+     campo profundo y constante, no una inversión del tema. */
+  --bitacora-marca: oklch(0.33 0.088 262);
+  --bitacora-marca-profunda: oklch(0.24 0.075 262);
+  --bitacora-marca-texto: oklch(0.98 0.004 262);
+  --bitacora-marca-tenue: oklch(0.84 0.03 262);
+  --bitacora-marca-pauta: oklch(1 0 0 / 0.1);
+
+  /* Sombra tintada con el neutro del proyecto, nunca negro puro. */
+  --bitacora-sombra: oklch(0.24 0.006 265 / 0.17);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bitacora-fondo: oklch(0.17 0.004 265);
+    --bitacora-panel: oklch(0.21 0.005 265);
+    --bitacora-filete: oklch(0.28 0.006 265);
+    --bitacora-filete-fuerte: oklch(0.38 0.008 265);
+
+    --bitacora-texto: oklch(0.94 0.002 265);
+    --bitacora-texto-tenue: oklch(0.7 0.008 265);
+
+    --bitacora-acento: oklch(0.72 0.15 262);
+    --bitacora-acento-fuerte: oklch(0.8 0.12 262);
+    --bitacora-acento-tenue: oklch(0.29 0.06 262);
+    --bitacora-acento-contraste: oklch(0.17 0.004 265);
+
+    --bitacora-validado: oklch(0.76 0.14 155);
+    --bitacora-pendiente: oklch(0.79 0.14 70);
+    --bitacora-automatico: oklch(0.7 0.008 265);
+
+    --bitacora-error: oklch(0.75 0.15 25);
+    --bitacora-error-borde: oklch(0.65 0.17 25);
+
+    --bitacora-marca: oklch(0.25 0.07 262);
+    --bitacora-marca-profunda: oklch(0.17 0.05 262);
+    --bitacora-marca-texto: oklch(0.96 0.004 262);
+    --bitacora-marca-tenue: oklch(0.78 0.03 262);
+    --bitacora-marca-pauta: oklch(1 0 0 / 0.07);
+
+    --bitacora-sombra: oklch(0.05 0.01 265 / 0.55);
+  }
+}
+
+@theme inline {
+  --color-fondo: var(--bitacora-fondo);
+  --color-panel: var(--bitacora-panel);
+  --color-filete: var(--bitacora-filete);
+  --color-filete-fuerte: var(--bitacora-filete-fuerte);
+
+  --color-texto: var(--bitacora-texto);
+  --color-texto-tenue: var(--bitacora-texto-tenue);
+
+  --color-acento: var(--bitacora-acento);
+  --color-acento-fuerte: var(--bitacora-acento-fuerte);
+  --color-acento-tenue: var(--bitacora-acento-tenue);
+  --color-acento-contraste: var(--bitacora-acento-contraste);
+
+  --color-validado: var(--bitacora-validado);
+  --color-pendiente: var(--bitacora-pendiente);
+  --color-automatico: var(--bitacora-automatico);
+
+  --color-error: var(--bitacora-error);
+  --color-error-borde: var(--bitacora-error-borde);
+
+  --color-marca: var(--bitacora-marca);
+  --color-marca-texto: var(--bitacora-marca-texto);
+  --color-marca-tenue: var(--bitacora-marca-tenue);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bitacora-fondo);
+    color: var(--bitacora-texto);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--bitacora-acento);
+    outline-offset: 2px;
+  }
+
+  /* Las coordenadas de trazabilidad van en monoespaciada tabular. */
+  .coordenada {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /*
+    Panel de identidad de las pantallas públicas. La profundidad sale de tres
+    capas apiladas en el mismo tono, no de un degradado de colores distintos:
+    una luz suave arriba a la izquierda, la pauta horizontal del cuaderno de
+    campo, y un asentamiento hacia el borde inferior.
+  */
+  .panel-de-marca {
+    background-color: var(--bitacora-marca);
+    background-image:
+      radial-gradient(115% 85% at 14% 0%, oklch(1 0 0 / 0.12), transparent 58%),
+      repeating-linear-gradient(
+        to bottom,
+        var(--bitacora-marca-pauta) 0 1px,
+        transparent 1px 2.5rem
+      ),
+      linear-gradient(180deg, transparent 45%, var(--bitacora-marca-profunda) 100%);
+  }
+
+  /* Elevación única del proyecto. Sombra tintada con el neutro, nunca negra. */
+  .elevacion {
+    box-shadow:
+      0 1px 2px var(--bitacora-sombra),
+      0 16px 40px -16px var(--bitacora-sombra);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

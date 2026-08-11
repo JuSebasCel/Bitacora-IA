@@ -2,6 +2,7 @@
 CLAUDE.md
 PRD.md
 PLAN.md
+.agent/
 
 # Dependencias
 node_modules/
