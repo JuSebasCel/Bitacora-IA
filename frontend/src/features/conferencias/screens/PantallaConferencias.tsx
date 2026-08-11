@@ -83,11 +83,30 @@ export function PantallaConferencias() {
   )
 
   /*
-    La búsqueda reemplaza la entrada del historial en vez de apilar una nueva:
-    si no, volver atrás obligaría a deshacer el texto letra por letra.
+    Los cambios se aplican sobre los criterios que la URL tenga en ese momento,
+    no sobre los del render actual. Con la forma directa, dos cambios seguidos
+    antes de un re-render se pisaban entre sí: elegir un origen y escribir en la
+    búsqueda a continuación descartaba el origen recién elegido.
+
+    La búsqueda además reemplaza la entrada del historial en vez de apilar una
+    nueva, o volver atrás obligaría a deshacer el texto letra por letra.
   */
-  function aplicar(nuevos: CriteriosDeListado, reemplazar = false): void {
-    setParams(escribirCriterios(nuevos), { replace: reemplazar })
+  function aplicar(cambio: Partial<CriteriosDeListado>, reemplazar = false): void {
+    setParams(
+      (anteriores) => escribirCriterios({ ...leerCriterios(anteriores, idsDeEtiqueta), ...cambio }),
+      { replace: reemplazar },
+    )
+  }
+
+  function alternarEtiqueta(idEtiqueta: string): void {
+    setParams((anteriores) => {
+      const previos = leerCriterios(anteriores, idsDeEtiqueta)
+      const etiquetas = previos.etiquetas.includes(idEtiqueta)
+        ? previos.etiquetas.filter((id) => id !== idEtiqueta)
+        : [...previos.etiquetas, idEtiqueta]
+
+      return escribirCriterios({ ...previos, etiquetas })
+    })
   }
 
   function alCrearEtiqueta(nombre: string): void {
@@ -116,8 +135,9 @@ export function PantallaConferencias() {
           criterios={criterios}
           etiquetas={espacio.etiquetas}
           mensajeDeEtiqueta={errorDeEtiqueta}
-          alCambiar={(nuevos) => aplicar(nuevos)}
-          alBuscar={(busqueda) => aplicar({ ...criterios, busqueda }, true)}
+          alCambiar={(cambio) => aplicar(cambio)}
+          alBuscar={(busqueda) => aplicar({ busqueda }, true)}
+          alAlternarEtiqueta={alternarEtiqueta}
           alCrearEtiqueta={alCrearEtiqueta}
         />
 

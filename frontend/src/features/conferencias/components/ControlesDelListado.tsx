@@ -10,12 +10,18 @@ import { SegmentacionDeOrigen } from './SegmentacionDeOrigen'
   componente solo los lee y avisa de los cambios.
 */
 
+/*
+  Los cambios se emiten como parche y no como criterios completos: quien los
+  recibe los aplica sobre lo que la URL tenga en ese momento, de modo que dos
+  cambios seguidos no se pisen entre sí.
+*/
 type PropiedadesControles = {
   criterios: CriteriosDeListado
   etiquetas: readonly Etiqueta[]
   mensajeDeEtiqueta: string | null
-  alCambiar: (criterios: CriteriosDeListado) => void
+  alCambiar: (cambio: Partial<CriteriosDeListado>) => void
   alBuscar: (busqueda: string) => void
+  alAlternarEtiqueta: (idEtiqueta: string) => void
   alCrearEtiqueta: (nombre: string) => void
 }
 
@@ -40,22 +46,15 @@ export function ControlesDelListado({
   mensajeDeEtiqueta,
   alCambiar,
   alBuscar,
+  alAlternarEtiqueta,
   alCrearEtiqueta,
 }: PropiedadesControles) {
-  function alternarEtiqueta(idEtiqueta: string): void {
-    const marcadas = criterios.etiquetas.includes(idEtiqueta)
-      ? criterios.etiquetas.filter((id) => id !== idEtiqueta)
-      : [...criterios.etiquetas, idEtiqueta]
-
-    alCambiar({ ...criterios, etiquetas: marcadas })
-  }
-
   return (
     <div className="flex flex-col gap-5 border-t border-filete pt-5">
       <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end">
         <SegmentacionDeOrigen
           segmento={criterios.segmento}
-          alCambiar={(segmento: Segmento) => alCambiar({ ...criterios, segmento })}
+          alCambiar={(segmento: Segmento) => alCambiar({ segmento })}
         />
 
         <div className="min-w-56 flex-1">
@@ -74,9 +73,7 @@ export function ControlesDelListado({
             <Select
               opciones={ESTADOS}
               value={criterios.estado}
-              onChange={(evento) =>
-                alCambiar({ ...criterios, estado: evento.target.value as FiltroDeEstado })
-              }
+              onChange={(evento) => alCambiar({ estado: evento.target.value as FiltroDeEstado })}
             />
           </Field>
         </div>
@@ -86,9 +83,7 @@ export function ControlesDelListado({
             <Select
               opciones={ORDENES}
               value={criterios.orden}
-              onChange={(evento) =>
-                alCambiar({ ...criterios, orden: evento.target.value as OrdenDeListado })
-              }
+              onChange={(evento) => alCambiar({ orden: evento.target.value as OrdenDeListado })}
             />
           </Field>
         </div>
@@ -97,7 +92,7 @@ export function ControlesDelListado({
       <FiltroDeEtiquetas
         etiquetas={etiquetas}
         seleccionadas={criterios.etiquetas}
-        alAlternar={alternarEtiqueta}
+        alAlternar={alAlternarEtiqueta}
         alCrear={alCrearEtiqueta}
       />
 

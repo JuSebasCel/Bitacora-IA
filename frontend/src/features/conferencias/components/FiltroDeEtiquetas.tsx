@@ -44,17 +44,18 @@ export function FiltroDeEtiquetas({
             return (
               <label
                 key={etiqueta.id}
-                className={`cursor-pointer rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                className={`relative cursor-pointer rounded-md border px-2.5 py-1 text-xs transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
                   marcada
                     ? 'border-acento bg-acento-tenue font-medium text-acento'
                     : 'border-filete-fuerte text-texto-tenue hover:border-acento hover:text-acento'
                 }`}
               >
+                {/* Transparente y a tamaño completo, por el mismo motivo que en SegmentacionDeOrigen. */}
                 <input
                   type="checkbox"
                   checked={marcada}
                   onChange={() => alAlternar(etiqueta.id)}
-                  className="sr-only"
+                  className="absolute inset-0 cursor-pointer appearance-none opacity-0"
                 />
                 {etiqueta.nombre}
               </label>

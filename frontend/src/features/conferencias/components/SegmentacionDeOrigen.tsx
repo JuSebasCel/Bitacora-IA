@@ -32,19 +32,27 @@ export function SegmentacionDeOrigen({ segmento, alCambiar }: PropiedadesSegment
           return (
             <label
               key={opcion.valor}
-              className={`cursor-pointer rounded-md border px-2.5 py-1 text-sm transition-colors ${
+              className={`relative cursor-pointer rounded-md border px-2.5 py-1 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
                 activa
                   ? 'border-acento bg-acento-tenue font-medium text-acento'
                   : 'border-filete-fuerte text-texto-tenue hover:border-acento hover:text-acento'
               }`}
             >
+              {/*
+                El control nativo se hace transparente y cubre toda la etiqueta,
+                en vez de esconderse con `sr-only` en un rincón de un píxel.
+                Escondido, el punto donde hay que pulsar queda tapado por la
+                propia etiqueta: el teclado y el lector de pantalla funcionaban,
+                pero un clic dirigido al control lo interceptaba la etiqueta.
+                Así el control sigue siendo nativo y además es lo que se pulsa.
+              */}
               <input
                 type="radio"
                 name="origen"
                 value={opcion.valor}
                 checked={activa}
                 onChange={() => alCambiar(opcion.valor)}
-                className="sr-only"
+                className="absolute inset-0 cursor-pointer appearance-none opacity-0"
               />
               {opcion.texto}
             </label>
