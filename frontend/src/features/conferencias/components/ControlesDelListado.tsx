@@ -1,16 +1,24 @@
-import { Field, Input, PanelDeError, Select } from '@/shared/ui'
 import type { Etiqueta } from '../data'
 import type { CriteriosDeListado, FiltroDeEstado, OrdenDeListado, Segmento } from '../query'
-import { FiltroDeEtiquetas } from './FiltroDeEtiquetas'
+import type { ResultadoCreacion } from './CreadorDeEtiqueta'
+import { BarraDeBusqueda } from './BarraDeBusqueda'
+import { PopoverDeFiltros } from './PopoverDeFiltros'
 import { SegmentacionDeOrigen } from './SegmentacionDeOrigen'
+import { SelectorDeOrden } from './SelectorDeOrden'
 
 /*
-  Los cinco controles del listado. No guardan estado propio salvo el borrador
-  del nombre de una etiqueta nueva: los criterios viven en la URL, y este
-  componente solo los lee y avisa de los cambios.
-*/
+  Los controles del listado, como una sola superficie elevada (`bg-panel`) en
+  vez de un renglón de widgets con su propio borde cada uno: el origen y la
+  búsqueda son lo que se usa en cada visita y quedan siempre a la vista; el
+  orden y los filtros menos frecuentes (estado, etiquetas) se agrupan detrás de
+  un botón cada uno.
 
-/*
+  Dentro de la barra, ningún control dibuja su propio borde. El vocabulario de
+  superficies es el mismo en todo el panel: `bg-fondo` marca lo "hundido"
+  (la pista del segmentado, la búsqueda, un botón fantasma al pasar el mouse o
+  al abrirse) y `bg-acento-tenue` marca lo seleccionado. La jerarquía sale del
+  contraste entre esas dos superficies, no de trazos.
+
   Los cambios se emiten como parche y no como criterios completos: quien los
   recibe los aplica sobre lo que la URL tenga en ese momento, de modo que dos
   cambios seguidos no se pisen entre sí.
@@ -18,85 +26,46 @@ import { SegmentacionDeOrigen } from './SegmentacionDeOrigen'
 type PropiedadesControles = {
   criterios: CriteriosDeListado
   etiquetas: readonly Etiqueta[]
-  mensajeDeEtiqueta: string | null
   alCambiar: (cambio: Partial<CriteriosDeListado>) => void
   alBuscar: (busqueda: string) => void
   alAlternarEtiqueta: (idEtiqueta: string) => void
-  alCrearEtiqueta: (nombre: string) => void
+  alCrearEtiqueta: (nombre: string) => ResultadoCreacion
 }
-
-const ESTADOS = [
-  { valor: 'todos', texto: 'Cualquier estado' },
-  { valor: 'procesada', texto: 'Procesada' },
-  { valor: 'procesando', texto: 'Procesando' },
-  { valor: 'en-cola', texto: 'En cola' },
-  { valor: 'fallida', texto: 'Procesamiento interrumpido' },
-]
-
-const ORDENES = [
-  { valor: 'fecha-desc', texto: 'Fecha de la charla, más reciente' },
-  { valor: 'fecha-asc', texto: 'Fecha de la charla, más antigua' },
-  { valor: 'titulo-asc', texto: 'Título' },
-  { valor: 'fichas-desc', texto: 'Número de fichas' },
-]
 
 export function ControlesDelListado({
   criterios,
   etiquetas,
-  mensajeDeEtiqueta,
   alCambiar,
   alBuscar,
   alAlternarEtiqueta,
   alCrearEtiqueta,
 }: PropiedadesControles) {
   return (
-    <div className="flex flex-col gap-5 border-t border-filete pt-5">
-      <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end">
-        <SegmentacionDeOrigen
-          segmento={criterios.segmento}
-          alCambiar={(segmento: Segmento) => alCambiar({ segmento })}
-        />
-
-        <div className="min-w-56 flex-1">
-          <Field id="buscar" etiqueta="Buscar por conferencia, ponente o evento">
-            <Input
-              type="search"
-              value={criterios.busqueda}
-              onChange={(evento) => alBuscar(evento.target.value)}
-              placeholder="Sesgos algorítmicos"
-            />
-          </Field>
-        </div>
-
-        <div className="w-full sm:w-52">
-          <Field id="estado" etiqueta="Estado de procesamiento">
-            <Select
-              opciones={ESTADOS}
-              value={criterios.estado}
-              onChange={(evento) => alCambiar({ estado: evento.target.value as FiltroDeEstado })}
-            />
-          </Field>
-        </div>
-
-        <div className="w-full sm:w-60">
-          <Field id="orden" etiqueta="Ordenar por">
-            <Select
-              opciones={ORDENES}
-              value={criterios.orden}
-              onChange={(evento) => alCambiar({ orden: evento.target.value as OrdenDeListado })}
-            />
-          </Field>
-        </div>
-      </div>
-
-      <FiltroDeEtiquetas
-        etiquetas={etiquetas}
-        seleccionadas={criterios.etiquetas}
-        alAlternar={alAlternarEtiqueta}
-        alCrear={alCrearEtiqueta}
+    <div className="flex flex-wrap items-center gap-1.5 rounded-md bg-panel p-1.5 shadow-sm">
+      <SegmentacionDeOrigen
+        segmento={criterios.segmento}
+        alCambiar={(segmento: Segmento) => alCambiar({ segmento })}
       />
 
-      {mensajeDeEtiqueta === null ? null : <PanelDeError mensaje={mensajeDeEtiqueta} />}
+      <div className="min-w-48 flex-1 basis-48">
+        <BarraDeBusqueda valor={criterios.busqueda} alCambiar={alBuscar} />
+      </div>
+
+      <div className="mx-0.5 h-5 w-px shrink-0 bg-filete" aria-hidden="true" />
+
+      <SelectorDeOrden
+        orden={criterios.orden}
+        alCambiar={(orden: OrdenDeListado) => alCambiar({ orden })}
+      />
+
+      <PopoverDeFiltros
+        estado={criterios.estado}
+        etiquetas={etiquetas}
+        etiquetasSeleccionadas={criterios.etiquetas}
+        alCambiarEstado={(estado: FiltroDeEstado) => alCambiar({ estado })}
+        alAlternarEtiqueta={alAlternarEtiqueta}
+        alCrearEtiqueta={alCrearEtiqueta}
+      />
     </div>
   )
 }

@@ -13,6 +13,13 @@ import type { Page } from '@playwright/test'
   Las credenciales se copian de `src/features/auth/session/cuentas.fixture.ts`:
   `tsconfig.e2e.json` no tiene el alias `@/`, así que desde aquí no se puede
   importar nada de `src`.
+
+  Estado y etiquetas viven detrás de un botón "Filtros" que alterna abierto y
+  cerrado: elegir un radio de estado o una casilla de etiqueta no lo cierra
+  (para poder ajustar varios filtros seguidos sin reabrir), pero el chip
+  "Nueva etiqueta" sí lo cierra al abrir el diálogo de creación. Cada paso dice
+  explícitamente cuándo abre y cuándo cierra el panel, para no depender de en
+  qué estado lo dejó el paso anterior.
 */
 const CUENTA = {
   correo: 'camila.zuluaga@labanfora.org',
@@ -31,6 +38,7 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
   const listado = page.getByRole('list', { name: 'Conferencias' })
   const filas = listado.getByRole('listitem')
   const navegacion = page.getByRole('navigation', { name: 'Secciones de Bitácora AI' })
+  const botonDeFiltros = page.getByRole('button', { name: 'Filtros' })
 
   await test.step('entrar deja el listado completo a la vista', async () => {
     await acceder(page)
@@ -58,12 +66,6 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
     await expect(filas.first()).toContainText('Compartida por')
   })
 
-  /*
-    Cada paso afirma el estado que deja antes de encadenar el siguiente. No es
-    ceremonia: Playwright devuelve el control en cuanto despacha el evento, no
-    cuando React ha confirmado el render, así que sin la afirmación intermedia
-    el paso siguiente puede actuar sobre el listado anterior.
-  */
   await test.step('buscar por ponente acota el listado y sobrevive a un recargado', async () => {
     await page.getByRole('radio', { name: 'Todas' }).click()
     await expect(filas).toHaveCount(7)
@@ -78,26 +80,42 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
     await expect(filas).toHaveCount(2)
   })
 
-  await test.step('el filtro de estado deja solo las procesadas', async () => {
+  await test.step('el panel de filtros deja solo las conferencias procesadas', async () => {
     await page.getByLabel(/Buscar por conferencia/).fill('')
     await expect(filas).toHaveCount(7)
 
-    await page.getByLabel('Estado de procesamiento').selectOption('procesada')
+    await botonDeFiltros.click()
+    await page.getByRole('radio', { name: 'Procesada' }).click()
 
     await expect(filas).toHaveCount(6)
+    await expect(botonDeFiltros).toContainText('1')
+
+    await page.keyboard.press('Escape')
   })
 
-  await test.step('una etiqueta creada al vuelo sirve para filtrar', async () => {
-    await page.getByLabel('Estado de procesamiento').selectOption('todos')
+  await test.step('una etiqueta creada al vuelo desde el diálogo sirve para filtrar', async () => {
+    await botonDeFiltros.click()
+    await page.getByRole('radio', { name: 'Cualquier estado' }).click()
     await expect(filas).toHaveCount(7)
 
-    await page.getByLabel('Nueva etiqueta').fill('art2')
-    await page.getByRole('button', { name: 'Crear etiqueta' }).click()
+    await page.getByRole('button', { name: /nueva etiqueta/i }).click()
 
+    const dialogo = page.getByRole('dialog')
+    await expect(dialogo).toBeVisible()
+
+    await page.getByLabel('Nombre').fill('art2')
+    await page.getByRole('button', { name: 'Crear' }).click()
+
+    await expect(dialogo).toBeHidden()
+
+    await botonDeFiltros.click()
     await expect(page.getByRole('checkbox', { name: 'art2' })).toBeVisible()
 
     await page.getByRole('checkbox', { name: 'revisión 2026' }).click()
+
     await expect(filas).toHaveCount(1)
+
+    await page.keyboard.press('Escape')
   })
 
   await test.step('una combinación imposible muestra el vacío de filtros', async () => {

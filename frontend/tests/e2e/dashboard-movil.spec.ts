@@ -34,16 +34,20 @@ test('el dashboard se recorre en pantalla angosta', async ({ page }) => {
     await page.getByRole('radio', { name: 'Mías' }).click()
     await expect(filas).toHaveCount(2)
 
-    await page.getByLabel('Estado de procesamiento').selectOption('procesada')
+    await page.getByRole('button', { name: 'Filtros' }).click()
+    await page.getByRole('radio', { name: 'Procesada' }).click()
     await expect(filas).toHaveCount(1)
   })
 
   /*
     Peñaloza no tiene ninguna etiqueta: es el caso que deja ver el texto que
-    invita a crear la primera.
+    invita a crear la primera. El panel de Filtros sigue abierto desde el paso
+    anterior (elegir un radio de estado no lo cierra), así que el texto ya es
+    visible aquí.
   */
   await test.step('sin etiquetas propias, el filtro invita a crear la primera', async () => {
     await expect(page.getByText(/Todavía no tienes etiquetas/)).toBeVisible()
+    await page.keyboard.press('Escape')
   })
 
   await test.step('abrir una fila lleva al detalle con el cajón cerrado', async () => {

@@ -22,31 +22,31 @@ export type PropsPastilla = {
     Marca las que puso quien compartió la conferencia. No es adorno: dos
     personas pueden tener una etiqueta con el mismo nombre sobre la misma
     conferencia, y sin distinguirlas la pantalla muestra dos pastillas idénticas
-    que se leen como un error de pintado en vez de como lo que son.
+    que se leen como un error de pintado en vez de como lo que son. Sin borde
+    disponible para marcar la diferencia (el chip es plano, como los de
+    filtros), la señal pasa a ser tipográfica: cursiva y algo más tenue.
   */
   ajena?: boolean
 }
 
 const CLASES_BASE =
-  'inline-flex items-center gap-1 rounded-md border bg-panel py-0.5 pl-2 text-xs text-texto-tenue'
+  'inline-flex items-center gap-1 rounded-md bg-fondo py-0.5 pl-2 text-xs text-texto-tenue'
 
-const AJENA = 'border-dashed border-filete-fuerte'
-const PROPIA = 'border-filete-fuerte'
+const AJENA = 'italic opacity-80'
 
 export function Pastilla({ nombre, alQuitar, ajena = false }: PropsPastilla): ReactElement {
-  const borde = ajena ? AJENA : PROPIA
   const titulo = ajena ? 'Etiqueta de quien compartió la conferencia' : undefined
 
   if (alQuitar === undefined) {
     return (
-      <span className={unirClases(CLASES_BASE, borde, 'pr-2')} title={titulo}>
+      <span className={unirClases(CLASES_BASE, ajena ? AJENA : '', 'pr-2')} title={titulo}>
         {nombre}
       </span>
     )
   }
 
   return (
-    <span className={unirClases(CLASES_BASE, borde, 'pr-0.5')} title={titulo}>
+    <span className={unirClases(CLASES_BASE, ajena ? AJENA : '', 'pr-0.5')} title={titulo}>
       {nombre}
       <button
         type="button"

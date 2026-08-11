@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { EncabezadoDeSeccion } from '@/shared/ui'
 import { ControlesDelListado, ListadoDeConferencias, useConferenciasVisibles } from '../components'
-import type { DatosDeFila, EstadoDelListado } from '../components'
+import type { DatosDeFila, EstadoDelListado, ResultadoCreacion } from '../components'
 import { FICHAS_DE_EJEMPLO } from '../data'
 import {
   CRITERIOS_POR_DEFECTO,
@@ -44,9 +44,8 @@ export function PantallaConferencias() {
   const idUsuario = usuario?.id ?? ''
 
   const [params, setParams] = useSearchParams()
-  const { espacio, crear } = useEtiquetas(idUsuario)
+  const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
   const { carga, visibles } = useConferenciasVisibles(idUsuario)
-  const [errorDeEtiqueta, setErrorDeEtiqueta] = useState<string | null>(null)
 
   const idsDeEtiqueta = useMemo(
     () => espacio.etiquetas.map((etiqueta) => etiqueta.id),
@@ -109,10 +108,44 @@ export function PantallaConferencias() {
     })
   }
 
-  function alCrearEtiqueta(nombre: string): void {
+  /*
+    El diálogo de creación necesita el mensaje ya traducido en el momento de
+    intentar crear, no un estado que le llegue en un render posterior: así
+    puede decidir por sí solo si se cierra (éxito) o se queda abierto con el
+    error (fallo), sin que la pantalla tenga que mantener ese estado por él.
+    También devuelve la etiqueta creada, para que quien la pidió desde una fila
+    concreta pueda asignarla ahí mismo sin un segundo viaje.
+  */
+  function alCrearEtiqueta(nombre: string): ResultadoCreacion {
     const resultado = crear(nombre)
 
-    setErrorDeEtiqueta(resultado.ok ? null : mensajeDeError(resultado.codigo))
+    return resultado.ok
+      ? { ok: true, etiqueta: resultado.etiqueta }
+      : { ok: false, mensaje: mensajeDeError(resultado.codigo) }
+  }
+
+  /** Poner o quitar una etiqueta propia sobre una conferencia concreta, desde su fila. */
+  function alAlternarAsignacion(idEtiqueta: string, idConferencia: string): void {
+    const yaAsignada = espacio.asignaciones.some(
+      (asignacion) => asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia,
+    )
+
+    if (yaAsignada) {
+      quitar(idEtiqueta, idConferencia)
+    } else {
+      asignar(idEtiqueta, idConferencia)
+    }
+  }
+
+  /** Crear una etiqueta nueva y asignarla de una vez a la conferencia desde la que se pidió. */
+  function alCrearYAsignarEtiqueta(nombre: string, idConferencia: string): ResultadoCreacion {
+    const resultado = alCrearEtiqueta(nombre)
+
+    if (resultado.ok) {
+      asignar(resultado.etiqueta.id, idConferencia)
+    }
+
+    return resultado
   }
 
   const hayConferencias = visibles.length > 0
@@ -134,7 +167,6 @@ export function PantallaConferencias() {
         <ControlesDelListado
           criterios={criterios}
           etiquetas={espacio.etiquetas}
-          mensajeDeEtiqueta={errorDeEtiqueta}
           alCambiar={(cambio) => aplicar(cambio)}
           alBuscar={(busqueda) => aplicar({ busqueda }, true)}
           alAlternarEtiqueta={alternarEtiqueta}
@@ -147,6 +179,9 @@ export function PantallaConferencias() {
           segmento={criterios.segmento}
           busqueda={params.toString() === '' ? '' : `?${params.toString()}`}
           alQuitarFiltros={() => aplicar(CRITERIOS_POR_DEFECTO)}
+          misEtiquetas={espacio.etiquetas}
+          alAlternarAsignacion={alAlternarAsignacion}
+          alCrearYAsignar={alCrearYAsignarEtiqueta}
         />
       </div>
     </>

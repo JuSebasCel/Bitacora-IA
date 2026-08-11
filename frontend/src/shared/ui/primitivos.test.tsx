@@ -117,13 +117,13 @@ describe('Pastilla', () => {
   */
   it('distingue la etiqueta de otra persona de la propia', () => {
     const { unmount } = render(<Pastilla nombre="IA" />)
-    expect(screen.getByText('IA').className).not.toContain('border-dashed')
+    expect(screen.getByText('IA').className).not.toContain('italic')
     unmount()
 
     render(<Pastilla nombre="IA" ajena />)
     const ajena = screen.getByText('IA')
 
-    expect(ajena.className).toContain('border-dashed')
+    expect(ajena.className).toContain('italic')
     expect(ajena).toHaveAttribute('title', expect.stringMatching(/compartió/i))
   })
 

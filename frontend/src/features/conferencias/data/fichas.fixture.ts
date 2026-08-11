@@ -13,6 +13,14 @@ import type { Ficha } from './tipos'
   texto interpretado. El `contextoMinimo` es lo que permite revisar una ficha
   sin reescuchar la charla, según PLAN.md sección 4.1.
 
+  La granularidad no es uniforme a propósito (PLAN.md sección 2.2, "ni oración
+  suelta ni charla completa"): una `cita-textual` es corta y punzante, porque
+  eso es lo que la hace citable tal cual. Todo lo demás (método, estrategia,
+  postura, dato de impacto, fase del trabajo) es un segmento temático completo
+  que desarrolla una idea entera, no una línea suelta — si se fragmentara la
+  idea en dos fichas, se perdería el argumento completo que alguien necesita
+  para citarla con contexto.
+
   Cuando entre B4 este archivo SE BORRA: las fichas reales salen del análisis de
   discurso, con su confianza calculada por consistencia entre pasadas.
 */
@@ -23,7 +31,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-01',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'Nosotros no le pedimos al modelo que decida si el artículo entra o no. Le pedimos que ordene la pila, y la decisión de exclusión sigue siendo de una persona.',
+      'Nosotros no le pedimos al modelo que decida si el artículo entra o no en la revisión. Le pedimos que ordene la pila de mayor a menor probabilidad de relevancia, y la decisión de exclusión sigue siendo de una persona, siempre. La diferencia parece sutil, pero cambia todo el diseño del sistema: no estamos construyendo un clasificador binario que hay que auditar por sesgo de exclusión, estamos construyendo un lector rápido que prioriza el trabajo de un lector humano que de todas formas iba a hacer la revisión completa.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 245,
     segundoFin: 268,
@@ -38,7 +46,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-02',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'El protocolo fue de dos pasadas ciegas sobre el mismo lote de resúmenes, y una tercera revisión humana solo donde las dos pasadas discreparon.',
+      'El protocolo fue de dos pasadas ciegas sobre el mismo lote de resúmenes: dos revisores distintos, sin ver la decisión del otro, clasificaban cada resumen como relevante, irrelevante o dudoso. Solo cuando las dos pasadas discreparon, o cuando alguna quedó marcada como dudosa, entraba una tercera revisión humana a resolver el empate. Esto nos permitió medir el acuerdo entre revisores desde el primer lote, en vez de asumirlo, y detectar temprano que dos de nuestros criterios de inclusión estaban redactados de forma ambigua.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 412,
     segundoFin: 434,
@@ -53,7 +61,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-03',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'De cuatro mil doscientos resúmenes iniciales, el cribado asistido nos dejó ochocientos para lectura completa. Eso son tres semanas de trabajo que no hicimos.',
+      'De cuatro mil doscientos resúmenes iniciales, el cribado asistido nos dejó ochocientos para lectura completa, un descarte de más del ochenta por ciento sin que ningún resumen se leyera dos veces por error. Calculamos que, al ritmo de nuestro equipo, revisar manualmente los cuatro mil doscientos habría tomado alrededor de tres semanas adicionales de trabajo dedicado. Esas tres semanas no se perdieron: se destinaron a la fase de extracción de datos, que es donde de verdad hace falta el criterio experto y donde ningún modelo puede sustituir al revisor.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 690,
     segundoFin: 712,
@@ -83,7 +91,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-05',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'Nuestra estrategia fue calibrar el umbral con un lote piloto ya revisado a mano, en vez de aceptar el que trae el modelo por defecto.',
+      'Nuestra estrategia fue calibrar el umbral de corte con un lote piloto de doscientos resúmenes ya revisado a mano, en vez de aceptar el umbral que trae el modelo por defecto. Corrimos la clasificación automática sobre ese lote conocido y comparamos contra las decisiones humanas ya tomadas, ajustando el punto de corte hasta que la sensibilidad se mantuviera por encima del noventa y cinco por ciento. Ese ejercicio de calibración se repite cada vez que cambiamos de dominio temático, porque un umbral que funciona bien para un tema puede ser demasiado permisivo o demasiado estricto en otro.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1288,
     segundoFin: 1309,
@@ -97,7 +105,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-06',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'Estamos en la fase de validación externa: el mismo protocolo corriendo en dos grupos que no participaron en el diseño.',
+      'Estamos en la fase de validación externa del protocolo: el mismo procedimiento, con el mismo umbral calibrado, corriendo ahora en dos grupos de investigación que no participaron en el diseño original ni conocen los detalles de cómo se ajustó. La idea es comprobar que el desempeño que reportamos no depende de que quien lo revisó fuera también quien lo construyó. Esperamos tener resultados de los dos grupos en los próximos dos meses, y solo después de eso consideraremos el protocolo listo para publicarse como método reproducible.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1640,
     segundoFin: 1658,
@@ -111,7 +119,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-07',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'La sensibilidad quedó en noventa y seis por ciento, pero eso significa que perdimos cuatro de cada cien estudios relevantes, y hay que decirlo así.',
+      'La sensibilidad final quedó en noventa y seis por ciento sobre el lote de validación, un número que suena alto hasta que se traduce a la práctica: eso significa que perdimos cuatro de cada cien estudios relevantes, y hay que decirlo así, sin suavizarlo. En una revisión sistemática pequeña, esos cuatro estudios pueden no importar demasiado; en una revisión de miles de referencias, cuatro por ciento son decenas de estudios que nunca llegan a ojos humanos. Por eso insistimos en que el sistema se presente siempre con esta cifra al lado, no como una nota a pie de página.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1902,
     segundoFin: 1927,
@@ -126,7 +134,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-08',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'Si el grupo no tiene ya un protocolo de revisión escrito, automatizar el cribado solo hace que los errores lleguen más rápido.',
+      'Si el grupo de investigación no tiene ya un protocolo de revisión escrito, con criterios de inclusión y exclusión claros antes de empezar, automatizar el cribado no resuelve nada: solo hace que los errores de criterio lleguen más rápido y en mayor volumen. La herramienta amplifica lo que ya existe, no lo corrige. Por eso, cuando alguien nos pide ayuda para automatizar su revisión, la primera pregunta que hacemos no es qué modelo usar, sino si el protocolo ya está escrito y probado a mano sobre una muestra pequeña.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 2180,
     segundoFin: 2201,
@@ -140,7 +148,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-01-09',
     idConferencia: 'cnf-alc-01',
     fragmento:
-      'Publicamos el prompt, el umbral y el lote de calibración. Sin eso, lo que reportamos no es reproducible por nadie.',
+      'Publicamos el prompt exacto que usamos para clasificar, el umbral de corte calibrado y el lote completo de calibración con sus decisiones humanas de referencia. Sin esos tres elementos, lo que reportamos en el artículo no es reproducible por nadie, por más que describamos el método en palabras. Nos tomó tiempo convencer a algunos coautores de que valía la pena el esfuerzo de empaquetar todo eso, pero hoy es la parte del trabajo que más nos han agradecido otros grupos que quieren aplicar el mismo protocolo a su propio dominio.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 2510,
     segundoFin: 2531,
@@ -156,7 +164,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-02-01',
     idConferencia: 'cnf-alc-02',
     fragmento:
-      'Cada variable de la base tiene un registro de quién la capturó, con qué instrumento y en qué versión del manual de campo.',
+      'Cada variable de la base tiene, además de su valor, un registro de quién la capturó, con qué instrumento y en qué versión del manual de campo estaba vigente ese día. Ese registro vive en una tabla aparte, ligada por un identificador único a cada observación, y no se toca nunca después de capturada: si hay que corregir algo, se agrega una nueva versión, no se sobrescribe la anterior. Esto nos permite reconstruir, para cualquier dato sospechoso, exactamente en qué condiciones se recogió.',
     hablante: 'Andrés Felipe Restrepo Ocampo',
     segundoInicio: 198,
     segundoFin: 217,
@@ -170,7 +178,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-02-02',
     idConferencia: 'cnf-alc-02',
     fragmento:
-      'El instrumento cambió tres veces en diez años. Si no queda registrado cuál se usó en cada ola, la serie completa deja de ser comparable.',
+      'El instrumento cambió tres veces en los diez años que lleva el estudio, cada vez con una justificación razonable: mejoras metodológicas, ajustes de vocabulario, preguntas nuevas que la literatura empezó a pedir. Pero si no queda registrado con precisión cuál versión del instrumento se usó en cada ola de campo, la serie completa deja de ser comparable, y diez años de trabajo de campo pierden buena parte de su valor analítico. Sostenemos que ningún cambio de instrumento debería aprobarse sin antes definir cómo se va a documentar la transición.',
     hablante: 'Andrés Felipe Restrepo Ocampo',
     segundoInicio: 445,
     segundoFin: 468,
@@ -185,7 +193,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-02-03',
     idConferencia: 'cnf-alc-02',
     fragmento:
-      'Optamos por versionar el manual de campo como si fuera código, con un identificador que viaja pegado a cada observación.',
+      'Optamos por versionar el manual de campo como si fuera código fuente: cada versión tiene un número, un registro de qué cambió respecto a la anterior, y una fecha de vigencia. Ese identificador de versión viaja pegado a cada observación capturada durante ese periodo, así que basta con consultar la tabla de metadatos para saber exactamente qué pregunta se hizo y cómo estaba formulada. Adoptamos herramientas de control de versiones que ya existían para software, en vez de inventar un sistema propio desde cero.',
     hablante: 'Andrés Felipe Restrepo Ocampo',
     segundoInicio: 712,
     segundoFin: 733,
@@ -199,7 +207,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-02-04',
     idConferencia: 'cnf-alc-02',
     fragmento:
-      'Recuperamos el ochenta y dos por ciento de las observaciones que habíamos dado por perdidas en la ola de dos mil veinte.',
+      'Recuperamos el ochenta y dos por ciento de las observaciones que habíamos dado por perdidas en la ola de dos mil veinte, cuando la pandemia interrumpió el trabajo de campo presencial a mitad de recolección. El ejercicio de recuperación cruzó los registros administrativos disponibles con los identificadores parciales que sí teníamos, y tomó cerca de cuatro meses de trabajo dedicado exclusivamente a esa reconstrucción. El dieciocho por ciento restante quedó marcado como pérdida irreversible en la documentación pública de la base, en vez de imputarse silenciosamente.',
     hablante: 'Andrés Felipe Restrepo Ocampo',
     segundoInicio: 1080,
     segundoFin: 1101,
@@ -228,7 +236,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-02-06',
     idConferencia: 'cnf-alc-02',
     fragmento:
-      'Ahora mismo estamos migrando el histórico completo al esquema nuevo, y esperamos terminar antes de la ola de campo del año entrante.',
+      'Ahora mismo estamos migrando el histórico completo de las tres versiones del instrumento al esquema nuevo de metadatos, un proceso que implica revisar observación por observación cuál versión le corresponde y verificar que ningún registro quede sin su identificador de procedencia. Esperamos terminar antes de que arranque la ola de campo del año entrante, porque queremos que la nueva ola nazca ya dentro del esquema versionado, sin necesidad de una migración retroactiva adicional.',
     hablante: 'Andrés Felipe Restrepo Ocampo',
     segundoInicio: 1810,
     segundoFin: 1834,
@@ -242,7 +250,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-02-07',
     idConferencia: 'cnf-alc-02',
     fragmento:
-      'Documentar la procedencia cuesta cerca del quince por ciento del tiempo de campo, y es el quince por ciento mejor invertido del proyecto.',
+      'Documentar la procedencia de cada dato cuesta, en nuestra experiencia, cerca del quince por ciento del tiempo total de campo: capacitar al equipo en el registro de metadatos, revisar que cada formulario quede correctamente etiquetado, y auditar una muestra al cierre de cada jornada. Es un costo real y hay que presupuestarlo desde el diseño del estudio, no como un añadido de último momento. Con todo, sostenemos que es el quince por ciento mejor invertido del proyecto, porque es lo que hace que los otros diez años de trabajo sigan siendo útiles dentro de otros diez más.',
     hablante: 'Andrés Felipe Restrepo Ocampo',
     segundoInicio: 2115,
     segundoFin: 2140,
@@ -273,7 +281,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-03-02',
     idConferencia: 'cnf-alc-03',
     fragmento:
-      'Comparamos la distribución del puntaje contra el censo, desagregando por zona rural y urbana y por jefatura de hogar.',
+      'Comparamos la distribución del puntaje de focalización contra los datos del censo más reciente, desagregando los resultados por zona rural y urbana y por jefatura de hogar, entre otras variables demográficas disponibles. La comparación no buscaba un promedio agregado, que ya sabíamos que se veía razonable, sino las colas de la distribución: dónde el puntaje se aleja más de lo que el censo describe como la composición real de la población elegible. Ahí es donde apareció el patrón que motivó el resto del estudio.',
     hablante: 'Lucía Ferreira Nogueira',
     segundoInicio: 610,
     segundoFin: 631,
@@ -302,7 +310,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-03-04',
     idConferencia: 'cnf-alc-03',
     fragmento:
-      'La estrategia que proponemos es auditar el registro de origen antes que el modelo, porque ahí está el noventa por ciento del problema.',
+      'La estrategia que proponemos, y que ya empezamos a implementar con dos de los programas analizados, es auditar el registro administrativo de origen antes que el modelo de focalización, porque ahí está, según nuestras estimaciones, cerca del noventa por ciento del problema. Revisar el algoritmo sin antes limpiar el dato de entrada es optimizar la parte equivocada del sistema. La auditoría de origen incluye comparar campos clave contra fuentes independientes y flagear los registros con inconsistencias antes de que entren siquiera al cálculo del puntaje.',
     hablante: 'Lucía Ferreira Nogueira',
     segundoInicio: 1350,
     segundoFin: 1376,
@@ -330,7 +338,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-03-06',
     idConferencia: 'cnf-alc-03',
     fragmento:
-      'Estamos en la etapa de contraste con los equipos territoriales, que son quienes ven los casos que el puntaje deja afuera.',
+      'Estamos en la etapa de contraste con los equipos territoriales, porque son ellos quienes ven, cara a cara, los casos concretos que el puntaje deja afuera del programa. Les presentamos una muestra de hogares excluidos según nuestro modelo y les pedimos su valoración de campo, sin decirles de antemano cuáles habíamos identificado como probablemente mal excluidos. El grado de coincidencia entre su criterio y nuestro análisis va a ser una de las validaciones más importantes del estudio.',
     hablante: 'Lucía Ferreira Nogueira',
     segundoInicio: 2090,
     segundoFin: 2113,
@@ -344,7 +352,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-03-07',
     idConferencia: 'cnf-alc-03',
     fragmento:
-      'Reconstruimos el puntaje de sesenta mil hogares con los datos corregidos, y el veintidós por ciento cambió de tramo.',
+      'Reconstruimos el puntaje de sesenta mil hogares usando los mismos algoritmos originales pero con los campos de vivienda ya corregidos contra la fuente independiente, y el veintidós por ciento de esos hogares cambió de tramo de clasificación. No todos los cambios favorecieron al hogar: en algunos casos el puntaje corregido subió, sacando del programa a hogares que habían entrado por un error de captura en sentido contrario. Ese hallazgo fue el que terminó de convencer al organismo de que el problema no era ideológico ni de diseño del algoritmo, sino de calidad del dato de entrada.',
     hablante: 'Lucía Ferreira Nogueira',
     segundoInicio: 2440,
     segundoFin: 2463,
@@ -358,7 +366,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-03-08',
     idConferencia: 'cnf-alc-03',
     fragmento:
-      'Incorporamos una vía de reclamación con revisión humana obligatoria para todo caso que quede a menos de dos puntos del corte.',
+      'Incorporamos una vía de reclamación con revisión humana obligatoria para todo caso que quede a menos de dos puntos del corte de elegibilidad, que es la zona donde un error de captura pesa más y donde el margen de duda es mayor. Cualquier hogar en ese rango puede solicitar una revisión presencial, y esa revisión no puede resolverse únicamente recalculando el puntaje: un funcionario tiene que verificar en terreno al menos uno de los campos en disputa. El mecanismo todavía es nuevo, pero ya redujo el tiempo de respuesta a reclamos de meses a semanas.',
     hablante: 'Lucía Ferreira Nogueira',
     segundoInicio: 2810,
     segundoFin: 2836,
@@ -375,7 +383,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-05-01',
     idConferencia: 'cnf-alc-05',
     fragmento:
-      'Instalamos cuarenta nodos de bajo costo en tres cuencas, midiendo caudal y turbidez cada quince minutos.',
+      'Instalamos cuarenta nodos de sensórica de bajo costo distribuidos en tres cuencas de la región, cada uno midiendo caudal y turbidez cada quince minutos y transmitiendo los datos por radio a una estación base local. Elegimos hardware de bajo costo a propósito, sabiendo que perderíamos algo de precisión frente a equipos comerciales, porque el objetivo del piloto era demostrar que un despliegue de esta escala era financieramente sostenible para un grupo de investigación sin presupuesto de infraestructura permanente.',
     hablante: 'Paula Andrea Cifuentes Mora',
     segundoInicio: 165,
     segundoFin: 184,
@@ -389,7 +397,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-05-02',
     idConferencia: 'cnf-alc-05',
     fragmento:
-      'A los dieciocho meses, la mitad de los nodos había dejado de reportar. Ninguno falló por el sensor: fallaron la batería y el vandalismo.',
+      'A los dieciocho meses de despliegue, la mitad de los cuarenta nodos había dejado de reportar datos de forma consistente. Revisamos cada caso antes de sacar conclusiones, y el patrón fue claro: ninguno falló por el sensor en sí, que resultó ser el componente más confiable de todo el sistema. Fallaron sobre todo la batería, por un dimensionamiento insuficiente para los meses de menor radiación solar, y el vandalismo, concentrado en los nodos más cercanos a zonas de tránsito peatonal.',
     hablante: 'Paula Andrea Cifuentes Mora',
     segundoInicio: 480,
     segundoFin: 506,
@@ -418,7 +426,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-05-04',
     idConferencia: 'cnf-alc-05',
     fragmento:
-      'Pasamos a un esquema de custodia comunitaria, con una persona de cada vereda responsable del nodo más cercano.',
+      'Pasamos a un esquema de custodia comunitaria, en el que una persona de cada vereda queda como responsable directa del nodo más cercano a su vivienda o su parcela. Esa persona recibe una capacitación breve, una compensación simbólica por el tiempo dedicado, y un canal directo para reportar cualquier anomalía visible sin tener que esperar a que el equipo técnico note la caída en los datos. Desde que adoptamos el esquema, la tasa de vandalismo bajó de forma notable y el tiempo de detección de fallas de batería se redujo a días en vez de semanas.',
     hablante: 'Paula Andrea Cifuentes Mora',
     segundoInicio: 1120,
     segundoFin: 1142,
@@ -446,7 +454,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-alc-05-06',
     idConferencia: 'cnf-alc-05',
     fragmento:
-      'Vamos a escalar a doce cuencas el año entrante, ya con el modelo de custodia incorporado desde el diseño.',
+      'Vamos a escalar el despliegue a doce cuencas el año entrante, ya con el modelo de custodia comunitaria incorporado desde el diseño inicial y no como una corrección posterior. Eso significa identificar y capacitar a los custodios locales antes de instalar un solo nodo, en vez de instalar primero y buscar apoyo comunitario después, que fue el orden que seguimos, sin planearlo, la primera vez.',
     hablante: 'Paula Andrea Cifuentes Mora',
     segundoInicio: 1790,
     segundoFin: 1812,
@@ -476,7 +484,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-01-02',
     idConferencia: 'cnf-ber-01',
     fragmento:
-      'Revisamos los actos administrativos de dieciséis universidades y rastreamos qué pasó con el repositorio cinco años después.',
+      'Revisamos los actos administrativos con los que dieciséis universidades públicas crearon su política de datos abiertos, y luego rastreamos qué había pasado con el repositorio correspondiente cinco años después de esa creación formal. El seguimiento incluyó revisar la actividad de depósito, el estado técnico del repositorio y si la política seguía vigente sin modificaciones que la vaciaran de contenido. No nos interesaba solo si el repositorio existía, sino si seguía cumpliendo la función para la que se creó.',
     hablante: 'Esteban Quiroga Lemus',
     segundoInicio: 465,
     segundoFin: 488,
@@ -504,7 +512,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-01-04',
     idConferencia: 'cnf-ber-01',
     fragmento:
-      'Lo que distingue a las que siguen vivas es que el depósito está atado al proceso de cierre de proyecto, no a la buena voluntad.',
+      'Lo que distingue a las cuatro universidades cuyo repositorio sigue realmente activo no es el tamaño del presupuesto ni la calidad técnica de la plataforma, sino que el depósito de datos está atado formalmente al proceso administrativo de cierre de proyecto de investigación. En esas instituciones, un proyecto no se considera cerrado hasta que los datos quedan depositados, con lo cual el depósito deja de depender de la buena voluntad de cada investigador y pasa a ser un requisito de trámite, igual que entregar el informe final.',
     hablante: 'Esteban Quiroga Lemus',
     segundoInicio: 1090,
     segundoFin: 1115,
@@ -532,7 +540,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-01-06',
     idConferencia: 'cnf-ber-01',
     fragmento:
-      'Estamos redactando un modelo de acuerdo interinstitucional, para no volver a empezar de cero en cada universidad.',
+      'Estamos redactando un modelo de acuerdo interinstitucional que cualquier universidad pueda adaptar y firmar, para que cada institución no tenga que empezar de cero en el diseño legal y administrativo de su política de datos abiertos. El borrador ya incorpora la cláusula de continuidad que mencionamos antes, y estamos revisándolo con las oficinas jurídicas de tres universidades antes de proponerlo como modelo de referencia para el resto del sistema universitario público.',
     hablante: 'Esteban Quiroga Lemus',
     segundoInicio: 1755,
     segundoFin: 1778,
@@ -546,7 +554,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-01-07',
     idConferencia: 'cnf-ber-01',
     fragmento:
-      'Incluimos una cláusula de continuidad que obliga a designar responsable del repositorio en cada cambio de administración.',
+      'Incluimos una cláusula de continuidad que obliga a designar, de forma explícita y documentada, un responsable del repositorio institucional en cada cambio de administración universitaria, sin importar quién ocupe el cargo. La cláusula también exige que la persona saliente entregue un informe breve del estado del repositorio a quien la releve, algo que en las universidades sin esta regla simplemente no ocurría, y que era, según encontramos, la causa más directa detrás de los repositorios abandonados.',
     hablante: 'Esteban Quiroga Lemus',
     segundoInicio: 2050,
     segundoFin: 2075,
@@ -560,7 +568,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-01-08',
     idConferencia: 'cnf-ber-01',
     fragmento:
-      'El costo de sostener un repositorio activo es cercano al uno por ciento del presupuesto de investigación de la institución.',
+      'El costo de sostener un repositorio activo, según nuestras estimaciones sobre las cuatro universidades donde el modelo funciona, es cercano al uno por ciento del presupuesto anual de investigación de la institución, contando personal dedicado, infraestructura y curaduría básica. Es una cifra pequeña frente al argumento que más veces escuchamos como excusa para no sostenerlo, que es la falta de presupuesto. El problema real, en la mayoría de los casos que revisamos, no era financiero sino de continuidad institucional.',
     hablante: 'Esteban Quiroga Lemus',
     segundoInicio: 2380,
     segundoFin: 2405,
@@ -576,7 +584,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-02-01',
     idConferencia: 'cnf-ber-02',
     fragmento:
-      'El modelo tenía ochenta y siete por ciento de exactitud global y fallaba en la mitad de los casos que de verdad importaban.',
+      'El modelo original tenía ochenta y siete por ciento de exactitud global, una cifra que en cualquier reporte técnico se vería como un éxito. Pero al mirar específicamente los casos de alto riesgo, que son los que de verdad le importan a un programa de retención, encontramos que fallaba en cerca de la mitad de ellos: los clasificaba como bajo riesgo cuando en realidad terminaban desertando. La exactitud global estaba escondiendo el error que más costaba.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 240,
     segundoFin: 264,
@@ -590,7 +598,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-02-02',
     idConferencia: 'cnf-ber-02',
     fragmento:
-      'Desagregamos el desempeño por cohorte de ingreso, por jornada y por programa, en vez de reportar una sola métrica.',
+      'Desagregamos el desempeño del modelo por cohorte de ingreso, por jornada académica y por programa, en vez de conformarnos con reportar una sola métrica agregada como suele hacerse. Esa desagregación fue la que reveló que el modelo funcionaba razonablemente bien para estudiantes de jornada diurna y programas presenciales tradicionales, pero se degradaba de forma notable para jornada nocturna y programas técnicos, precisamente los grupos con mayor riesgo real de deserción.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 560,
     segundoFin: 582,
@@ -618,7 +626,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-02-04',
     idConferencia: 'cnf-ber-02',
     fragmento:
-      'Propusimos fijar el umbral por cohorte y no globalmente, aceptando más falsos positivos en los grupos de mayor riesgo.',
+      'Propusimos fijar el umbral de alerta por cohorte y no de forma global para toda la institución, aceptando conscientemente más falsos positivos en los grupos de mayor riesgo real, como jornada nocturna. La lógica es que el costo de una alerta de más, que en la práctica significa una llamada de seguimiento del programa de bienestar, es mucho menor que el costo de una alerta que nunca llega para un estudiante que sí necesitaba la intervención.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 1245,
     segundoFin: 1270,
@@ -632,7 +640,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-02-05',
     idConferencia: 'cnf-ber-02',
     fragmento:
-      'Ya tenemos el piloto corriendo en dos facultades, y la evaluación de impacto está prevista para el semestre siguiente.',
+      'Ya tenemos el piloto del modelo ajustado corriendo en dos facultades, generando alertas semanales que llegan directamente al programa de bienestar estudiantil de cada una. La evaluación formal de impacto, comparando tasas de deserción contra un grupo de facultades sin el piloto, está prevista para el semestre siguiente, cuando haya suficiente tiempo de seguimiento para que la comparación tenga sentido estadístico.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 1620,
     segundoFin: 1644,
@@ -648,7 +656,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-04-01',
     idConferencia: 'cnf-ber-04',
     fragmento:
-      'La encuesta decía que el setenta por ciento usaba la plataforma. Las entrevistas mostraron que la abrían una vez al mes para cumplir el requisito.',
+      'La encuesta estructurada decía que el setenta por ciento de los productores usaba la plataforma de forma regular, un número que hubiéramos reportado sin dudar si no hubiéramos hecho también el trabajo cualitativo. Las veintiocho entrevistas en profundidad mostraron una realidad distinta: buena parte de ese setenta por ciento la abría apenas una vez al mes, justo antes de la fecha en que sabían que un extensionista podía preguntarles, para poder decir que la usaban.',
     hablante: 'Daniela Marchena Solís',
     segundoInicio: 280,
     segundoFin: 307,
@@ -662,7 +670,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-04-02',
     idConferencia: 'cnf-ber-04',
     fragmento:
-      'Aplicamos una encuesta panel en tres olas y veintiocho entrevistas en profundidad con una submuestra estratificada.',
+      'Aplicamos una encuesta panel en tres olas separadas por seis meses cada una, y complementamos ese componente cuantitativo con veintiocho entrevistas en profundidad realizadas a una submuestra estratificada por nivel de adopción declarada. La estratificación fue clave: entrevistamos tanto a quienes decían usar la plataforma todo el tiempo como a quienes decían no usarla nunca, para poder contrastar el discurso contra la práctica en los dos extremos.',
     hablante: 'Daniela Marchena Solís',
     segundoInicio: 590,
     segundoFin: 613,
@@ -676,7 +684,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-04-03',
     idConferencia: 'cnf-ber-04',
     fragmento:
-      'Adopción declarada y adopción observada no son dos medidas de lo mismo con distinto error. Son dos cosas distintas.',
+      'Adopción declarada y adopción observada no son dos medidas del mismo fenómeno con distinto margen de error, como suele asumirse en los estudios que solo usan encuesta. Son, sostenemos, dos cosas conceptualmente distintas: una mide lo que la persona cree que debe responder, y la otra mide lo que efectivamente hace. Tratarlas como intercambiables es el error metodológico más común que encontramos en la literatura sobre adopción tecnológica rural.',
     hablante: 'Daniela Marchena Solís',
     segundoInicio: 940,
     segundoFin: 963,
@@ -704,7 +712,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-04-05',
     idConferencia: 'cnf-ber-04',
     fragmento:
-      'Cambiamos el instrumento para preguntar por la última vez que la usó y para qué, en lugar de preguntar si la usa.',
+      'Cambiamos el instrumento de la tercera ola para preguntar por la última vez concreta que la persona usó la plataforma y para qué la usó ese día, en lugar de preguntar de forma general si la usa o no. Esa reformulación obliga a la persona a recordar un episodio real en vez de emitir un juicio general sobre sí misma, y es una técnica que tomamos prestada de la literatura sobre sesgo de deseabilidad social en encuestas de comportamiento.',
     hablante: 'Daniela Marchena Solís',
     segundoInicio: 1630,
     segundoFin: 1654,
@@ -718,7 +726,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-04-06',
     idConferencia: 'cnf-ber-04',
     fragmento:
-      'Con la pregunta reformulada, la adopción declarada bajó del setenta al treinta y cuatro por ciento.',
+      'Con la pregunta reformulada, la adopción declarada bajó del setenta al treinta y cuatro por ciento, un número mucho más cercano a lo que las entrevistas cualitativas ya venían sugiriendo. La caída no significa que menos gente use la plataforma que antes: significa que la primera cifra nunca reflejó el uso real, y que el instrumento original estaba, sin que lo notáramos, midiendo otra cosa.',
     hablante: 'Daniela Marchena Solís',
     segundoInicio: 1940,
     segundoFin: 1962,
@@ -732,7 +740,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-ber-04-07',
     idConferencia: 'cnf-ber-04',
     fragmento:
-      'Estamos preparando la cuarta ola con observación directa en una submuestra, para cerrar el triángulo.',
+      'Estamos preparando la cuarta ola del panel, que va a incorporar observación directa en una submuestra: en vez de preguntar, vamos a acompañar a un grupo de productores durante una jornada normal de trabajo y registrar si abren la plataforma sin que nadie se lo pregunte. La idea es cerrar el triángulo entre lo declarado, lo recordado en entrevista y lo efectivamente observado.',
     hablante: 'Daniela Marchena Solís',
     segundoInicio: 2260,
     segundoFin: 2282,
@@ -748,7 +756,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-01',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Catorce millones de registros y ninguna forma de saber, para la mitad, en qué punto de atención se capturaron.',
+      'Catorce millones de registros acumulados en el sistema, y para la mitad de ellos no existe ninguna forma confiable de saber en qué punto de atención se capturaron originalmente. El campo que debería contener esa información se llenó de formas distintas a lo largo de los años, sin un catálogo controlado detrás, así que hoy es prácticamente inútil para cualquier análisis que necesite saber de dónde viene el dato.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 190,
     segundoFin: 212,
@@ -762,7 +770,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-02',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Construimos indicadores de completitud, consistencia y oportunidad, y los calculamos por institución y por mes.',
+      'Construimos tres familias de indicadores, completitud, consistencia y oportunidad, y los calculamos de forma desagregada por institución y por mes, no como un promedio nacional que escondería las diferencias reales. Completitud mide si el campo tiene un valor; consistencia, si ese valor cae dentro del catálogo esperado; oportunidad, si el registro se capturó dentro de la ventana de tiempo razonable después de la atención.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 430,
     segundoFin: 452,
@@ -789,7 +797,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-04',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'La variable de ocupación tenía noventa y un por ciento de completitud y solo doce por ciento de valores dentro del catálogo oficial.',
+      'La variable de ocupación es un buen ejemplo de por qué no basta con medir completitud sola: tenía noventa y un por ciento de completitud, es decir, casi todos los registros traían algo escrito ahí, pero solo el doce por ciento de esos valores caía dentro del catálogo oficial de ocupaciones. El resto eran variaciones de texto libre, abreviaturas distintas o directamente errores de digitación, así que un indicador que solo mirara completitud habría reportado la variable como saludable.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1010,
     segundoFin: 1037,
@@ -803,7 +811,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-05',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Priorizamos la corrección en el punto de captura antes que cualquier trabajo de depuración aguas abajo.',
+      'Priorizamos la corrección en el punto de captura, donde el dato nace, antes que cualquier trabajo de depuración aguas abajo sobre la base ya consolidada. La razón es simple: depurar aguas abajo corrige el histórico una sola vez, pero si el problema de captura sigue activo, cada mes que pasa se sigue generando el mismo error. Invertir primero en el punto de captura es más lento de ver reflejado en los indicadores, pero es la única corrección que no hay que repetir.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1320,
     segundoFin: 1342,
@@ -817,7 +825,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-06',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Un tablero de calidad que nadie mira en la institución que captura no cambia absolutamente nada.',
+      'Un tablero de calidad, por sofisticado que sea, que nadie mira en la institución que efectivamente captura el dato no cambia absolutamente nada en la práctica. Puede ganar premios de innovación en datos abiertos y no mover ni un punto porcentual la consistencia de una variable, porque el tablero vive en una oficina central y quien digita el dato en el punto de atención nunca lo ve.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1615,
     segundoFin: 1634,
@@ -831,7 +839,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-07',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Devolvimos a cada institución su propio reporte mensual, comparado contra el promedio de instituciones parecidas.',
+      'Devolvimos a cada institución su propio reporte mensual de calidad, comparado explícitamente contra el promedio de instituciones de tamaño y nivel de complejidad parecidos, no contra el promedio nacional que no le decía nada útil a nadie. El reporte llegaba con nombre propio a la persona responsable de digitación en cada sede, no como una cifra anónima en un tablero central.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 1905,
     segundoFin: 1929,
@@ -873,7 +881,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-10',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Estamos en la fase de extender el esquema de reportes a los registros de urgencias, que son los más incompletos.',
+      'Estamos en la fase de extender el esquema de reportes mensuales a los registros de urgencias, que resultaron ser, de lejos, los más incompletos de todo el sistema: el ritmo de atención deja poco margen para el registro cuidadoso, y es exactamente donde más se necesita la trazabilidad. Adaptar el esquema a ese contexto va a requerir simplificar el formulario, no solo replicar lo que funcionó en consulta externa.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 2760,
     segundoFin: 2784,
@@ -887,7 +895,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-11',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Ningún estudio que use estos registros debería publicarse sin reportar la calidad de las variables que usó.',
+      'Ningún estudio que use estos registros administrativos debería publicarse sin reportar, aunque sea en un anexo, la calidad de las variables específicas que usó para sus conclusiones. No pedimos que todos los estudios midan calidad con el mismo detalle que nosotros, pero sí que digan explícitamente qué tan completa y consistente era la variable clave de su análisis, para que quien lea el estudio pueda juzgar por sí mismo cuánto peso darle al resultado.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 2980,
     segundoFin: 3003,
@@ -901,7 +909,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-01-12',
     idConferencia: 'cnf-zul-01',
     fragmento:
-      'Publicamos el código de los indicadores para que cualquier institución los calcule sobre sus propios datos.',
+      'Publicamos el código completo de los indicadores, con su documentación, para que cualquier institución del sistema pueda calcularlos directamente sobre sus propios datos sin depender de que nosotros lo hagamos por ellos. Ya son tres instituciones distintas las que lo han adaptado a su infraestructura, y una de ellas encontró un error en nuestro cálculo de oportunidad que ya corregimos gracias a esa retroalimentación.',
     hablante: 'Mariana Escobar Vallejo',
     segundoInicio: 3155,
     segundoFin: 3178,
@@ -917,7 +925,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-03-01',
     idConferencia: 'cnf-zul-03',
     fragmento:
-      'Hicimos tres talleres de codiseño con personas que llevaban el trámite hecho y con personas que lo habían abandonado a medias.',
+      'Hicimos tres talleres de codiseño, cada uno con una mezcla deliberada de personas que ya habían completado el trámite y personas que lo habían abandonado a medias en algún punto del proceso. Esa mezcla generaba una tensión productiva: quien completó el trámite explicaba cómo lo resolvió, y quien lo abandonó señalaba exactamente dónde se había atascado, muchas veces en el mismo paso que el otro grupo describía como sencillo.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 225,
     segundoFin: 250,
@@ -945,7 +953,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-03-03',
     idConferencia: 'cnf-zul-03',
     fragmento:
-      'El formulario pasó de veintiocho campos a once, y nueve de los eliminados no los usaba ninguna dependencia.',
+      'El formulario pasó de veintiocho campos a once después del proceso de codiseño, una reducción que no fue solo cosmética: al revisar con las dependencias internas para qué se usaba cada campo, encontramos que nueve de los diecisiete eliminados no los consultaba absolutamente ninguna oficina. Habían sobrevivido por inercia administrativa, no porque alguien los necesitara.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 880,
     segundoFin: 903,
@@ -959,7 +967,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-03-04',
     idConferencia: 'cnf-zul-03',
     fragmento:
-      'Llevamos a los talleres el formulario impreso y les pedimos que tacharan, en vez de mostrarles un prototipo terminado.',
+      'Llevamos a los talleres el formulario impreso tal como existía, con todos sus veintiocho campos, y les pedimos a los participantes que tacharan directamente sobre el papel lo que les parecía innecesario o confuso, en vez de mostrarles de entrada un prototipo ya rediseñado por nosotros. Esa decisión metodológica cambió la dinámica por completo: la gente discute con más libertad tachando algo existente que opinando sobre una propuesta ajena que siente que ya viene decidida.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 1235,
     segundoFin: 1259,
@@ -987,7 +995,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-zul-03-06',
     idConferencia: 'cnf-zul-03',
     fragmento:
-      'Estamos replicando el método en dos trámites más, con el equipo de la alcaldía facilitando directamente.',
+      'Estamos replicando el método de codiseño en dos trámites municipales más, esta vez con el propio equipo de la alcaldía facilitando los talleres directamente, con nuestro acompañamiento como soporte metodológico más que como conductores del proceso. La meta de esta fase es que el método quede instalado como capacidad interna de la administración, no como algo que depende de que nosotros volvamos cada vez.',
     hablante: 'Natalia Bermúdez Arango',
     segundoInicio: 2020,
     segundoFin: 2043,
@@ -1003,7 +1011,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-pen-01-01',
     idConferencia: 'cnf-pen-01',
     fragmento:
-      'Usamos dos años de validaciones de tarjeta por estación y por franja de quince minutos, sin ninguna encuesta de por medio.',
+      'Usamos dos años completos de validaciones de tarjeta, agregadas por estación y por franja de quince minutos, sin ninguna encuesta de por medio: todo el análisis parte de datos transaccionales que el sistema ya generaba de todas formas. Esa decisión evitó el costo y el sesgo de una encuesta de movilidad, pero también significó que tuvimos que inferir el propósito del viaje a partir de patrones de uso, en vez de preguntarlo directamente.',
     hablante: 'Tomás Iriarte Villalba',
     segundoInicio: 175,
     segundoFin: 199,
@@ -1017,7 +1025,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-pen-01-02',
     idConferencia: 'cnf-pen-01',
     fragmento:
-      'Sin marcar los días atípicos, el error del pronóstico se duplicaba en las dos semanas siguientes a cada evento masivo.',
+      'Sin marcar los días atípicos en el modelo, el error del pronóstico se duplicaba de forma consistente en las dos semanas siguientes a cada evento masivo en la ciudad, ya fuera un concierto, un partido o un cierre vial prolongado. El modelo aprendía esos picos como si fueran parte del patrón normal, y luego los proyectaba hacia adelante donde no correspondía, contaminando el pronóstico de días completamente ordinarios.',
     hablante: 'Tomás Iriarte Villalba',
     segundoInicio: 520,
     segundoFin: 545,
@@ -1044,7 +1052,7 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     id: 'fch-pen-01-04',
     idConferencia: 'cnf-pen-01',
     fragmento:
-      'Incorporamos un calendario de eventos de la ciudad como variable externa, y el error volvió al nivel de un día ordinario.',
+      'Incorporamos un calendario de eventos de la ciudad como variable externa al modelo, construido a partir de permisos de aforo público y anuncios oficiales, y el error del pronóstico en los días posteriores a un evento volvió al nivel de un día ordinario. Mantener ese calendario actualizado terminó siendo, de forma inesperada, más trabajo operativo que ajustar el modelo en sí.',
     hablante: 'Tomás Iriarte Villalba',
     segundoInicio: 1290,
     segundoFin: 1315,

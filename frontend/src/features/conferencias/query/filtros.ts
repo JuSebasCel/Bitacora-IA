@@ -57,21 +57,41 @@ export function filtrarPorSegmento(
   return visibles.filter((visible) => visible.procedencia === procedencia)
 }
 
-/** Busca sobre título, ponente y evento. Un texto vacío no filtra nada. */
+/** Separa en palabras por cualquier tramo que no sea letra o número. */
+function palabrasDe(texto: string): readonly string[] {
+  return texto.split(/[^a-z0-9]+/).filter((palabra) => palabra.length > 0)
+}
+
+/*
+  Busca sobre título, ponente y evento por inicio de palabra, no por
+  subcadena. Con subcadena sin límites, buscar "IA" encontraba cualquier
+  conferencia cuyo ponente se llamara "Mariana" o "Lucía", o cuyo evento
+  mencionara "Ingeniería": "ia" aparece a mitad de esas palabras sin que
+  tengan nada que ver con lo que se buscaba. Coincidir por inicio de palabra
+  evita esos falsos positivos y conserva la búsqueda incremental de siempre
+  ("algorit" sigue encontrando "algorítmicos" mientras se escribe).
+
+  Con varias palabras en la búsqueda, cada una se exige por separado (todas a
+  la vez, en cualquier orden): así "revision sistematica" encuentra el título
+  aunque las palabras no aparezcan pegadas de esa forma exacta en el texto.
+*/
 export function buscar(
   visibles: readonly ConferenciaVisible[],
   texto: string,
 ): readonly ConferenciaVisible[] {
-  const aguja = normalizarTexto(texto)
+  const palabrasBuscadas = palabrasDe(normalizarTexto(texto))
 
-  if (aguja.length === 0) {
+  if (palabrasBuscadas.length === 0) {
     return visibles
   }
 
   return visibles.filter((visible) => {
     const { titulo, ponente, evento } = visible.conferencia
+    const palabrasDelTexto = palabrasDe(normalizarTexto(`${titulo} ${ponente} ${evento}`))
 
-    return normalizarTexto(`${titulo} ${ponente} ${evento}`).includes(aguja)
+    return palabrasBuscadas.every((buscada) =>
+      palabrasDelTexto.some((palabra) => palabra.startsWith(buscada)),
+    )
   })
 }
 

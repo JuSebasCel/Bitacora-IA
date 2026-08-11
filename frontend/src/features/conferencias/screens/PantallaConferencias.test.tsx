@@ -176,7 +176,8 @@ describe('PantallaConferencias, controles', () => {
     montar()
     await listado()
 
-    await usuario.selectOptions(screen.getByLabelText(/estado/i), 'procesada')
+    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
+    await usuario.click(await screen.findByRole('radio', { name: 'Procesada' }))
 
     await waitFor(async () => expect(await filas()).toHaveLength(6))
   })
@@ -186,7 +187,8 @@ describe('PantallaConferencias, controles', () => {
     montar()
     await listado()
 
-    await usuario.selectOptions(screen.getByLabelText(/ordenar/i), 'titulo-asc')
+    await usuario.click(screen.getByRole('button', { name: /ordenar por/i }))
+    await usuario.click(await screen.findByRole('radio', { name: 'Título, de la A a la Z' }))
 
     await waitFor(() => expect(ubicacion()).toContain('orden=titulo-asc'))
 
@@ -199,10 +201,29 @@ describe('PantallaConferencias, controles', () => {
     montar()
     await listado()
 
-    await usuario.click(screen.getByRole('checkbox', { name: 'revisión 2026' }))
+    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
+    await usuario.click(await screen.findByRole('checkbox', { name: 'revisión 2026' }))
 
     await waitFor(async () => expect(await filas()).toHaveLength(1))
     expect(ubicacion()).toContain('etiquetas=')
+  })
+
+  /*
+    El contador sobre el botón "Filtros" es lo único que dice cuántos filtros
+    están activos sin tener que abrir el panel: si no se actualizara, alguien
+    podría dejar un filtro puesto sin saberlo.
+  */
+  it('muestra en el botón de filtros cuántos están activos', async () => {
+    const usuario = userEvent.setup()
+    montar()
+    await listado()
+
+    expect(screen.queryByText('1', { selector: 'span' })).not.toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
+    await usuario.click(await screen.findByRole('radio', { name: 'Procesada' }))
+
+    expect(screen.getByRole('button', { name: 'Filtros' })).toHaveTextContent('1')
   })
 })
 
@@ -241,29 +262,46 @@ describe('PantallaConferencias, estados vacíos', () => {
 })
 
 describe('PantallaConferencias, etiquetas', () => {
+  /*
+    Crear una etiqueta abre el panel de filtros, dispara el diálogo modal
+    desde el chip "Nueva etiqueta", y ese diálogo se cierra solo al crear con
+    éxito. Para comprobar que la etiqueta quedó disponible hay que volver a
+    abrir el panel: crearla no lo deja abierto a propósito, un diálogo por
+    encima de un popover abierto sería dos capas flotantes a la vez.
+  */
   it('deja disponible una etiqueta recién creada', async () => {
     const usuario = userEvent.setup()
     montar()
     await listado()
 
-    await usuario.type(screen.getByLabelText(/nueva etiqueta/i), 'art2')
-    await usuario.click(screen.getByRole('button', { name: /crear etiqueta/i }))
+    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
+    await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))
+    await usuario.type(await screen.findByLabelText('Nombre'), 'art2')
+    await usuario.click(screen.getByRole('button', { name: 'Crear' }))
 
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
     expect(await screen.findByRole('checkbox', { name: 'art2' })).toBeInTheDocument()
   })
 
-  it('traduce el choque de nombres sin mostrar el código crudo', async () => {
+  it('traduce el choque de nombres sin mostrar el código crudo, sin cerrar el diálogo', async () => {
     const usuario = userEvent.setup()
     montar()
     await listado()
 
-    await usuario.type(screen.getByLabelText(/nueva etiqueta/i), 'tesis')
-    await usuario.click(screen.getByRole('button', { name: /crear etiqueta/i }))
+    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
+    await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))
+    await usuario.type(await screen.findByLabelText('Nombre'), 'tesis')
+    await usuario.click(screen.getByRole('button', { name: 'Crear' }))
 
     const alerta = await screen.findByRole('alert')
 
     expect(alerta).toHaveTextContent(mensajeDeError('ETQ_YA_EXISTE'))
     expect(alerta.textContent).not.toContain('ETQ_')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   it('muestra sobre cada fila las etiquetas que esa persona le puso', async () => {

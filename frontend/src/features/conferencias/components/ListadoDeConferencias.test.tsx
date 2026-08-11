@@ -33,6 +33,9 @@ function montar(estado: EstadoDelListado, filas: readonly DatosDeFila[] = FILAS,
         segmento="todas"
         busqueda=""
         alQuitarFiltros={() => undefined}
+        misEtiquetas={[]}
+        alAlternarAsignacion={() => undefined}
+        alCrearYAsignar={() => ({ ok: false, mensaje: 'sin usar en esta prueba' })}
         {...extra}
       />
     </MemoryRouter>,
