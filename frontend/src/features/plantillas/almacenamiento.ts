@@ -16,39 +16,56 @@ import type { Plantilla } from './data'
 
 export const CLAVE_PLANTILLAS = 'bitacora-ai.plantillas'
 
-function esRectangulo(valor: unknown): boolean {
+/*
+  No se valida la forma interna del documento TipTap más allá de "es un nodo
+  `doc` con contenido": el esquema real (qué tipos de nodo/atributos son
+  válidos) lo aplica el propio editor al montar, y una entrada corrupta ahí
+  cae al mismo camino de "se descarta en silencio" que una plantilla inválida
+  completa.
+*/
+function esContenido(valor: unknown): boolean {
   if (typeof valor !== 'object' || valor === null) {
     return false
   }
 
   const candidato = valor as Record<string, unknown>
 
-  return (
-    typeof candidato['x'] === 'number' &&
-    typeof candidato['y'] === 'number' &&
-    typeof candidato['ancho'] === 'number' &&
-    typeof candidato['alto'] === 'number'
-  )
+  return candidato['type'] === 'doc' && Array.isArray(candidato['content'])
 }
 
-function esElemento(valor: unknown): boolean {
+function esOrigenDeDato(valor: unknown): boolean {
   if (typeof valor !== 'object' || valor === null) {
     return false
   }
 
   const candidato = valor as Record<string, unknown>
 
-  if (typeof candidato['id'] !== 'string' || !esRectangulo(candidato['posicion'])) {
+  return candidato['tipo'] === 'campo'
+    ? typeof candidato['campo'] === 'string'
+    : candidato['tipo'] === 'personalizado' && typeof candidato['etiqueta'] === 'string'
+}
+
+function esMarcadorDeDocx(valor: unknown): boolean {
+  if (typeof valor !== 'object' || valor === null) {
+    return false
+  }
+
+  const candidato = valor as Record<string, unknown>
+
+  if (typeof candidato['id'] !== 'string' || !esOrigenDeDato(candidato['origenDeDato'])) {
     return false
   }
 
   switch (candidato['tipo']) {
-    case 'texto':
-      return typeof candidato['rol'] === 'string' && typeof candidato['contenido'] === 'string'
-    case 'imagen':
-      return typeof candidato['url'] === 'string' && typeof candidato['nombreDeArchivo'] === 'string'
-    case 'marcador':
-      return typeof candidato['campo'] === 'string' && typeof candidato['formato'] === 'string'
+    case 'simple':
+      return (
+        typeof candidato['textoOriginal'] === 'string' &&
+        typeof candidato['contexto'] === 'string' &&
+        typeof candidato['formato'] === 'string'
+      )
+    case 'condicional':
+    case 'repetible':
+      return typeof candidato['descripcion'] === 'string'
     default:
       return false
   }
@@ -61,16 +78,34 @@ function esPlantilla(valor: unknown): valor is Plantilla {
 
   const candidato = valor as Record<string, unknown>
 
-  return (
+  const camposComunes =
     typeof candidato['id'] === 'string' &&
     typeof candidato['nombre'] === 'string' &&
-    typeof candidato['colorPrincipal'] === 'string' &&
-    typeof candidato['colorSecundario'] === 'string' &&
     typeof candidato['actualizadaEl'] === 'string' &&
-    candidato['id'].trim().length > 0 &&
-    Array.isArray(candidato['elementos']) &&
-    candidato['elementos'].every(esElemento)
-  )
+    candidato['id'].trim().length > 0
+
+  if (!camposComunes) {
+    return false
+  }
+
+  if (candidato['origen'] === 'blanco') {
+    return (
+      typeof candidato['colorPrincipal'] === 'string' &&
+      typeof candidato['colorSecundario'] === 'string' &&
+      esContenido(candidato['contenido'])
+    )
+  }
+
+  if (candidato['origen'] === 'docx') {
+    return (
+      typeof candidato['archivoOriginal'] === 'string' &&
+      candidato['archivoOriginal'].length > 0 &&
+      Array.isArray(candidato['marcadores']) &&
+      candidato['marcadores'].every(esMarcadorDeDocx)
+    )
+  }
+
+  return false
 }
 
 /** `null` = nunca se guardó nada (cae a la semilla); `[]` = se guardó vacío a propósito. */

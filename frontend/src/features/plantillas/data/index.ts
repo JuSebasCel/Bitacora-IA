@@ -5,15 +5,27 @@
 
 export type {
   CampoDeMarcador,
-  ElementoDeImagen,
-  ElementoDeMarcador,
-  ElementoDePlantilla,
-  ElementoDeTexto,
   FormatoDeMarcador,
+  JSONContent,
+  MarcadorDeDocx,
+  MarcadorDeSeccionDeDocx,
+  MarcadorSimpleDeDocx,
+  ModoDeSeccion,
+  OrigenDeMarcador,
   Plantilla,
-  Rectangulo,
-  RolDeTexto,
+  PlantillaDesdeDocx,
+  PlantillaEnBlanco,
 } from './tipos'
 
-export { CAMPOS_DE_MARCADOR, DATOS_DE_EJEMPLO, ETIQUETAS_DE_CAMPO } from './campos'
+export {
+  CAMPOS_DE_MARCADOR,
+  DATOS_DE_EJEMPLO,
+  ETIQUETAS_DE_CAMPO,
+  ETIQUETAS_DE_FORMATO,
+  ETIQUETAS_DE_MODO_DE_SECCION,
+  etiquetaDeOrigen,
+  resolverCondicionDeMarcador,
+  resolverListaDeMarcador,
+  resolverMarcador,
+} from './campos'
 export { PLANTILLAS_DE_EJEMPLO } from './plantillas.fixture'

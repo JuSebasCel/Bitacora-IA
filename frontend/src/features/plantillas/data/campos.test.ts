@@ -1,45 +1,63 @@
 import { describe, expect, it } from 'vitest'
-import { CAMPOS_DE_MARCADOR, DATOS_DE_EJEMPLO, ETIQUETAS_DE_CAMPO } from './campos'
+import {
+  CAMPOS_DE_MARCADOR,
+  DATOS_DE_EJEMPLO,
+  ETIQUETAS_DE_CAMPO,
+  etiquetaDeOrigen,
+  resolverCondicionDeMarcador,
+  resolverListaDeMarcador,
+  resolverMarcador,
+} from './campos'
+import type { OrigenDeMarcador } from './tipos'
 
-describe('CAMPOS_DE_MARCADOR', () => {
-  it('lista los cinco campos nombrados en PLAN.md 5.6', () => {
-    expect(CAMPOS_DE_MARCADOR).toEqual([
-      'tema_principal',
-      'cita_destacada',
-      'nombre_ponente',
-      'fecha_evento',
-      'resumen_metodo',
-    ])
+describe('etiquetaDeOrigen', () => {
+  it('para un campo fijo, devuelve su etiqueta legible', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'nombre_ponente' }
+
+    expect(etiquetaDeOrigen(origen)).toBe(ETIQUETAS_DE_CAMPO.nombre_ponente)
+  })
+
+  it('para uno personalizado, devuelve la etiqueta tal cual', () => {
+    const origen: OrigenDeMarcador = { tipo: 'personalizado', etiqueta: 'Puntos de la agenda' }
+
+    expect(etiquetaDeOrigen(origen)).toBe('Puntos de la agenda')
   })
 })
 
-describe('ETIQUETAS_DE_CAMPO', () => {
-  it('trae una etiqueta legible para cada campo', () => {
+describe('resolverMarcador', () => {
+  it('cada uno de los cinco campos fijos tiene dato de ejemplo para párrafo y lista', () => {
     for (const campo of CAMPOS_DE_MARCADOR) {
-      expect(ETIQUETAS_DE_CAMPO[campo].trim().length).toBeGreaterThan(0)
+      const origen: OrigenDeMarcador = { tipo: 'campo', campo }
+
+      expect(typeof resolverMarcador(origen, 'parrafo')).toBe('string')
+      expect(Array.isArray(resolverMarcador(origen, 'lista_vinetas'))).toBe(true)
+      expect(Array.isArray(resolverMarcador(origen, 'lista_numerada'))).toBe(true)
     }
   })
 
-  it('ninguna etiqueta repite el nombre técnico del campo con guion bajo', () => {
-    for (const campo of CAMPOS_DE_MARCADOR) {
-      expect(ETIQUETAS_DE_CAMPO[campo]).not.toContain('_')
-    }
+  it('un origen personalizado sin fixture propio igual resuelve un dato de ejemplo', () => {
+    const origen: OrigenDeMarcador = { tipo: 'personalizado', etiqueta: 'Puntos de la agenda' }
+
+    const parrafo = resolverMarcador(origen, 'parrafo')
+    expect(typeof parrafo).toBe('string')
+    expect(parrafo).toContain('Puntos de la agenda')
   })
 })
 
-describe('DATOS_DE_EJEMPLO', () => {
-  it('cubre los dos formatos para cada campo', () => {
-    for (const campo of CAMPOS_DE_MARCADOR) {
-      expect(DATOS_DE_EJEMPLO[campo].parrafo.trim().length).toBeGreaterThan(0)
-      expect(DATOS_DE_EJEMPLO[campo].lista.length).toBeGreaterThan(0)
-    }
-  })
+describe('resolverListaDeMarcador', () => {
+  it('devuelve el mismo arreglo que resolverMarcador con formato de lista', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'resumen_metodo' }
 
-  it('el formato de lista trae cada elemento con contenido, no vacío', () => {
+    expect(resolverListaDeMarcador(origen)).toEqual(DATOS_DE_EJEMPLO.resumen_metodo.lista)
+  })
+})
+
+describe('resolverCondicionDeMarcador', () => {
+  it('los datos de ejemplo siempre están presentes, así que la condición siempre es verdadera', () => {
     for (const campo of CAMPOS_DE_MARCADOR) {
-      for (const elemento of DATOS_DE_EJEMPLO[campo].lista) {
-        expect(elemento.trim().length).toBeGreaterThan(0)
-      }
+      expect(resolverCondicionDeMarcador({ tipo: 'campo', campo })).toBe(true)
     }
+
+    expect(resolverCondicionDeMarcador({ tipo: 'personalizado', etiqueta: 'Lo que sea' })).toBe(true)
   })
 })

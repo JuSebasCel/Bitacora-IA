@@ -1,232 +1,224 @@
 import { describe, expect, it } from 'vitest'
-import { LARGO_MAXIMO_DE_PLANTILLA } from '@/shared/errors'
-import { CAMPOS_DE_MARCADOR, DATOS_DE_EJEMPLO } from './data'
 import {
-  agregarElementoDeImagen,
-  agregarElementoDeMarcador,
-  agregarElementoDeTexto,
-  actualizarElemento,
+  actualizarContenido,
+  actualizarMarcadoresDeDocx,
   cambiarColores,
+  crearPlantillaDesdeDocx,
   crearPlantillaEnBlanco,
-  quitarElemento,
+  esPlantillaEnBlancoAbandonada,
+  NOMBRE_DE_PLANTILLA_SIN_TOCAR,
   renombrarPlantilla,
-  resolverMarcador,
   validarImagen,
 } from './plantillas'
+import type { JSONContent, MarcadorDeDocx } from './data'
+
+const MARCADOR: MarcadorDeDocx = {
+  tipo: 'simple',
+  id: 'mar-1',
+  textoOriginal: '[[Nombre grupo]]',
+  contexto: 'Grupo: [[Nombre grupo]]',
+  origenDeDato: { tipo: 'personalizado', etiqueta: 'Nombre grupo' },
+  formato: 'parrafo',
+}
+
+function archivo(nombre: string, tipo: string, tamanoEnBytes: number): File {
+  return new File([new Uint8Array(tamanoEnBytes)], nombre, { type: tipo })
+}
 
 describe('crearPlantillaEnBlanco', () => {
-  it('trae un id único, no vacío', () => {
+  it('nace con origen blanco, nombre por defecto y un documento sin contenido', () => {
+    const plantilla = crearPlantillaEnBlanco()
+
+    expect(plantilla.origen).toBe('blanco')
+    expect(plantilla.nombre).toBe(NOMBRE_DE_PLANTILLA_SIN_TOCAR)
+    expect(plantilla.contenido).toEqual({ type: 'doc', content: [{ type: 'paragraph' }] })
+  })
+
+  it('cada llamada produce un id distinto', () => {
     const primera = crearPlantillaEnBlanco()
     const segunda = crearPlantillaEnBlanco()
 
-    expect(primera.id.trim().length).toBeGreaterThan(0)
     expect(primera.id).not.toBe(segunda.id)
   })
+})
 
-  it('arranca sin elementos y con un nombre por defecto', () => {
-    const plantilla = crearPlantillaEnBlanco()
+describe('crearPlantillaDesdeDocx', () => {
+  it('nace con origen docx, el archivo y los marcadores tal cual se pasaron', () => {
+    const plantilla = crearPlantillaDesdeDocx('data:application/octet-stream;base64,AA==', 'Mi plantilla', [
+      MARCADOR,
+    ])
 
-    expect(plantilla.elementos).toEqual([])
-    expect(plantilla.nombre.trim().length).toBeGreaterThan(0)
-  })
-
-  it('trae colores por defecto válidos en formato hex', () => {
-    const plantilla = crearPlantillaEnBlanco()
-
-    expect(plantilla.colorPrincipal).toMatch(/^#[0-9a-f]{6}$/i)
-    expect(plantilla.colorSecundario).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(plantilla.origen).toBe('docx')
+    expect(plantilla.nombre).toBe('Mi plantilla')
+    expect(plantilla.archivoOriginal).toBe('data:application/octet-stream;base64,AA==')
+    expect(plantilla.marcadores).toEqual([MARCADOR])
   })
 })
 
 describe('renombrarPlantilla', () => {
-  const base = crearPlantillaEnBlanco()
+  it('con un nombre válido, lo recorta', () => {
+    const plantilla = crearPlantillaEnBlanco()
 
-  it('con nombre vacío, falla con PLANT_NOMBRE_REQUERIDO', () => {
-    const resultado = renombrarPlantilla(base, '   ')
+    const resultado = renombrarPlantilla(plantilla, '  Memoria del taller  ')
+
+    expect(resultado.ok).toBe(true)
+    if (resultado.ok) {
+      expect(resultado.plantilla.nombre).toBe('Memoria del taller')
+    }
+  })
+
+  it('rechaza un nombre vacío o solo espacios', () => {
+    const plantilla = crearPlantillaEnBlanco()
+
+    const resultado = renombrarPlantilla(plantilla, '   ')
 
     expect(resultado).toEqual({ ok: false, codigo: 'PLANT_NOMBRE_REQUERIDO' })
   })
 
-  it('con nombre por encima del límite, falla con PLANT_NOMBRE_MUY_LARGO', () => {
-    const resultado = renombrarPlantilla(base, 'x'.repeat(LARGO_MAXIMO_DE_PLANTILLA + 1))
+  it('rechaza un nombre por encima del largo máximo', () => {
+    const plantilla = crearPlantillaEnBlanco()
+
+    const resultado = renombrarPlantilla(plantilla, 'x'.repeat(81))
 
     expect(resultado).toEqual({ ok: false, codigo: 'PLANT_NOMBRE_MUY_LARGO' })
-  })
-
-  it('con un nombre válido, devuelve la plantilla con el nombre recortado', () => {
-    const resultado = renombrarPlantilla(base, '  Memoria del taller  ')
-
-    expect(resultado.ok).toBe(true)
-    expect(resultado.ok && resultado.plantilla.nombre).toBe('Memoria del taller')
-    expect(resultado.ok && resultado.plantilla.id).toBe(base.id)
-  })
-
-  it('no muta la plantilla recibida', () => {
-    renombrarPlantilla(base, 'Otro nombre')
-
-    expect(base.nombre).not.toBe('Otro nombre')
   })
 })
 
 describe('cambiarColores', () => {
-  it('devuelve la plantilla con los dos colores actualizados', () => {
-    const base = crearPlantillaEnBlanco()
+  it('actualiza los colores de una plantilla en blanco', () => {
+    const plantilla = crearPlantillaEnBlanco()
 
-    const resultado = cambiarColores(base, '#111111', '#222222')
+    const resultado = cambiarColores(plantilla, '#111111', '#222222')
 
-    expect(resultado.colorPrincipal).toBe('#111111')
-    expect(resultado.colorSecundario).toBe('#222222')
+    expect(resultado).toMatchObject({ colorPrincipal: '#111111', colorSecundario: '#222222' })
   })
 
-  it('no muta la plantilla recibida', () => {
-    const base = crearPlantillaEnBlanco()
+  it('no hace nada sobre una plantilla docx', () => {
+    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
 
-    cambiarColores(base, '#111111', '#222222')
+    const resultado = cambiarColores(plantilla, '#111111', '#222222')
 
-    expect(base.colorPrincipal).not.toBe('#111111')
-  })
-})
-
-describe('agregarElementoDeTexto', () => {
-  it('añade un elemento de texto con id único y posición por defecto dentro del lienzo', () => {
-    const base = crearPlantillaEnBlanco()
-
-    const resultado = agregarElementoDeTexto(base)
-
-    expect(resultado.elementos).toHaveLength(1)
-    const [elemento] = resultado.elementos
-    expect(elemento?.tipo).toBe('texto')
-    expect(elemento?.id.trim().length).toBeGreaterThan(0)
-    expect(elemento?.posicion.x).toBeGreaterThanOrEqual(0)
-    expect(elemento?.posicion.y).toBeGreaterThanOrEqual(0)
-  })
-
-  it('no muta la plantilla recibida', () => {
-    const base = crearPlantillaEnBlanco()
-
-    agregarElementoDeTexto(base)
-
-    expect(base.elementos).toEqual([])
-  })
-
-  it('dos elementos agregados tienen ids distintos', () => {
-    const base = crearPlantillaEnBlanco()
-
-    const conUno = agregarElementoDeTexto(base)
-    const conDos = agregarElementoDeTexto(conUno)
-
-    const [primero, segundo] = conDos.elementos
-    expect(primero?.id).not.toBe(segundo?.id)
+    expect(resultado).toBe(plantilla)
   })
 })
 
-describe('agregarElementoDeImagen', () => {
-  it('añade un elemento de imagen con la url y el nombre de archivo dados', () => {
-    const base = crearPlantillaEnBlanco()
+describe('actualizarContenido', () => {
+  it('reemplaza el documento de una plantilla en blanco', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    const nuevoContenido: JSONContent = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hola' }] }] }
 
-    const resultado = agregarElementoDeImagen(base, 'data:image/png;base64,AAAA', 'logo.png')
+    const resultado = actualizarContenido(plantilla, nuevoContenido)
 
-    const [elemento] = resultado.elementos
-    expect(elemento?.tipo).toBe('imagen')
-    expect(elemento && elemento.tipo === 'imagen' && elemento.url).toBe('data:image/png;base64,AAAA')
-    expect(elemento && elemento.tipo === 'imagen' && elemento.nombreDeArchivo).toBe('logo.png')
+    expect(resultado.origen).toBe('blanco')
+    if (resultado.origen === 'blanco') {
+      expect(resultado.contenido).toEqual(nuevoContenido)
+    }
+  })
+
+  it('no hace nada sobre una plantilla docx', () => {
+    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+
+    const resultado = actualizarContenido(plantilla, { type: 'doc', content: [] })
+
+    expect(resultado).toBe(plantilla)
   })
 })
 
-describe('agregarElementoDeMarcador', () => {
-  it('añade un marcador con el campo y formato por defecto', () => {
-    const base = crearPlantillaEnBlanco()
+describe('actualizarMarcadoresDeDocx', () => {
+  it('reemplaza los marcadores de una plantilla docx', () => {
+    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
 
-    const resultado = agregarElementoDeMarcador(base)
+    const resultado = actualizarMarcadoresDeDocx(plantilla, [MARCADOR])
 
-    const [elemento] = resultado.elementos
-    expect(elemento?.tipo).toBe('marcador')
-    expect(elemento && elemento.tipo === 'marcador' && elemento.campo).toBe(CAMPOS_DE_MARCADOR[0])
-    expect(elemento && elemento.tipo === 'marcador' && elemento.formato).toBe('parrafo')
+    expect(resultado.origen).toBe('docx')
+    if (resultado.origen === 'docx') {
+      expect(resultado.marcadores).toEqual([MARCADOR])
+    }
   })
 
-  it('acepta un campo y formato específicos', () => {
-    const base = crearPlantillaEnBlanco()
+  it('no hace nada sobre una plantilla en blanco', () => {
+    const plantilla = crearPlantillaEnBlanco()
 
-    const resultado = agregarElementoDeMarcador(base, 'cita_destacada', 'lista')
+    const resultado = actualizarMarcadoresDeDocx(plantilla, [MARCADOR])
 
-    const [elemento] = resultado.elementos
-    expect(elemento && elemento.tipo === 'marcador' && elemento.campo).toBe('cita_destacada')
-    expect(elemento && elemento.tipo === 'marcador' && elemento.formato).toBe('lista')
-  })
-})
-
-describe('actualizarElemento', () => {
-  it('cambia el contenido de un elemento de texto por id, sin tocar los demás', () => {
-    const conDos = agregarElementoDeTexto(agregarElementoDeTexto(crearPlantillaEnBlanco()))
-    const [primero, segundo] = conDos.elementos
-    if (primero === undefined || segundo === undefined) throw new Error('faltan elementos')
-
-    const resultado = actualizarElemento(conDos, primero.id, { contenido: 'Nuevo texto' })
-
-    const actualizado = resultado.elementos.find((elemento) => elemento.id === primero.id)
-    const intacto = resultado.elementos.find((elemento) => elemento.id === segundo.id)
-    expect(actualizado?.tipo === 'texto' && actualizado.contenido).toBe('Nuevo texto')
-    expect(intacto).toEqual(segundo)
-  })
-
-  it('con un id inexistente, devuelve la plantilla sin cambios', () => {
-    const base = agregarElementoDeTexto(crearPlantillaEnBlanco())
-
-    const resultado = actualizarElemento(base, 'no-existe', { contenido: 'x' })
-
-    expect(resultado).toEqual(base)
-  })
-})
-
-describe('quitarElemento', () => {
-  it('quita el elemento con ese id', () => {
-    const conUno = agregarElementoDeTexto(crearPlantillaEnBlanco())
-    const [elemento] = conUno.elementos
-    if (elemento === undefined) throw new Error('falta el elemento')
-
-    const resultado = quitarElemento(conUno, elemento.id)
-
-    expect(resultado.elementos).toEqual([])
-  })
-
-  it('deja intactos los demás elementos', () => {
-    const conDos = agregarElementoDeTexto(agregarElementoDeTexto(crearPlantillaEnBlanco()))
-    const [primero, segundo] = conDos.elementos
-    if (primero === undefined || segundo === undefined) throw new Error('faltan elementos')
-
-    const resultado = quitarElemento(conDos, primero.id)
-
-    expect(resultado.elementos).toEqual([segundo])
+    expect(resultado).toBe(plantilla)
   })
 })
 
 describe('validarImagen', () => {
-  it('acepta png, jpeg y webp', () => {
-    for (const tipo of ['image/png', 'image/jpeg', 'image/webp']) {
-      const archivo = new File([new Uint8Array(10)], 'logo', { type: tipo })
-      expect(validarImagen(archivo)).toEqual({ ok: true })
-    }
+  it('acepta png, jpeg y webp dentro del tamaño máximo', () => {
+    expect(validarImagen(archivo('logo.png', 'image/png', 1024))).toEqual({ ok: true })
+    expect(validarImagen(archivo('logo.jpg', 'image/jpeg', 1024))).toEqual({ ok: true })
+    expect(validarImagen(archivo('logo.webp', 'image/webp', 1024))).toEqual({ ok: true })
   })
 
-  it('rechaza un tipo no soportado, ej. svg', () => {
-    const archivo = new File([new Uint8Array(10)], 'logo.svg', { type: 'image/svg+xml' })
-
-    expect(validarImagen(archivo)).toEqual({ ok: false, codigo: 'PLANT_IMAGEN_NO_SOPORTADA' })
+  it('rechaza un formato no soportado', () => {
+    expect(validarImagen(archivo('logo.svg', 'image/svg+xml', 1024))).toEqual({
+      ok: false,
+      codigo: 'PLANT_IMAGEN_NO_SOPORTADA',
+    })
   })
 
-  it('rechaza un archivo por encima del tamaño máximo', () => {
-    const archivoGrande = new File([new Uint8Array(3 * 1024 * 1024)], 'logo.png', { type: 'image/png' })
+  it('rechaza una imagen por encima del tamaño máximo', () => {
+    const grande = archivo('logo.png', 'image/png', 3 * 1024 * 1024)
 
-    expect(validarImagen(archivoGrande)).toEqual({ ok: false, codigo: 'PLANT_IMAGEN_MUY_GRANDE' })
+    expect(validarImagen(grande)).toEqual({ ok: false, codigo: 'PLANT_IMAGEN_MUY_GRANDE' })
   })
 })
 
-describe('resolverMarcador', () => {
-  it('resuelve cada combinación de campo y formato a un dato de ejemplo no vacío', () => {
-    for (const campo of CAMPOS_DE_MARCADOR) {
-      expect(resolverMarcador(campo, 'parrafo')).toBe(DATOS_DE_EJEMPLO[campo].parrafo)
-      expect(resolverMarcador(campo, 'lista')).toEqual(DATOS_DE_EJEMPLO[campo].lista)
+describe('esPlantillaEnBlancoAbandonada', () => {
+  it('una plantilla recién creada, sin tocar, se considera abandonada', () => {
+    expect(esPlantillaEnBlancoAbandonada(crearPlantillaEnBlanco())).toBe(true)
+  })
+
+  it('renombrarla ya no la deja abandonada, aunque el documento siga vacío', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    const resultado = renombrarPlantilla(plantilla, 'Con nombre')
+
+    expect(resultado.ok).toBe(true)
+    if (resultado.ok) {
+      expect(esPlantillaEnBlancoAbandonada(resultado.plantilla)).toBe(false)
     }
+  })
+
+  it('escribir texto real ya no la deja abandonada, aunque el nombre siga siendo el de fábrica', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    const conContenido = actualizarContenido(plantilla, {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Algo real' }] }],
+    })
+
+    expect(esPlantillaEnBlancoAbandonada(conContenido)).toBe(false)
+  })
+
+  it('un párrafo con solo espacios en blanco sigue contando como abandonada', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    const conEspacios = actualizarContenido(plantilla, {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: '   ' }] }],
+    })
+
+    expect(esPlantillaEnBlancoAbandonada(conEspacios)).toBe(true)
+  })
+
+  it('insertar un marcador, aunque no haya texto, ya no la deja abandonada', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    const conMarcador = actualizarContenido(plantilla, {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'marcador', attrs: { origenTipo: 'campo', campo: 'tema_principal', formato: 'parrafo' } }],
+        },
+      ],
+    })
+
+    expect(esPlantillaEnBlancoAbandonada(conMarcador)).toBe(false)
+  })
+
+  it('una plantilla docx nunca se considera una plantilla en blanco abandonada', () => {
+    expect(esPlantillaEnBlancoAbandonada(crearPlantillaDesdeDocx('data:;base64,AA==', NOMBRE_DE_PLANTILLA_SIN_TOCAR, []))).toBe(
+      false,
+    )
   })
 })

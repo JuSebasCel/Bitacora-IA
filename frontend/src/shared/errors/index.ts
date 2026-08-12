@@ -40,6 +40,11 @@ export type CodigoError =
   | 'PLANT_NO_ENCONTRADA'
   | 'PLANT_IMAGEN_NO_SOPORTADA'
   | 'PLANT_IMAGEN_MUY_GRANDE'
+  | 'PLANT_DOCX_NO_SOPORTADO'
+  | 'PLANT_DOCX_MUY_GRANDE'
+  | 'PLANT_DOCX_FALLO_IMPORTACION'
+  | 'PLANT_DOCX_FALLO_GENERACION'
+  | 'PLANT_ETIQUETA_REQUERIDA'
 
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
@@ -53,6 +58,12 @@ export const LARGO_MAXIMO_DE_PLANTILLA = 80
 
 /** Tope del archivo de imagen antes de codificarlo a base64 para guardarlo en sessionStorage. */
 export const TAMANO_MAXIMO_DE_IMAGEN_MB = 2
+
+/** Tope del archivo .docx que se puede importar como punto de partida de una plantilla. */
+export const TAMANO_MAXIMO_DE_DOCX_MB = 10
+
+/** Largo máximo de una etiqueta personalizada de marcador (texto libre, no un campo fijo). */
+export const LARGO_MAXIMO_DE_ETIQUETA_DE_MARCADOR = 120
 
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
@@ -100,6 +111,13 @@ const MENSAJES: Record<CodigoError, string> = {
   PLANT_IMAGEN_NO_SOPORTADA:
     'Esa imagen no tiene un formato admitido. Usa PNG, JPG o WEBP e inténtalo de nuevo.',
   PLANT_IMAGEN_MUY_GRANDE: `Esa imagen supera el tamaño máximo admitido (${TAMANO_MAXIMO_DE_IMAGEN_MB} MB). Usa una más liviana.`,
+  PLANT_DOCX_NO_SOPORTADO: 'Ese archivo no es un .docx admitido. Expórtalo desde Word y vuelve a intentarlo.',
+  PLANT_DOCX_MUY_GRANDE: `Ese archivo supera el tamaño máximo admitido (${TAMANO_MAXIMO_DE_DOCX_MB} MB). Usa uno más liviano.`,
+  PLANT_DOCX_FALLO_IMPORTACION:
+    'No pudimos leer ese archivo. Puede estar dañado o usar un formato que todavía no soportamos.',
+  PLANT_DOCX_FALLO_GENERACION:
+    'No pudimos generar la vista previa. Revisa que las marcas [[SI:...]]/[[FIN SI]] y [[REPETIR:...]]/[[FIN REPETIR]] estén completas y bien escritas en el documento.',
+  PLANT_ETIQUETA_REQUERIDA: 'Escribe una descripción para el campo personalizado antes de agregarlo.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'
