@@ -74,6 +74,7 @@ frontend/src/
   features/   # un directorio por dominio del producto
     auth/         # acceso, registro y sesión
     conferencias/ # dashboard, detalle y carga de conferencia
+    plantillas/   # editor de plantillas visuales para memorias
   shared/     # primitivos de interfaz, catálogo de errores, almacenamiento
   styles/     # tokens de diseño
 ```
