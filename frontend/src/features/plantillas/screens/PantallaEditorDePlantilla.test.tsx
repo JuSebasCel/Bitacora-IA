@@ -1,77 +1,102 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CLAVE_PLANTILLAS } from '../almacenamiento'
+import { crearPlantillaDesdeDocx, crearPlantillaEnBlanco } from '../plantillas'
 import { PantallaEditorDePlantilla } from './PantallaEditorDePlantilla'
+
+const renderAsyncMock = vi.hoisted(() => vi.fn())
+
+vi.mock('docx-preview', () => ({
+  renderAsync: renderAsyncMock,
+}))
+
+beforeEach(() => {
+  sessionStorage.clear()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => new Promise(() => {})),
+  )
+})
+
+afterEach(() => {
+  renderAsyncMock.mockReset()
+  vi.unstubAllGlobals()
+})
+
+function ListadoEspia() {
+  return <p>Listado</p>
+}
 
 function montar(idPlantilla: string) {
   return render(
     <MemoryRouter initialEntries={[`/plantillas/${idPlantilla}`]}>
       <Routes>
-        <Route path="/plantillas" element={<p>Contenido del listado</p>} />
+        <Route path="/plantillas" element={<ListadoEspia />} />
         <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
       </Routes>
     </MemoryRouter>,
   )
 }
 
-beforeEach(() => {
-  sessionStorage.clear()
+describe('PantallaEditorDePlantilla — id inexistente', () => {
+  it('muestra el error PLANT_NO_ENCONTRADA y un enlace de regreso', () => {
+    montar('pla-no-existe')
+
+    expect(screen.getByText(/no encontramos esa plantilla/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /volver a plantillas/i })).toHaveAttribute('href', '/plantillas')
+  })
 })
 
-describe('PantallaEditorDePlantilla', () => {
-  it('un id inexistente muestra el error de plantilla no encontrada', () => {
-    montar('pla-que-no-existe')
+describe('PantallaEditorDePlantilla — origen docx', () => {
+  it('muestra la pantalla de confirmación de solo lectura, sin editor TipTap', () => {
+    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Importada', [])
+    sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([plantilla]))
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/no encontramos esa plantilla/i)
+    montar(plantilla.id)
+
+    expect(screen.getByText(/no encontramos ninguna marca/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Negrita' })).not.toBeInTheDocument()
   })
+})
 
-  it('ofrece un enlace de regreso al listado', async () => {
+describe('PantallaEditorDePlantilla — origen blanco', () => {
+  it('renombrar la plantilla persiste el nombre nuevo', async () => {
     const usuario = userEvent.setup()
-    montar('pla-memoria-estandar')
+    const plantilla = crearPlantillaEnBlanco()
+    sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([plantilla]))
 
-    await usuario.click(screen.getByRole('link', { name: /volver/i }))
-
-    expect(await screen.findByText('Contenido del listado')).toBeInTheDocument()
-  })
-
-  it('renombrar la plantilla persiste tras remontar', async () => {
-    const usuario = userEvent.setup()
-    const { unmount } = montar('pla-memoria-estandar')
-
-    const campoNombre = screen.getByLabelText(/nombre/i)
+    montar(plantilla.id)
+    const campoNombre = screen.getByLabelText('Nombre')
     await usuario.clear(campoNombre)
-    await usuario.type(campoNombre, 'Memoria renombrada')
+    await usuario.type(campoNombre, 'Memoria de cierre')
 
-    unmount()
-    montar('pla-memoria-estandar')
-
-    expect(screen.getByLabelText(/nombre/i)).toHaveValue('Memoria renombrada')
+    expect(sessionStorage.getItem(CLAVE_PLANTILLAS)).toContain('Memoria de cierre')
   })
 
-  it('cambiar el color principal se refleja de inmediato', () => {
-    montar('pla-memoria-estandar')
-
-    const colorPrincipal = screen.getByLabelText(/color principal/i)
-    fireEvent.change(colorPrincipal, { target: { value: '#00ff00' } })
-
-    expect(colorPrincipal).toHaveValue('#00ff00')
-  })
-
-  it('agregar un elemento de texto desde la barra de herramientas lo muestra en el lienzo', async () => {
+  it('volver sin tocar nada elimina la plantilla en blanco recién creada', async () => {
     const usuario = userEvent.setup()
-    montar('pla-cita-simple')
+    const plantilla = crearPlantillaEnBlanco()
+    sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([plantilla]))
 
-    await usuario.click(screen.getByRole('button', { name: /texto/i }))
+    montar(plantilla.id)
+    await usuario.click(screen.getByRole('button', { name: /volver a plantillas/i }))
 
-    expect(within(screen.getByTestId('lienzo-de-plantilla')).getByText('Texto')).toBeInTheDocument()
+    expect(await screen.findByText('Listado')).toBeInTheDocument()
+    expect(sessionStorage.getItem(CLAVE_PLANTILLAS)).not.toContain(plantilla.id)
   })
 
-  it('seleccionar un elemento del lienzo muestra sus propiedades en el inspector', () => {
-    montar('pla-memoria-estandar')
+  it('volver tras renombrar conserva la plantilla', async () => {
+    const usuario = userEvent.setup()
+    const plantilla = crearPlantillaEnBlanco()
+    sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([plantilla]))
 
-    fireEvent.pointerDown(screen.getByTestId('elemento-el-titulo-principal'))
+    montar(plantilla.id)
+    await usuario.type(screen.getByLabelText('Nombre'), ' agregado')
+    await usuario.click(screen.getByRole('button', { name: /volver a plantillas/i }))
 
-    expect(screen.getByLabelText(/tamaño/i)).toHaveValue('titulo')
+    await waitFor(() => expect(screen.getByText('Listado')).toBeInTheDocument())
+    expect(sessionStorage.getItem(CLAVE_PLANTILLAS)).toContain(plantilla.id)
   })
 })

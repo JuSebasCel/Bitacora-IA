@@ -1,31 +1,85 @@
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash'
+import { useEditor } from '@tiptap/react'
 import type { ReactElement } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
-import { LienzoDePlantilla } from './LienzoDePlantilla'
-import type { Plantilla } from '../data'
+import type { Plantilla, PlantillaDesdeDocx, PlantillaEnBlanco } from '../data'
+import { EXTENSIONES_DE_PLANTILLA } from '../editor/extensionesDePlantilla'
+import { EditorDeDocumento } from './EditorDeDocumento'
+import { MiniaturaDeDocx } from './MiniaturaDeDocx'
 
 export type PropsTarjetaDePlantilla = {
   plantilla: Plantilla
   alEliminar: () => void
 }
 
-/*
-  Tarjeta del listado: mismo `LienzoDePlantilla` del editor, en modo no
-  interactivo y dentro de un contenedor angosto — al ser `w-full` por dentro,
-  se reduce solo con el ancho del contenedor, sin necesitar `transform:
-  scale()`.
-*/
-export function TarjetaDePlantilla({ plantilla, alEliminar }: PropsTarjetaDePlantilla): ReactElement {
-  function alPulsarEliminar(): void {
-    if (window.confirm(`¿Eliminar la plantilla «${plantilla.nombre}»? Esta acción no se puede deshacer.`)) {
+function BotonEliminar({ nombre, alEliminar }: { nombre: string; alEliminar: () => void }): ReactElement {
+  function alPulsar(): void {
+    if (window.confirm(`¿Eliminar la plantilla «${nombre}»? Esta acción no se puede deshacer.`)) {
       alEliminar()
     }
   }
 
   return (
+    <button
+      type="button"
+      onClick={alPulsar}
+      aria-label={`Eliminar «${nombre}»`}
+      className="absolute top-3 right-3 z-10 rounded-md bg-panel p-1.5 text-texto-tenue opacity-0 transition-colors hover:bg-fondo hover:text-error focus-visible:opacity-100 group-hover:opacity-100"
+    >
+      <TrashIcon size={15} weight="regular" aria-hidden="true" />
+    </button>
+  )
+}
+
+/*
+  Tarjeta del listado para una plantilla en blanco: su propia instancia de
+  editor TipTap, en modo lectura (`editable: false`), escalada dentro de un
+  recorte de altura fija.
+*/
+function TarjetaDePlantillaEnBlanco({
+  plantilla,
+  alEliminar,
+}: {
+  plantilla: PlantillaEnBlanco
+  alEliminar: () => void
+}): ReactElement {
+  const editor = useEditor({
+    extensions: EXTENSIONES_DE_PLANTILLA,
+    content: plantilla.contenido,
+    editable: false,
+    immediatelyRender: false,
+  })
+
+  /*
+    `content` en `useEditor` solo cuenta para el montaje inicial: este efecto
+    sincroniza cambios posteriores (ej. tras editar y volver al listado). Se
+    salta la primera ejecución (montaje) a propósito — llamar `setContent`
+    ahí duplicaba la carga inicial en el mismo instante en que la vista de
+    ProseMirror recién se adjunta, y provocaba un error de selección
+    ("Selection passed to setSelection must point at the current document")
+    detectado en la revisión visual, no en ninguna prueba.
+  */
+  const esPrimeraEjecucion = useRef(true)
+
+  useEffect(() => {
+    if (esPrimeraEjecucion.current) {
+      esPrimeraEjecucion.current = false
+      return
+    }
+
+    if (editor !== null && !editor.isDestroyed) {
+      editor.commands.setContent(plantilla.contenido)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plantilla.actualizadaEl])
+
+  return (
     <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm">
       <Link to={`/plantillas/${plantilla.id}`} className="flex flex-col gap-3">
-        <LienzoDePlantilla elementos={plantilla.elementos} interactivo={false} />
+        <div className="h-48 overflow-hidden rounded-sm border border-filete">
+          <EditorDeDocumento editor={editor} className="pointer-events-none w-[161%] origin-top-left scale-[0.62]" />
+        </div>
 
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium text-texto">{plantilla.nombre}</span>
@@ -44,14 +98,49 @@ export function TarjetaDePlantilla({ plantilla, alEliminar }: PropsTarjetaDePlan
         </div>
       </Link>
 
-      <button
-        type="button"
-        onClick={alPulsarEliminar}
-        aria-label={`Eliminar «${plantilla.nombre}»`}
-        className="absolute top-3 right-3 z-10 rounded-md bg-panel p-1.5 text-texto-tenue opacity-0 transition-colors hover:bg-fondo hover:text-error focus-visible:opacity-100 group-hover:opacity-100"
-      >
-        <TrashIcon size={15} weight="regular" aria-hidden="true" />
-      </button>
+      <BotonEliminar nombre={plantilla.nombre} alEliminar={alEliminar} />
     </div>
+  )
+}
+
+/*
+  Tarjeta del listado para una plantilla importada de `.docx`: miniatura del
+  documento real (`MiniaturaDeDocx`, mismo `docx-preview` de la pantalla de
+  confirmación, recortado y escalado) — para poder reconocer la plantilla
+  antes de entrar a ella, no solo por el nombre.
+*/
+function TarjetaDePlantillaDocx({
+  plantilla,
+  alEliminar,
+}: {
+  plantilla: PlantillaDesdeDocx
+  alEliminar: () => void
+}): ReactElement {
+  return (
+    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm">
+      <Link to={`/plantillas/${plantilla.id}`} className="flex flex-col gap-3">
+        <div className="h-48 overflow-hidden rounded-sm bg-fondo">
+          <MiniaturaDeDocx archivoOriginal={plantilla.archivoOriginal} />
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <span className="truncate text-sm font-medium text-texto">{plantilla.nombre}</span>
+          <span className="text-xs text-texto-tenue">
+            {plantilla.marcadores.length} marcador{plantilla.marcadores.length === 1 ? '' : 'es'} detectado
+            {plantilla.marcadores.length === 1 ? '' : 's'}
+          </span>
+        </div>
+      </Link>
+
+      <BotonEliminar nombre={plantilla.nombre} alEliminar={alEliminar} />
+    </div>
+  )
+}
+
+export function TarjetaDePlantilla({ plantilla, alEliminar }: PropsTarjetaDePlantilla): ReactElement {
+  return plantilla.origen === 'docx' ? (
+    <TarjetaDePlantillaDocx plantilla={plantilla} alEliminar={alEliminar} />
+  ) : (
+    <TarjetaDePlantillaEnBlanco plantilla={plantilla} alEliminar={alEliminar} />
   )
 }

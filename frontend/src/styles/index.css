@@ -60,6 +60,15 @@
 
   /* Sombra tintada con el neutro del proyecto, nunca negro puro. */
   --bitacora-sombra: oklch(0.24 0.006 265 / 0.17);
+
+  /*
+    Hoja de documento (editor de plantillas, F4): a diferencia de `panel`, que
+    sigue el tema claro/oscuro de la app, la hoja se mantiene siempre clara —
+    igual que un documento de Word o Google Docs no invierte de color con el
+    tema del sistema. Es lo que reemplaza el lienzo oscuro de la v1.
+  */
+  --bitacora-papel: oklch(0.995 0.002 90);
+  --bitacora-papel-texto: oklch(0.22 0.006 265);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -118,6 +127,9 @@
   --color-marca: var(--bitacora-marca);
   --color-marca-texto: var(--bitacora-marca-texto);
   --color-marca-tenue: var(--bitacora-marca-tenue);
+
+  --color-papel: var(--bitacora-papel);
+  --color-papel-texto: var(--bitacora-papel-texto);
 }
 
 @layer base {
@@ -167,6 +179,87 @@
     box-shadow:
       0 1px 2px var(--bitacora-sombra),
       0 16px 40px -16px var(--bitacora-sombra);
+  }
+
+  /*
+    Contenido del documento del editor de plantillas (F4). Escapado a su
+    propio bloque porque TipTap no trae tipografía por defecto: el propio
+    `.ProseMirror` (el `contentEditable` real) necesita reglas explícitas de
+    espaciado para párrafos, encabezados, listas e imágenes.
+  */
+  .prose-plantilla .ProseMirror {
+    outline: none;
+    min-height: 40vh;
+  }
+
+  .prose-plantilla .ProseMirror > * + * {
+    margin-top: 0.75em;
+  }
+
+  .prose-plantilla .ProseMirror h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .prose-plantilla .ProseMirror h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .prose-plantilla .ProseMirror h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .prose-plantilla .ProseMirror ul,
+  .prose-plantilla .ProseMirror ol {
+    padding-left: 1.4em;
+  }
+
+  .prose-plantilla .ProseMirror ul {
+    list-style: disc;
+  }
+
+  .prose-plantilla .ProseMirror ol {
+    list-style: decimal;
+  }
+
+  .prose-plantilla .ProseMirror img {
+    max-width: 100%;
+    border-radius: 0.25rem;
+  }
+
+  .prose-plantilla .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--bitacora-texto-tenue);
+  }
+
+  /*
+    `docx-preview` (vista previa/miniatura de una plantilla `.docx`, F4) trae
+    su propia hoja de estilos con `inWrapper: true`: un fondo gris fijo
+    (`.docx-wrapper`) y la página en blanco fijo
+    (`.docx-wrapper>section.docx`), sin ningún gancho para el tema de la
+    app. Aquí se sobreescribe el color — nunca la estructura, que es lo que
+    da el centrado gratis (`display:flex; align-items:center`) — por los
+    tokens del sistema: el "escritorio" sigue el tema claro/oscuro normal
+    (`--bitacora-fondo`) y la página se queda siempre clara
+    (`--bitacora-papel`), igual que el resto del editor de plantillas.
+  */
+  .vista-previa-docx :where(.docx-wrapper) {
+    background: var(--bitacora-fondo) !important;
+  }
+
+  .vista-previa-docx :where(.docx-wrapper > section.docx) {
+    background: var(--bitacora-papel) !important;
+    box-shadow:
+      0 1px 2px var(--bitacora-sombra),
+      0 16px 40px -16px var(--bitacora-sombra) !important;
   }
 
   @media (prefers-reduced-motion: reduce) {

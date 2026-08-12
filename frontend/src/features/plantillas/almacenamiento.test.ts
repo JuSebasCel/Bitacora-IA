@@ -1,86 +1,102 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { CLAVE_PLANTILLAS, eliminarPlantilla, guardarPlantilla, todasLasPlantillas } from './almacenamiento'
-import type { Plantilla } from './data'
-
-const PLANTILLA_DE_PRUEBA: Plantilla = {
-  id: 'pla-prueba',
-  nombre: 'Plantilla de prueba',
-  colorPrincipal: '#123456',
-  colorSecundario: '#654321',
-  elementos: [],
-  actualizadaEl: '2026-06-01T00:00:00.000Z',
-}
+import {
+  CLAVE_PLANTILLAS,
+  eliminarPlantilla,
+  guardarPlantilla,
+  todasLasPlantillas,
+} from './almacenamiento'
+import { crearPlantillaDesdeDocx, crearPlantillaEnBlanco } from './plantillas'
+import type { MarcadorDeDocx } from './data'
 
 beforeEach(() => {
   sessionStorage.clear()
 })
 
+const MARCADOR_SIMPLE: MarcadorDeDocx = {
+  tipo: 'simple',
+  id: 'mar-1',
+  textoOriginal: '[[Nombre grupo]]',
+  contexto: 'Grupo: [[Nombre grupo]]',
+  origenDeDato: { tipo: 'personalizado', etiqueta: 'Nombre grupo' },
+  formato: 'parrafo',
+}
+
 describe('todasLasPlantillas', () => {
   it('sin nada guardado, devuelve la semilla del fixture', () => {
     const plantillas = todasLasPlantillas()
 
-    expect(plantillas.some((plantilla) => plantilla.id === 'pla-memoria-estandar')).toBe(true)
+    expect(plantillas.some((plantilla) => plantilla.nombre === 'Memoria estándar')).toBe(true)
   })
 
   it('un valor corrupto en sessionStorage se descarta y cae a la semilla', () => {
     sessionStorage.setItem(CLAVE_PLANTILLAS, '{ esto no es JSON')
 
-    const plantillas = todasLasPlantillas()
-
-    expect(plantillas.some((plantilla) => plantilla.id === 'pla-memoria-estandar')).toBe(true)
+    expect(todasLasPlantillas().length).toBeGreaterThan(0)
   })
 
-  it('una entrada individual corrupta se descarta, sin perder las válidas', () => {
+  it('una entrada sin forma válida se descarta en silencio, sin tumbar el resto', () => {
+    sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([{ id: 'sin-nombre-ni-origen' }]))
+
+    expect(todasLasPlantillas()).toEqual([])
+  })
+
+  it('acepta una plantilla en blanco válida', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    guardarPlantilla(plantilla)
+
+    expect(todasLasPlantillas().map((candidata) => candidata.id)).toContain(plantilla.id)
+  })
+
+  it('acepta una plantilla docx válida y descarta un marcador con forma inválida', () => {
+    const plantilla = crearPlantillaDesdeDocx('data:application/octet-stream;base64,AA==', 'Prueba', [
+      MARCADOR_SIMPLE,
+    ])
     sessionStorage.setItem(
       CLAVE_PLANTILLAS,
-      JSON.stringify([PLANTILLA_DE_PRUEBA, { nombre: 'sin id ni elementos' }]),
+      JSON.stringify([
+        plantilla,
+        { ...plantilla, id: 'pla-marcador-invalido', marcadores: [{ tipo: 'simple' }] },
+      ]),
     )
 
-    const plantillas = todasLasPlantillas()
+    const leidas = todasLasPlantillas()
 
-    expect(plantillas.some((plantilla) => plantilla.id === 'pla-prueba')).toBe(true)
-    expect(plantillas.some((plantilla) => plantilla.nombre === 'sin id ni elementos')).toBe(false)
+    expect(leidas.map((candidata) => candidata.id)).toEqual([plantilla.id])
   })
 })
 
 describe('guardarPlantilla', () => {
-  it('con un id nuevo, lo añade sin reemplazar lo existente', () => {
-    guardarPlantilla(PLANTILLA_DE_PRUEBA)
+  it('agrega una plantilla nueva y sobrevive a una nueva lectura', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    guardarPlantilla(plantilla)
 
-    const plantillas = todasLasPlantillas()
-
-    expect(plantillas.some((plantilla) => plantilla.id === 'pla-prueba')).toBe(true)
-    expect(plantillas.some((plantilla) => plantilla.id === 'pla-memoria-estandar')).toBe(true)
+    expect(todasLasPlantillas().map((candidata) => candidata.id)).toContain(plantilla.id)
   })
 
-  it('con un id ya guardado, reemplaza esa entrada en vez de duplicarla', () => {
-    guardarPlantilla(PLANTILLA_DE_PRUEBA)
-    guardarPlantilla({ ...PLANTILLA_DE_PRUEBA, nombre: 'Nombre actualizado' })
+  it('reemplaza una plantilla existente por id en vez de duplicarla', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    guardarPlantilla(plantilla)
 
-    const plantillas = todasLasPlantillas()
-    const coincidencias = plantillas.filter((plantilla) => plantilla.id === 'pla-prueba')
+    const renombrada = { ...plantilla, nombre: 'Con nombre nuevo' }
+    guardarPlantilla(renombrada)
 
-    expect(coincidencias).toHaveLength(1)
-    expect(coincidencias[0]?.nombre).toBe('Nombre actualizado')
-  })
-
-  it('sobrevive a una nueva lectura', () => {
-    guardarPlantilla(PLANTILLA_DE_PRUEBA)
-
-    expect(todasLasPlantillas().map((plantilla) => plantilla.id)).toContain('pla-prueba')
-    expect(todasLasPlantillas().map((plantilla) => plantilla.id)).toContain('pla-prueba')
+    const leidas = todasLasPlantillas().filter((candidata) => candidata.id === plantilla.id)
+    expect(leidas).toHaveLength(1)
+    expect(leidas[0]?.nombre).toBe('Con nombre nuevo')
   })
 })
 
 describe('eliminarPlantilla', () => {
-  it('quita una plantilla previamente guardada', () => {
-    guardarPlantilla(PLANTILLA_DE_PRUEBA)
-    eliminarPlantilla('pla-prueba')
+  it('la quita de lecturas posteriores', () => {
+    const plantilla = crearPlantillaEnBlanco()
+    guardarPlantilla(plantilla)
 
-    expect(todasLasPlantillas().some((plantilla) => plantilla.id === 'pla-prueba')).toBe(false)
+    eliminarPlantilla(plantilla.id)
+
+    expect(todasLasPlantillas().map((candidata) => candidata.id)).not.toContain(plantilla.id)
   })
 
-  it('puede dejar el arreglo guardado legítimamente vacío, sin volver a la semilla', () => {
+  it('borrar la última plantilla deja un arreglo vacío guardado, sin resucitar la semilla', () => {
     for (const plantilla of todasLasPlantillas()) {
       eliminarPlantilla(plantilla.id)
     }

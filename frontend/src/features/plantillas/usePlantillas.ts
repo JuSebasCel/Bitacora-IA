@@ -1,14 +1,13 @@
 import { useCallback, useState } from 'react'
 import { eliminarPlantilla, guardarPlantilla, todasLasPlantillas } from './almacenamiento'
-import type { CampoDeMarcador, ElementoDePlantilla, FormatoDeMarcador, Plantilla } from './data'
+import type { JSONContent, MarcadorDeDocx, Plantilla } from './data'
 import {
-  actualizarElemento as actualizarElementoPuro,
-  agregarElementoDeImagen as agregarElementoDeImagenPuro,
-  agregarElementoDeMarcador as agregarElementoDeMarcadorPuro,
-  agregarElementoDeTexto as agregarElementoDeTextoPuro,
+  actualizarContenido as actualizarContenidoPuro,
+  actualizarMarcadoresDeDocx as actualizarMarcadoresDeDocxPuro,
   cambiarColores as cambiarColoresPuro,
+  crearPlantillaDesdeDocx,
   crearPlantillaEnBlanco,
-  quitarElemento as quitarElementoPuro,
+  esPlantillaEnBlancoAbandonada,
   renombrarPlantilla as renombrarPlantillaPura,
 } from './plantillas'
 import type { ResultadoPlantilla } from './plantillas'
@@ -23,22 +22,17 @@ import type { ResultadoPlantilla } from './plantillas'
 export type ValorDePlantillas = {
   readonly plantillas: readonly Plantilla[]
   readonly crear: () => Plantilla
+  readonly crearDesdeDocx: (
+    archivoOriginal: string,
+    nombre: string,
+    marcadores: readonly MarcadorDeDocx[],
+  ) => Plantilla
   readonly renombrarPlantilla: (id: string, nombre: string) => ResultadoPlantilla
   readonly cambiarColores: (id: string, colorPrincipal: string, colorSecundario: string) => void
-  readonly agregarElementoDeTexto: (id: string) => void
-  readonly agregarElementoDeImagen: (id: string, url: string, nombreDeArchivo: string) => void
-  readonly agregarElementoDeMarcador: (
-    id: string,
-    campo?: CampoDeMarcador,
-    formato?: FormatoDeMarcador,
-  ) => void
-  readonly actualizarElemento: (
-    id: string,
-    idElemento: string,
-    cambios: Partial<ElementoDePlantilla>,
-  ) => void
-  readonly quitarElemento: (id: string, idElemento: string) => void
+  readonly actualizarContenido: (id: string, contenido: JSONContent) => void
+  readonly actualizarMarcadoresDeDocx: (id: string, marcadores: readonly MarcadorDeDocx[]) => void
   readonly eliminar: (id: string) => void
+  readonly podarAbandonadas: () => void
 }
 
 export function usePlantillas(): ValorDePlantillas {
@@ -71,6 +65,15 @@ export function usePlantillas(): ValorDePlantillas {
     return nueva
   }, [guardarEnEstado])
 
+  const crearDesdeDocx = useCallback(
+    (archivoOriginal: string, nombre: string, marcadores: readonly MarcadorDeDocx[]): Plantilla => {
+      const nueva = crearPlantillaDesdeDocx(archivoOriginal, nombre, marcadores)
+      guardarEnEstado(nueva)
+      return nueva
+    },
+    [guardarEnEstado],
+  )
+
   const renombrarPlantilla = useCallback(
     (id: string, nombre: string): ResultadoPlantilla => {
       const actual = plantillas.find((candidata) => candidata.id === id)
@@ -95,37 +98,16 @@ export function usePlantillas(): ValorDePlantillas {
     [conPlantilla],
   )
 
-  const agregarElementoDeTexto = useCallback(
-    (id: string): void => {
-      conPlantilla(id, agregarElementoDeTextoPuro)
+  const actualizarContenido = useCallback(
+    (id: string, contenido: JSONContent): void => {
+      conPlantilla(id, (plantilla) => actualizarContenidoPuro(plantilla, contenido))
     },
     [conPlantilla],
   )
 
-  const agregarElementoDeImagen = useCallback(
-    (id: string, url: string, nombreDeArchivo: string): void => {
-      conPlantilla(id, (plantilla) => agregarElementoDeImagenPuro(plantilla, url, nombreDeArchivo))
-    },
-    [conPlantilla],
-  )
-
-  const agregarElementoDeMarcador = useCallback(
-    (id: string, campo?: CampoDeMarcador, formato?: FormatoDeMarcador): void => {
-      conPlantilla(id, (plantilla) => agregarElementoDeMarcadorPuro(plantilla, campo, formato))
-    },
-    [conPlantilla],
-  )
-
-  const actualizarElemento = useCallback(
-    (id: string, idElemento: string, cambios: Partial<ElementoDePlantilla>): void => {
-      conPlantilla(id, (plantilla) => actualizarElementoPuro(plantilla, idElemento, cambios))
-    },
-    [conPlantilla],
-  )
-
-  const quitarElemento = useCallback(
-    (id: string, idElemento: string): void => {
-      conPlantilla(id, (plantilla) => quitarElementoPuro(plantilla, idElemento))
+  const actualizarMarcadoresDeDocx = useCallback(
+    (id: string, marcadores: readonly MarcadorDeDocx[]): void => {
+      conPlantilla(id, (plantilla) => actualizarMarcadoresDeDocxPuro(plantilla, marcadores))
     },
     [conPlantilla],
   )
@@ -135,16 +117,40 @@ export function usePlantillas(): ValorDePlantillas {
     setPlantillas((anteriores) => anteriores.filter((candidata) => candidata.id !== id))
   }, [])
 
+  /*
+    Red de seguridad para plantillas en blanco abandonadas: "Crear plantilla"
+    persiste de inmediato, así que salir sin tocar nada (sin darle nombre ni
+    contenido) dejaría una entrada vacía acumulándose. El punto principal de
+    limpieza es el botón "Volver a plantillas" del propio editor (borra ahí
+    mismo, sin esperar a este barrido); esto cubre cualquier otra forma de
+    salir (navegación lateral, atrás del navegador). Se llama al montar el
+    listado — leer el propio arreglo en memoria y filtrar es idempotente, así
+    que no hay problema si React (`StrictMode`) lo invoca dos veces seguidas.
+  */
+  const podarAbandonadas = useCallback((): void => {
+    setPlantillas((anteriores) => {
+      const abandonadas = anteriores.filter(esPlantillaEnBlancoAbandonada)
+      if (abandonadas.length === 0) {
+        return anteriores
+      }
+
+      for (const plantilla of abandonadas) {
+        eliminarPlantilla(plantilla.id)
+      }
+
+      return anteriores.filter((candidata) => !esPlantillaEnBlancoAbandonada(candidata))
+    })
+  }, [])
+
   return {
     plantillas,
     crear,
+    crearDesdeDocx,
     renombrarPlantilla,
     cambiarColores,
-    agregarElementoDeTexto,
-    agregarElementoDeImagen,
-    agregarElementoDeMarcador,
-    actualizarElemento,
-    quitarElemento,
+    actualizarContenido,
+    actualizarMarcadoresDeDocx,
     eliminar,
+    podarAbandonadas,
   }
 }
