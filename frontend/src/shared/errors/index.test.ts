@@ -173,3 +173,48 @@ describe('códigos de error de F3', () => {
     }
   })
 })
+
+/* Códigos del directorio compartido de eventos y ponentes (rediseño de F3). */
+const CODIGOS_DE_DIRECTORIO = [
+  'DIR_EVENTO_NOMBRE_REQUERIDO',
+  'DIR_EVENTO_YA_EXISTE',
+  'DIR_EVENTO_NOMBRE_MUY_LARGO',
+  'DIR_PONENTE_NOMBRE_REQUERIDO',
+  'DIR_PONENTE_YA_EXISTE',
+  'DIR_PONENTE_NOMBRE_MUY_LARGO',
+] as const
+
+describe('códigos de error del directorio', () => {
+  it('registra en el catálogo los códigos de evento y ponente', () => {
+    for (const codigo of CODIGOS_DE_DIRECTORIO) {
+      expect(CODIGOS_DE_ERROR).toContain(codigo)
+    }
+  })
+
+  it('ningún código del directorio cae al mensaje genérico', () => {
+    const generico = mensajeDeError(CODIGO_INEXISTENTE)
+
+    for (const codigo of CODIGOS_DE_DIRECTORIO) {
+      expect(mensajeDeError(codigo)).not.toBe(generico)
+    }
+  })
+
+  it('traduce cada código del directorio a un mensaje accionable', () => {
+    for (const codigo of CODIGOS_DE_DIRECTORIO) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje.length).toBeGreaterThan(20)
+      expect(mensaje.trim()).toBe(mensaje)
+    }
+  })
+
+  it('ningún mensaje del directorio filtra un código ni detalle técnico', () => {
+    for (const codigo of CODIGOS_DE_DIRECTORIO) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje).not.toMatch(/_[A-Z]/)
+      expect(mensaje.toLowerCase()).not.toContain('undefined')
+      expect(mensaje.toLowerCase()).not.toContain('null')
+    }
+  })
+})

@@ -12,8 +12,10 @@ export type {
   EstadoDeProcesamiento,
   EstadoDeValidacion,
   Etiqueta,
+  Evento,
   Ficha,
   FuenteDeConferencia,
+  Ponente,
   PrivacidadDeComparticion,
   TipoDeUnidad,
 } from './tipos'

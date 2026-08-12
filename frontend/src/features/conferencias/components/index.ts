@@ -17,6 +17,7 @@ export { ConteosDeFichas } from './ConteosDeFichas'
 export { EditorDeEtiquetas } from './EditorDeEtiquetas'
 export { ListadoDeFichas } from './ListadoDeFichas'
 export { ResumenDeConferencia } from './ResumenDeConferencia'
+export { VistaPreviaDeCarga } from './VistaPreviaDeCarga'
 
 export type { DatosDeFila, EstadoDelListado } from './ListadoDeConferencias'
 export { ListadoDeConferencias } from './ListadoDeConferencias'

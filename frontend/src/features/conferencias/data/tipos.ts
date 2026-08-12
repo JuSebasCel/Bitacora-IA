@@ -118,3 +118,21 @@ export const ESPACIO_DE_ETIQUETAS_VACIO: EspacioDeEtiquetas = {
   etiquetas: [],
   asignaciones: [],
 }
+
+/*
+  Evento y ponente son el directorio compartido de F3 (carga de conferencia):
+  a diferencia de las etiquetas, no son del espacio personal de nadie, son
+  datos del grupo. Un ponente queda asociado a un evento porque la misma
+  persona real puede hablar en más de uno sin que sean la misma entrada
+  (PLAN.md sección 7).
+*/
+export type Evento = {
+  readonly id: string
+  readonly nombre: string
+}
+
+export type Ponente = {
+  readonly id: string
+  readonly nombre: string
+  readonly idEvento: string
+}
