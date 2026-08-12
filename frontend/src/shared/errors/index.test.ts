@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CODIGOS_DE_ERROR, mensajeDeError, type CodigoError } from './index'
+import { CODIGOS_DE_ERROR, LARGO_MAXIMO_DE_PLANTILLA, mensajeDeError, type CodigoError } from './index'
 
 describe('catálogo de errores', () => {
   it('resuelve cada código conocido a un mensaje no vacío', () => {
@@ -216,5 +216,53 @@ describe('códigos de error del directorio', () => {
       expect(mensaje.toLowerCase()).not.toContain('undefined')
       expect(mensaje.toLowerCase()).not.toContain('null')
     }
+  })
+})
+
+/* Códigos del editor de plantillas (F4). */
+const CODIGOS_DE_PLANTILLAS = [
+  'PLANT_NOMBRE_REQUERIDO',
+  'PLANT_NOMBRE_MUY_LARGO',
+  'PLANT_NO_ENCONTRADA',
+  'PLANT_IMAGEN_NO_SOPORTADA',
+  'PLANT_IMAGEN_MUY_GRANDE',
+] as const
+
+describe('códigos de error de plantillas', () => {
+  it('registra en el catálogo los códigos de plantillas', () => {
+    for (const codigo of CODIGOS_DE_PLANTILLAS) {
+      expect(CODIGOS_DE_ERROR).toContain(codigo)
+    }
+  })
+
+  it('ningún código de plantillas cae al mensaje genérico', () => {
+    const generico = mensajeDeError(CODIGO_INEXISTENTE)
+
+    for (const codigo of CODIGOS_DE_PLANTILLAS) {
+      expect(mensajeDeError(codigo)).not.toBe(generico)
+    }
+  })
+
+  it('traduce cada código de plantillas a un mensaje accionable', () => {
+    for (const codigo of CODIGOS_DE_PLANTILLAS) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje.length).toBeGreaterThan(20)
+      expect(mensaje.trim()).toBe(mensaje)
+    }
+  })
+
+  it('ningún mensaje de plantillas filtra un código ni detalle técnico', () => {
+    for (const codigo of CODIGOS_DE_PLANTILLAS) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje).not.toMatch(/_[A-Z]/)
+      expect(mensaje.toLowerCase()).not.toContain('undefined')
+      expect(mensaje.toLowerCase()).not.toContain('null')
+    }
+  })
+
+  it('indica el límite exacto en el mensaje de nombre de plantilla demasiado largo', () => {
+    expect(mensajeDeError('PLANT_NOMBRE_MUY_LARGO')).toContain(String(LARGO_MAXIMO_DE_PLANTILLA))
   })
 })

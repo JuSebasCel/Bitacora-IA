@@ -6,8 +6,9 @@ import { PantallaDeModulo } from './PantallaDeModulo'
 */
 
 /*
-  Conferencias y Cargar conferencia ya no están aquí: F2 y F3 las sustituyeron
-  por sus pantallas reales, que viven en `features/conferencias/screens`.
+  Conferencias, Cargar conferencia y Plantillas ya no están aquí: F2, F3 y F4
+  las sustituyeron por sus pantallas reales, que viven en
+  `features/conferencias/screens` y `features/plantillas/screens`.
 */
 
 export function PantallaCatalogo() {
@@ -24,15 +25,6 @@ export function PantallaMemorias() {
     <PantallaDeModulo
       titulo="Memorias"
       descripcion="Compone la memoria de una conferencia a partir de una plantilla guardada y muestra la vista previa del documento antes de exportarlo."
-    />
-  )
-}
-
-export function PantallaPlantillas() {
-  return (
-    <PantallaDeModulo
-      titulo="Plantillas"
-      descripcion="Define el logo, los colores, la estructura y los marcadores de cada plantilla, y los reutiliza en la generación de memorias."
     />
   )
 }

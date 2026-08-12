@@ -34,6 +34,12 @@ export type CodigoError =
   | 'DIR_PONENTE_NOMBRE_REQUERIDO'
   | 'DIR_PONENTE_YA_EXISTE'
   | 'DIR_PONENTE_NOMBRE_MUY_LARGO'
+  /* Editor de plantillas (F4). */
+  | 'PLANT_NOMBRE_REQUERIDO'
+  | 'PLANT_NOMBRE_MUY_LARGO'
+  | 'PLANT_NO_ENCONTRADA'
+  | 'PLANT_IMAGEN_NO_SOPORTADA'
+  | 'PLANT_IMAGEN_MUY_GRANDE'
 
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
@@ -41,6 +47,12 @@ export const LARGO_MAXIMO_DE_ETIQUETA = 24
 /** Nombres de evento y ponente admiten más largo que una etiqueta: son texto libre real, no un chip. */
 export const LARGO_MAXIMO_DE_EVENTO = 80
 export const LARGO_MAXIMO_DE_PONENTE = 60
+
+/** Nombre de una plantilla: se muestra en tarjetas del listado, similar de largo a un evento. */
+export const LARGO_MAXIMO_DE_PLANTILLA = 80
+
+/** Tope del archivo de imagen antes de codificarlo a base64 para guardarlo en sessionStorage. */
+export const TAMANO_MAXIMO_DE_IMAGEN_MB = 2
 
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
@@ -81,6 +93,13 @@ const MENSAJES: Record<CodigoError, string> = {
   DIR_PONENTE_YA_EXISTE:
     'Ese ponente ya está registrado en este evento. Elígelo de la lista o usa otro nombre.',
   DIR_PONENTE_NOMBRE_MUY_LARGO: `El nombre del ponente admite hasta ${LARGO_MAXIMO_DE_PONENTE} caracteres. Acórtalo para guardarlo.`,
+
+  PLANT_NOMBRE_REQUERIDO: 'Escribe un nombre para la plantilla antes de guardarla.',
+  PLANT_NOMBRE_MUY_LARGO: `El nombre de la plantilla admite hasta ${LARGO_MAXIMO_DE_PLANTILLA} caracteres. Acórtalo para guardarlo.`,
+  PLANT_NO_ENCONTRADA: 'No encontramos esa plantilla. Puede que ya se haya eliminado.',
+  PLANT_IMAGEN_NO_SOPORTADA:
+    'Esa imagen no tiene un formato admitido. Usa PNG, JPG o WEBP e inténtalo de nuevo.',
+  PLANT_IMAGEN_MUY_GRANDE: `Esa imagen supera el tamaño máximo admitido (${TAMANO_MAXIMO_DE_IMAGEN_MB} MB). Usa una más liviana.`,
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'
