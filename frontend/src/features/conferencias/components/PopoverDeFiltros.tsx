@@ -20,6 +20,7 @@ type PropiedadesPopoverDeFiltros = {
   etiquetasSeleccionadas: readonly string[]
   alCambiarEstado: (estado: FiltroDeEstado) => void
   alAlternarEtiqueta: (idEtiqueta: string) => void
+  alQuitarTodasLasEtiquetas: () => void
   alCrearEtiqueta: (nombre: string) => ResultadoCreacion
 }
 
@@ -37,6 +38,7 @@ export function PopoverDeFiltros({
   etiquetasSeleccionadas,
   alCambiarEstado,
   alAlternarEtiqueta,
+  alQuitarTodasLasEtiquetas,
   alCrearEtiqueta,
 }: PropiedadesPopoverDeFiltros) {
   const [creadorAbierto, setCreadorAbierto] = useState(false)
@@ -98,6 +100,7 @@ export function PopoverDeFiltros({
               etiquetas={etiquetas}
               seleccionadas={etiquetasSeleccionadas}
               alAlternar={alAlternarEtiqueta}
+              alQuitarTodas={alQuitarTodasLasEtiquetas}
               alAbrirCreador={() => {
                 cerrar()
                 setCreadorAbierto(true)

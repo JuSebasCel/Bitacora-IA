@@ -6,6 +6,7 @@ import { EncabezadoDeSeccion } from '@/shared/ui'
 import { ControlesDelListado, ListadoDeConferencias, useConferenciasVisibles } from '../components'
 import type { DatosDeFila, EstadoDelListado, ResultadoCreacion } from '../components'
 import { FICHAS_DE_EJEMPLO } from '../data'
+import { useConferenciasOcultas } from '../ocultas'
 import {
   CRITERIOS_POR_DEFECTO,
   escribirCriterios,
@@ -46,10 +47,22 @@ export function PantallaConferencias() {
   const [params, setParams] = useSearchParams()
   const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
   const { carga, visibles } = useConferenciasVisibles(idUsuario)
+  const { idsOcultos, ocultar } = useConferenciasOcultas(idUsuario)
 
   const idsDeEtiqueta = useMemo(
     () => espacio.etiquetas.map((etiqueta) => etiqueta.id),
     [espacio.etiquetas],
+  )
+
+  /*
+    Ocultar una conferencia es una preferencia de vista, no una regla de
+    acceso: se resuelve aquí, sobre lo que la sesión puede ver, antes de que
+    los filtros y la búsqueda entren a jugar. Por eso cuenta igual que
+    "visible" para decidir entre los dos vacíos de abajo.
+  */
+  const visiblesSinOcultas = useMemo(
+    () => visibles.filter((visible) => !idsOcultos.includes(visible.conferencia.id)),
+    [visibles, idsOcultos],
   )
 
   const criterios = useMemo(() => leerCriterios(params, idsDeEtiqueta), [params, idsDeEtiqueta])
@@ -57,12 +70,12 @@ export function PantallaConferencias() {
   const listadas = useMemo(
     () =>
       listarConferencias({
-        visibles,
+        visibles: visiblesSinOcultas,
         criterios,
         asignaciones: espacio.asignaciones,
         fichas: FICHAS_DE_EJEMPLO,
       }),
-    [visibles, criterios, espacio.asignaciones],
+    [visiblesSinOcultas, criterios, espacio.asignaciones],
   )
 
   const filas: readonly DatosDeFila[] = useMemo(
@@ -148,7 +161,7 @@ export function PantallaConferencias() {
     return resultado
   }
 
-  const hayConferencias = visibles.length > 0
+  const hayConferencias = visiblesSinOcultas.length > 0
 
   const estadoDelListado: EstadoDelListado =
     carga === 'cargando'
@@ -182,6 +195,7 @@ export function PantallaConferencias() {
           misEtiquetas={espacio.etiquetas}
           alAlternarAsignacion={alAlternarAsignacion}
           alCrearYAsignar={alCrearYAsignarEtiqueta}
+          alOcultar={ocultar}
         />
       </div>
     </>

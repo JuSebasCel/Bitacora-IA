@@ -36,6 +36,7 @@ function montar(estado: EstadoDelListado, filas: readonly DatosDeFila[] = FILAS,
         misEtiquetas={[]}
         alAlternarAsignacion={() => undefined}
         alCrearYAsignar={() => ({ ok: false, mensaje: 'sin usar en esta prueba' })}
+        alOcultar={() => undefined}
         {...extra}
       />
     </MemoryRouter>,
@@ -111,5 +112,20 @@ describe('ListadoDeConferencias', () => {
     const enlace = screen.getAllByRole('link')[0]
 
     expect(enlace).toHaveAttribute('href', expect.stringContaining('?segmento=propias'))
+  })
+
+  it('ocultar una fila llama a alOcultar con el id de esa conferencia', async () => {
+    const usuario = userEvent.setup()
+    const alOcultar = vi.fn()
+    const primera = FILAS[0]
+    if (primera === undefined) throw new Error('se esperaba al menos una fila')
+
+    montar('listo', FILAS.slice(0, 1), { alOcultar })
+
+    await usuario.click(
+      screen.getByRole('button', { name: new RegExp(`quitar.*${primera.visible.conferencia.titulo}`, 'i') }),
+    )
+
+    expect(alOcultar).toHaveBeenCalledWith(primera.visible.conferencia.id)
   })
 })

@@ -36,6 +36,7 @@ type PropiedadesListado = {
   misEtiquetas: readonly Etiqueta[]
   alAlternarAsignacion: (idEtiqueta: string, idConferencia: string) => void
   alCrearYAsignar: (nombre: string, idConferencia: string) => ResultadoCreacion
+  alOcultar: (idConferencia: string) => void
 }
 
 const VACIO_POR_SEGMENTO: Record<Segmento, { titulo: string; descripcion: string }> = {
@@ -69,6 +70,7 @@ export function ListadoDeConferencias({
   misEtiquetas,
   alAlternarAsignacion,
   alCrearYAsignar,
+  alOcultar,
 }: PropiedadesListado) {
   const reducirMovimiento = useReducedMotion()
 
@@ -118,6 +120,7 @@ export function ListadoDeConferencias({
               alAlternarAsignacion(idEtiqueta, fila.visible.conferencia.id)
             }
             alCrearYAsignar={(nombre) => alCrearYAsignar(nombre, fila.visible.conferencia.id)}
+            alOcultar={() => alOcultar(fila.visible.conferencia.id)}
           />
         ))}
       </motion.ul>

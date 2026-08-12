@@ -13,6 +13,7 @@ type PropiedadesFiltro = {
   seleccionadas: readonly string[]
   alAlternar: (idEtiqueta: string) => void
   alAbrirCreador: () => void
+  alQuitarTodas: () => void
 }
 
 export function FiltroDeEtiquetas({
@@ -20,10 +21,22 @@ export function FiltroDeEtiquetas({
   seleccionadas,
   alAlternar,
   alAbrirCreador,
+  alQuitarTodas,
 }: PropiedadesFiltro) {
   return (
     <fieldset className="flex flex-col gap-1.5">
-      <legend className="text-xs font-medium text-texto-tenue">Etiquetas</legend>
+      <legend className="flex w-full items-center justify-between gap-2 text-xs font-medium text-texto-tenue">
+        Etiquetas
+        {seleccionadas.length === 0 ? null : (
+          <button
+            type="button"
+            onClick={alQuitarTodas}
+            className="font-normal text-texto-tenue underline-offset-2 transition-colors hover:text-acento hover:underline"
+          >
+            Quitar todas
+          </button>
+        )}
+      </legend>
 
       {etiquetas.length === 0 ? (
         <p className="text-xs text-texto-tenue">
