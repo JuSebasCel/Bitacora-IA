@@ -50,7 +50,7 @@ export function VistaPreviaDeCarga({ datos, archivo, eventos, ponentes }: Propie
   const nombreDelPonente = ponentes.find((ponente) => ponente.id === datos.idPonente)?.nombre ?? null
 
   return (
-    <aside aria-label="Vista previa" className="flex h-fit flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
+    <aside aria-label="Vista previa" className="flex h-fit flex-col gap-4 rounded-md bg-panel p-4 shadow-sm">
       <h2 className="text-sm font-medium text-texto">Vista previa</h2>
 
       {datos.titulo.trim() === '' ? (

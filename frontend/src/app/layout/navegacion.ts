@@ -3,7 +3,6 @@ import { CardsIcon } from '@phosphor-icons/react/dist/csr/Cards'
 import { GearIcon } from '@phosphor-icons/react/dist/csr/Gear'
 import { LayoutIcon } from '@phosphor-icons/react/dist/csr/Layout'
 import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
-import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple'
 import type { Icon, IconWeight } from '@phosphor-icons/react'
 
 /*
@@ -32,11 +31,6 @@ export const SECCIONES_DE_NAVEGACION: readonly SeccionDeNavegacion[] = [
     etiqueta: 'Conferencias',
     ruta: '/conferencias',
     icono: MicrophoneIcon,
-  },
-  {
-    etiqueta: 'Cargar conferencia',
-    ruta: '/conferencias/nueva',
-    icono: UploadSimpleIcon,
   },
   {
     etiqueta: 'Catálogo',
@@ -70,10 +64,10 @@ function cuelgaDe(rutaActual: string, base: string): boolean {
   con la ruta actual.
 
   Sustituye al par `coincidenciaExacta` + `end` de NavLink que usaba F1, que
-  dejó de servir al entrar el detalle de conferencia. Con `end`,
-  /conferencias/cnf-alc-01 no marcaba ninguna sección; sin `end`, se marcaban
-  dos a la vez en /conferencias/nueva. La regla de especificidad resuelve los
-  dos casos y, al ser una función pura, se prueba sin montar el shell.
+  dejó de servir al entrar el detalle de conferencia: con `end`,
+  /conferencias/cnf-alc-01 no marcaba ninguna sección. La regla de
+  especificidad resuelve el caso general y, al ser una función pura, se prueba
+  sin montar el shell.
 */
 export function esSeccionActiva(seccion: SeccionDeNavegacion, rutaActual: string): boolean {
   if (!cuelgaDe(rutaActual, seccion.ruta)) {

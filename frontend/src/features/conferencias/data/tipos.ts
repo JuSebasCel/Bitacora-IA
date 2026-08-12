@@ -89,6 +89,12 @@ export type Conferencia = {
   readonly resumen: string
   readonly fuente: FuenteDeConferencia
   readonly comparticiones: readonly Comparticion[]
+  /**
+   * Fecha y hora ISO en que se cargó, presente solo en conferencias subidas
+   * en esta sesión (F3). Sirve para simular en el listado el avance del
+   * procesamiento en tiempo real; el fixture no la trae.
+   */
+  readonly cargadaEl?: string
 }
 
 /*

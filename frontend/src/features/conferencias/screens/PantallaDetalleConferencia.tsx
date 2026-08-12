@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { PanelDeError } from '@/shared/ui'
+import { conferenciasCargadasDe } from '../carga'
 import {
   AsignadorDeEtiquetas,
   ConteosDeFichas,
@@ -47,7 +48,12 @@ export function PantallaDetalleConferencia() {
   const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
 
   const resultado = useMemo(
-    () => obtenerConferencia(CONFERENCIAS_DE_EJEMPLO, idUsuario, idConferencia),
+    () =>
+      obtenerConferencia(
+        [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)],
+        idUsuario,
+        idConferencia,
+      ),
     [idUsuario, idConferencia],
   )
 

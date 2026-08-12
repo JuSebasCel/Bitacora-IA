@@ -1,8 +1,10 @@
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/csr/EyeSlash'
 import { motion } from 'motion/react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Insignia, Pastilla } from '@/shared/ui'
 import type { TonoDeInsignia } from '@/shared/ui'
+import { progresoDe } from '../carga'
 import { formatearFecha, nombreDePersona } from '../data'
 import type { Etiqueta, EstadoDeProcesamiento } from '../data'
 import type { ConferenciaVisible } from '../query'
@@ -79,6 +81,32 @@ export function FilaDeConferencia({
     .filter((visibleDeEtiqueta) => visibleDeEtiqueta.propia)
     .map((visibleDeEtiqueta) => visibleDeEtiqueta.etiqueta.id)
 
+  const { cargadaEl } = conferencia
+  const [progreso, setProgreso] = useState(() =>
+    cargadaEl === undefined ? 100 : progresoDe(cargadaEl, Date.now()),
+  )
+
+  /*
+    Solo las conferencias cargadas en esta sesión traen `cargadaEl`; las del
+    fixture no avanzan solas. El intervalo se apaga solo al llegar a 100, no
+    hace falta desmontar nada más.
+  */
+  useEffect(() => {
+    if (cargadaEl === undefined || progreso >= 100) {
+      return
+    }
+
+    const intervalo = setInterval(() => {
+      setProgreso(progresoDe(cargadaEl, Date.now()))
+    }, 250)
+
+    return () => clearInterval(intervalo)
+  }, [cargadaEl, progreso])
+
+  const enProcesamiento = cargadaEl !== undefined && progreso < 100
+  const estadoMostrado: EstadoDeProcesamiento =
+    cargadaEl !== undefined && progreso >= 100 ? 'procesada' : conferencia.estado
+
   return (
     <motion.li
       variants={ELEMENTO_DE_FILA}
@@ -131,9 +159,7 @@ export function FilaDeConferencia({
         </p>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-0.5">
-          <Insignia tono={TONO_POR_ESTADO[conferencia.estado]}>
-            {TEXTO_POR_ESTADO[conferencia.estado]}
-          </Insignia>
+          <Insignia tono={TONO_POR_ESTADO[estadoMostrado]}>{TEXTO_POR_ESTADO[estadoMostrado]}</Insignia>
           <span className="coordenada text-xs text-texto-tenue">
             {textoDeFichas(numeroDeFichas)}
           </span>
@@ -143,6 +169,22 @@ export function FilaDeConferencia({
               : `Compartida por ${nombreDelDueno ?? 'otra persona'}`}
           </span>
         </div>
+
+        {enProcesamiento ? (
+          <div
+            role="progressbar"
+            aria-label={`Procesando «${conferencia.titulo}»`}
+            aria-valuenow={progreso}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            className="h-1 w-full max-w-48 overflow-hidden rounded-full bg-fondo"
+          >
+            <div
+              className="h-full rounded-full bg-acento transition-[width] duration-300 ease-linear"
+              style={{ width: `${progreso}%` }}
+            />
+          </div>
+        ) : null}
 
         {/*
           Las pastillas van en un div y no en una lista anidada: el listado de
