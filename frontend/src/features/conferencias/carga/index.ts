@@ -6,3 +6,5 @@ export {
   validarDatos,
 } from './validacion'
 export type { DatosDeCarga, ResultadoDeCarga } from './validacion'
+export { agregarConferenciaCargada, CLAVE_CARGADAS, conferenciasCargadasDe } from './almacenamiento'
+export { DURACION_PROCESAMIENTO_MS, progresoDe } from './progreso'

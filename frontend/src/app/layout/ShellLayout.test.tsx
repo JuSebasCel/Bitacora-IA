@@ -32,7 +32,6 @@ function montarShell(rutaInicial = '/conferencias') {
           <Route element={<RutaProtegida />}>
             <Route element={<ShellLayout />}>
               <Route path="/conferencias" element={<p>Contenido de conferencias</p>} />
-              <Route path="/conferencias/nueva" element={<p>Contenido de carga</p>} />
               <Route path="/conferencias/:idConferencia" element={<p>Contenido del detalle</p>} />
               <Route path="/catalogo" element={<p>Contenido del catálogo</p>} />
               <Route path="/memorias" element={<p>Contenido de memorias</p>} />
@@ -77,15 +76,14 @@ describe('ShellLayout', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-  it('lista las seis secciones de navegación en el orden definido', () => {
+  it('lista las cinco secciones de navegación en el orden definido', () => {
     montarShell()
 
     const enlaces = within(barraDeNavegacion()).getAllByRole('link')
 
-    expect(enlaces).toHaveLength(6)
+    expect(enlaces).toHaveLength(5)
     expect(enlaces.map((enlace) => enlace.textContent?.trim())).toEqual([
       'Conferencias',
-      'Cargar conferencia',
       'Catálogo',
       'Memorias',
       'Plantillas',
@@ -93,7 +91,6 @@ describe('ShellLayout', () => {
     ])
     expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual([
       '/conferencias',
-      '/conferencias/nueva',
       '/catalogo',
       '/memorias',
       '/plantillas',
@@ -111,16 +108,6 @@ describe('ShellLayout', () => {
     expect(activos[0]).toHaveTextContent('Catálogo')
   })
 
-  it('no marca dos secciones a la vez cuando una ruta es prefijo de otra', () => {
-    montarShell('/conferencias/nueva')
-
-    const enlaces = within(barraDeNavegacion()).getAllByRole('link')
-    const activos = enlaces.filter((enlace) => enlace.getAttribute('aria-current') === 'page')
-
-    expect(activos).toHaveLength(1)
-    expect(activos[0]).toHaveTextContent('Cargar conferencia')
-  })
-
   /*
     El detalle de una conferencia cuelga de /conferencias y no tiene sección
     propia, así que la sección de origen tiene que seguir marcada: si no, el
@@ -135,17 +122,6 @@ describe('ShellLayout', () => {
     expect(activos).toHaveLength(1)
     expect(activos[0]).toHaveTextContent('Conferencias')
     expect(screen.getByText('Contenido del detalle')).toBeInTheDocument()
-  })
-
-  /*
-    Regresión: el segmento estático tiene que seguir ganando al dinámico ahora
-    que las dos rutas conviven.
-  */
-  it('resuelve la carga de conferencia y no el detalle en /conferencias/nueva', () => {
-    montarShell('/conferencias/nueva')
-
-    expect(screen.getByText('Contenido de carga')).toBeInTheDocument()
-    expect(screen.queryByText('Contenido del detalle')).not.toBeInTheDocument()
   })
 
   it('muestra el nombre de la persona con sesión abierta', () => {
@@ -302,11 +278,11 @@ describe('ShellLayout', () => {
 })
 
 describe('SECCIONES_DE_NAVEGACION', () => {
-  it('define seis secciones con ruta única e icono', () => {
-    expect(SECCIONES_DE_NAVEGACION).toHaveLength(6)
+  it('define cinco secciones con ruta única e icono', () => {
+    expect(SECCIONES_DE_NAVEGACION).toHaveLength(5)
 
     const rutas = SECCIONES_DE_NAVEGACION.map((seccion) => seccion.ruta)
-    expect(new Set(rutas).size).toBe(6)
+    expect(new Set(rutas).size).toBe(5)
 
     for (const seccion of SECCIONES_DE_NAVEGACION) {
       expect(seccion.etiqueta.trim().length).toBeGreaterThan(0)

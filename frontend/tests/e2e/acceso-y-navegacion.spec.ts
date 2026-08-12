@@ -46,20 +46,12 @@ test('acceso, navegación protegida y cierre de sesión', async ({ page }) => {
 
   const navegacion = page.getByRole('navigation', { name: 'Secciones de Bitácora AI' })
 
-  await test.step('la barra lateral lista las seis secciones y marca la activa', async () => {
-    await expect(navegacion.getByRole('link')).toHaveCount(6)
+  await test.step('la barra lateral lista las cinco secciones y marca la activa', async () => {
+    await expect(navegacion.getByRole('link')).toHaveCount(5)
 
-    /*
-      "Conferencias" es prefijo de "Cargar conferencia": solo la primera puede
-      quedar marcada al estar en /conferencias.
-    */
     await expect(
       navegacion.getByRole('link', { name: 'Conferencias', exact: true }),
     ).toHaveAttribute('aria-current', 'page')
-    await expect(navegacion.getByRole('link', { name: 'Cargar conferencia' })).not.toHaveAttribute(
-      'aria-current',
-      'page',
-    )
   })
 
   await test.step('navegar al catálogo mueve la marca de sección activa', async () => {

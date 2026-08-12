@@ -34,14 +34,6 @@ describe('esSeccionActiva', () => {
   })
 
   /*
-    El caso que rompía el booleano: la ruta más específica gana, y Conferencias
-    no se queda marcada solo por ser su prefijo.
-  */
-  it('deja una sola sección marcada cuando una ruta es prefijo de otra', () => {
-    expect(activasEn('/conferencias/nueva')).toEqual(['Cargar conferencia'])
-  })
-
-  /*
     El caso que rompía el `end`: el detalle cuelga de Conferencias y de ninguna
     otra sección, así que Conferencias sigue siendo el sitio donde estás.
   */

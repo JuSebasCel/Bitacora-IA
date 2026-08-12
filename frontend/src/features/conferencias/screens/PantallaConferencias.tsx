@@ -1,9 +1,15 @@
-import { useMemo } from 'react'
+import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
-import { EncabezadoDeSeccion } from '@/shared/ui'
-import { ControlesDelListado, ListadoDeConferencias, useConferenciasVisibles } from '../components'
+import { Button, EncabezadoDeSeccion } from '@/shared/ui'
+import {
+  ControlesDelListado,
+  ListadoDeConferencias,
+  PanelDeCarga,
+  useConferenciasVisibles,
+} from '../components'
 import type { DatosDeFila, EstadoDelListado, ResultadoCreacion } from '../components'
 import { FICHAS_DE_EJEMPLO } from '../data'
 import { useConferenciasOcultas } from '../ocultas'
@@ -46,8 +52,9 @@ export function PantallaConferencias() {
 
   const [params, setParams] = useSearchParams()
   const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
-  const { carga, visibles } = useConferenciasVisibles(idUsuario)
+  const { carga, visibles, recargar } = useConferenciasVisibles(idUsuario)
   const { idsOcultos, ocultar } = useConferenciasOcultas(idUsuario)
+  const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
 
   const idsDeEtiqueta = useMemo(
     () => espacio.etiquetas.map((etiqueta) => etiqueta.id),
@@ -177,6 +184,13 @@ export function PantallaConferencias() {
       <EncabezadoDeSeccion titulo="Conferencias" descripcion={DESCRIPCION} />
 
       <div className="mt-6 flex flex-col gap-6">
+        <div className="flex justify-end">
+          <Button variante="secundario" onClick={() => setPanelDeCargaAbierto(true)}>
+            <PlusIcon size={14} weight="bold" aria-hidden="true" />
+            Cargar conferencia
+          </Button>
+        </div>
+
         <ControlesDelListado
           criterios={criterios}
           etiquetas={espacio.etiquetas}
@@ -198,6 +212,15 @@ export function PantallaConferencias() {
           alOcultar={ocultar}
         />
       </div>
+
+      <PanelDeCarga
+        abierto={panelDeCargaAbierto}
+        alCerrar={() => setPanelDeCargaAbierto(false)}
+        alCargar={() => {
+          setPanelDeCargaAbierto(false)
+          recargar()
+        }}
+      />
     </>
   )
 }

@@ -276,8 +276,9 @@ describe('PantallaConferencias, etiquetas', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
     await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))
-    await usuario.type(await screen.findByLabelText('Nombre'), 'art2')
-    await usuario.click(screen.getByRole('button', { name: 'Crear' }))
+    const dialogo = await screen.findByRole('dialog')
+    await usuario.type(within(dialogo).getByLabelText('Nombre'), 'art2')
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Crear' }))
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -294,8 +295,9 @@ describe('PantallaConferencias, etiquetas', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
     await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))
-    await usuario.type(await screen.findByLabelText('Nombre'), 'tesis')
-    await usuario.click(screen.getByRole('button', { name: 'Crear' }))
+    const dialogo = await screen.findByRole('dialog')
+    await usuario.type(within(dialogo).getByLabelText('Nombre'), 'tesis')
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Crear' }))
 
     const alerta = await screen.findByRole('alert')
 

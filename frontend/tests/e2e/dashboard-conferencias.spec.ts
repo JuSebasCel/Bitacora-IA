@@ -103,8 +103,8 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
     const dialogo = page.getByRole('dialog')
     await expect(dialogo).toBeVisible()
 
-    await page.getByLabel('Nombre').fill('art2')
-    await page.getByRole('button', { name: 'Crear' }).click()
+    await dialogo.getByLabel('Nombre').fill('art2')
+    await dialogo.getByRole('button', { name: 'Crear' }).click()
 
     await expect(dialogo).toBeHidden()
 
@@ -160,19 +160,12 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
     await expect(page.getByText('00:03:10')).toBeVisible()
   })
 
-  /*
-    El detalle no tiene sección propia en el índice, así que la de origen tiene
-    que seguir marcada. `exact` es obligatorio: "Conferencias" es prefijo de
-    "Cargar conferencia".
-  */
+  /* El detalle no tiene sección propia en el índice, así que la de origen tiene que seguir marcada. */
   await test.step('el índice sigue señalando la sección de origen', async () => {
     await expect(navegacion.getByRole('link', { name: 'Conferencias', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    await expect(
-      navegacion.getByRole('link', { name: 'Cargar conferencia' }),
-    ).not.toHaveAttribute('aria-current', 'page')
   })
 
   await test.step('volver al listado conserva los filtros que había', async () => {

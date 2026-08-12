@@ -1,16 +1,17 @@
 import { expect, test } from '@playwright/test'
 
 /*
-  Criterio de aceptación de F3 (rediseño con directorio de eventos y
-  ponentes): un recorrido continuo por el formulario, desde el error de
-  campos vacíos hasta la confirmación, pasando por crear un evento y un
-  ponente al vuelo.
+  Criterio de aceptación de F3 (panel de carga integrado al dashboard): un
+  recorrido continuo desde el botón "Cargar conferencia" en /conferencias,
+  pasando por crear un evento y un ponente al vuelo, hasta ver la conferencia
+  nueva en el listado con su estado "Procesando" y su barra de avance.
 
-  F3 sigue siendo una pantalla aislada (PRD.md sección 6, PLAN.md sección 7):
-  lo cargado no se persiste ni se integra al dashboard, así que esta spec no
-  toca ningún estado compartido con otras pruebas. Se reutiliza la cuenta de
-  Camila Zuluaga sin riesgo de colisión bajo `fullyParallel` por esa misma
-  razón.
+  F3 ya no es una pantalla aparte (PRD.md sección 6, PLAN.md sección 7): el
+  formulario vive en un panel lateral disparado desde el dashboard, y lo
+  cargado sí se persiste (por sesión, por usuario) y aparece de inmediato en
+  el listado. Se reutiliza la cuenta de Camila Zuluaga: el listado que ve
+  (7 conferencias) es exclusivo de esta spec bajo `fullyParallel`, y la
+  conferencia que esta prueba agrega no la ve ninguna otra cuenta.
 
   Credenciales copiadas de `src/features/auth/session/cuentas.fixture.ts`:
   `tsconfig.e2e.json` no tiene el alias `@/`, así que desde aquí no se puede
@@ -21,28 +22,28 @@ const CUENTA = {
   contrasena: 'Simposio-Andes',
 }
 
-test('recorrido completo de la carga de conferencia', async ({ page }) => {
-  const selectorDeEvento = page.getByLabel('Evento', { exact: true })
-  const selectorDePonente = page.getByLabel('Ponente', { exact: true })
+test('recorrido completo de la carga de conferencia desde el dashboard', async ({ page }) => {
+  const panel = page.getByRole('dialog', { name: 'Cargar conferencia' })
+  const selectorDeEvento = panel.getByLabel('Evento', { exact: true })
+  const selectorDePonente = panel.getByLabel('Ponente', { exact: true })
 
-  await test.step('acceder y navegar a "Cargar conferencia"', async () => {
+  await test.step('acceder y abrir el panel de carga desde Conferencias', async () => {
     await page.goto('/acceso')
     await page.getByLabel('Correo').fill(CUENTA.correo)
     await page.getByLabel('Contraseña').fill(CUENTA.contrasena)
     await page.getByRole('button', { name: 'Acceder' }).click()
     await expect(page).toHaveURL(/\/conferencias$/)
 
-    await page.getByRole('link', { name: 'Cargar conferencia' }).click()
-    await expect(page).toHaveURL(/\/conferencias\/nueva$/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Cargar conferencia' })).toBeVisible()
+    await page.getByRole('button', { name: 'Cargar conferencia' }).click()
+    await expect(panel).toBeVisible()
   })
 
   await test.step('enviar el formulario vacío muestra un error por cada campo sin completar', async () => {
-    await page.getByRole('button', { name: 'Cargar conferencia' }).click()
+    await panel.getByRole('button', { name: 'Cargar conferencia' }).click()
 
-    await expect(page.getByRole('alert').first()).toBeVisible()
+    await expect(panel.getByRole('alert').first()).toBeVisible()
     await expect(selectorDeEvento).toHaveAttribute('aria-invalid', 'true')
-    await expect(page).toHaveURL(/\/conferencias\/nueva$/)
+    await expect(panel).toBeVisible()
   })
 
   await test.step('el selector de ponente empieza deshabilitado', async () => {
@@ -52,7 +53,7 @@ test('recorrido completo de la carga de conferencia', async ({ page }) => {
   await test.step('crear un evento nuevo al vuelo lo deja elegido y habilita el de ponente', async () => {
     await selectorDeEvento.selectOption({ label: '+ Crear evento nuevo…' })
 
-    const dialogo = page.getByRole('dialog')
+    const dialogo = page.getByRole('dialog').filter({ hasText: 'Nuevo evento' })
     await expect(dialogo).toBeVisible()
 
     await dialogo.getByLabel('Nombre').fill('Encuentro de Prueba E2E')
@@ -66,7 +67,7 @@ test('recorrido completo de la carga de conferencia', async ({ page }) => {
   await test.step('crear un ponente nuevo al vuelo lo deja elegido', async () => {
     await selectorDePonente.selectOption({ label: '+ Crear ponente nuevo…' })
 
-    const dialogo = page.getByRole('dialog')
+    const dialogo = page.getByRole('dialog').filter({ hasText: 'Nuevo ponente' })
     await expect(dialogo).toBeVisible()
 
     await dialogo.getByLabel('Nombre').fill('Ponente de Prueba')
@@ -77,52 +78,48 @@ test('recorrido completo de la carga de conferencia', async ({ page }) => {
   })
 
   await test.step('la vista previa refleja el evento y el ponente elegidos', async () => {
-    const vistaPrevia = page.getByRole('complementary', { name: 'Vista previa' })
+    const vistaPrevia = panel.getByRole('complementary', { name: 'Vista previa' })
 
     await expect(vistaPrevia.getByText('Encuentro de Prueba E2E')).toBeVisible()
     await expect(vistaPrevia.getByText('Ponente de Prueba')).toBeVisible()
   })
 
   await test.step('completar los datos y adjuntar la extensión equivocada muestra el error de formato', async () => {
-    await page.getByLabel('Título').fill('Charla de prueba end to end')
-    await page.getByLabel('Fecha del evento').fill('2026-05-14')
+    await panel.getByLabel('Título').fill('Charla de prueba end to end')
+    await panel.getByLabel('Fecha del evento').fill('2026-05-14')
 
-    await expect(page.getByRole('radio', { name: 'Audio' })).toBeChecked()
+    await expect(panel.getByRole('radio', { name: 'Audio' })).toBeChecked()
 
-    await page
+    await panel
       .getByLabel('Archivo', { exact: true })
       .setInputFiles('tests/e2e/fixtures/transcripcion-demo.txt')
 
-    await page.getByRole('button', { name: 'Cargar conferencia' }).click()
+    await panel.getByRole('button', { name: 'Cargar conferencia' }).click()
 
-    await expect(page.getByRole('alert')).toContainText(/formato admitido/i)
+    await expect(panel.getByRole('alert')).toContainText(/formato admitido/i)
   })
 
-  await test.step('adjuntar el archivo correcto y enviar muestra la confirmación con nombres, no ids', async () => {
-    await page.getByLabel('Archivo', { exact: true }).setInputFiles('tests/e2e/fixtures/charla-demo.mp3')
+  await test.step('adjuntar el archivo correcto y enviar cierra el panel y agrega la fila procesando', async () => {
+    await panel.getByLabel('Archivo', { exact: true }).setInputFiles('tests/e2e/fixtures/charla-demo.mp3')
 
-    const boton = page.getByRole('button', { name: 'Cargar conferencia' })
+    const boton = panel.getByRole('button', { name: 'Cargar conferencia' })
     await boton.click()
     await expect(boton).toHaveAttribute('aria-busy', 'true')
 
-    /*
-      "Charla de prueba end to end" y los nombres de evento/ponente también
-      aparecen en la vista previa mientras el formulario sigue visible, así
-      que no sirven para esperar la confirmación: se espera "Cargar otra
-      conferencia", que solo existe una vez confirmada.
-    */
-    await expect(page.getByRole('button', { name: 'Cargar otra conferencia' })).toBeVisible()
+    await expect(panel).toBeHidden()
 
-    await expect(page.getByText(/Charla de prueba end to end/)).toBeVisible()
-    await expect(page.getByText('Encuentro de Prueba E2E')).toBeVisible()
-    await expect(page.getByText('Ponente de Prueba')).toBeVisible()
-    await expect(page.getByLabel('Título')).toHaveCount(0)
+    const filaNueva = page.getByRole('listitem').filter({ hasText: 'Charla de prueba end to end' })
+    await expect(filaNueva).toBeVisible()
+    await expect(filaNueva.getByText('Procesando')).toBeVisible()
+    await expect(filaNueva.getByRole('progressbar')).toBeVisible()
+    await expect(filaNueva).toContainText('Encuentro de Prueba E2E')
+    await expect(filaNueva).toContainText('Ponente de Prueba')
   })
 
-  await test.step('volver a Conferencias no muestra la conferencia recién cargada', async () => {
-    await page.getByRole('link', { name: 'Ver mis conferencias' }).click()
+  await test.step('recargar la página conserva la conferencia cargada', async () => {
+    await page.reload()
 
-    await expect(page).toHaveURL(/\/conferencias$/)
-    await expect(page.getByText('Charla de prueba end to end')).toHaveCount(0)
+    const filaNueva = page.getByRole('listitem').filter({ hasText: 'Charla de prueba end to end' })
+    await expect(filaNueva).toBeVisible()
   })
 })

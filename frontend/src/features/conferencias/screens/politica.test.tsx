@@ -3,7 +3,6 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
-import { PantallaCargarConferencia } from './PantallaCargarConferencia'
 import { PantallaConferencias } from './PantallaConferencias'
 
 /*
@@ -80,52 +79,3 @@ describe('Redacción de la pantalla de conferencias', () => {
   })
 })
 
-function montarCarga() {
-  sessionStorage.setItem(
-    CLAVE_SESION,
-    JSON.stringify({
-      id: 'usr-zuluaga',
-      nombre: 'Camila Zuluaga Nieto',
-      correo: 'camila.zuluaga@labanfora.org',
-    }),
-  )
-
-  return render(
-    <SessionProvider>
-      <MemoryRouter initialEntries={['/conferencias/nueva']}>
-        <PantallaCargarConferencia />
-      </MemoryRouter>
-    </SessionProvider>,
-  )
-}
-
-describe('Redacción de la pantalla de carga', () => {
-  it('se anuncia con un encabezado de nivel 1', () => {
-    montarCarga()
-
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Cargar conferencia' }),
-    ).toBeInTheDocument()
-  })
-
-  it('describe con una línea qué trabajo se hace en la sección', () => {
-    montarCarga()
-
-    const encabezado = screen.getByRole('heading', { level: 1, name: 'Cargar conferencia' })
-    const descripcion = encabezado.parentElement?.textContent?.replace('Cargar conferencia', '').trim()
-
-    expect((descripcion ?? '').length).toBeGreaterThan(30)
-  })
-
-  it('no usa lenguaje de obra en curso', () => {
-    montarCarga()
-
-    expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
-  })
-
-  it('no usa el guion largo en ningún texto visible', () => {
-    montarCarga()
-
-    expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
-  })
-})
