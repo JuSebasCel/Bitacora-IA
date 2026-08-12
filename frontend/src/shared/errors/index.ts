@@ -21,6 +21,12 @@ export type CodigoError =
   | 'ETQ_YA_EXISTE'
   | 'ETQ_NOMBRE_MUY_LARGO'
   | 'ETQ_NO_EDITABLE'
+  /* Carga de conferencia (F3). */
+  | 'CARGA_CAMPO_REQUERIDO'
+  | 'CARGA_ARCHIVO_REQUERIDO'
+  | 'CARGA_ARCHIVO_NO_SOPORTADO'
+  | 'CARGA_ARCHIVO_MUY_GRANDE'
+  | 'CARGA_FALLO_INESPERADO'
 
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
@@ -49,6 +55,13 @@ const MENSAJES: Record<CodigoError, string> = {
   ETQ_NOMBRE_MUY_LARGO: `El nombre de la etiqueta admite hasta ${LARGO_MAXIMO_DE_ETIQUETA} caracteres. Acórtalo para guardarlo.`,
   ETQ_NO_EDITABLE:
     'Esa etiqueta la puso quien te compartió la conferencia, así que solo esa persona puede quitarla.',
+
+  CARGA_CAMPO_REQUERIDO: 'Completa el título, el ponente, el evento y la fecha antes de continuar.',
+  CARGA_ARCHIVO_REQUERIDO: 'Elige el archivo de audio o transcripción antes de continuar.',
+  CARGA_ARCHIVO_NO_SOPORTADO:
+    'Ese archivo no tiene un formato admitido para la fuente elegida. Revísalo e inténtalo de nuevo.',
+  CARGA_ARCHIVO_MUY_GRANDE: 'Ese archivo supera el tamaño máximo admitido. Usa uno más liviano.',
+  CARGA_FALLO_INESPERADO: 'No pudimos recibir la conferencia. Vuelve a intentarlo en unos momentos.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'

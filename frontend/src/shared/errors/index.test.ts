@@ -129,3 +129,47 @@ describe('códigos de error de F2', () => {
     expect(mensaje).toMatch(/elíge|elige|usa|otro nombre|lista/)
   })
 })
+
+/* Códigos que introduce F3 (carga de conferencia). Listados a mano, como en F2. */
+const CODIGOS_DE_F3 = [
+  'CARGA_CAMPO_REQUERIDO',
+  'CARGA_ARCHIVO_REQUERIDO',
+  'CARGA_ARCHIVO_NO_SOPORTADO',
+  'CARGA_ARCHIVO_MUY_GRANDE',
+  'CARGA_FALLO_INESPERADO',
+] as const
+
+describe('códigos de error de F3', () => {
+  it('registra en el catálogo los códigos de carga de conferencia', () => {
+    for (const codigo of CODIGOS_DE_F3) {
+      expect(CODIGOS_DE_ERROR).toContain(codigo)
+    }
+  })
+
+  it('ningún código de F3 cae al mensaje genérico', () => {
+    const generico = mensajeDeError(CODIGO_INEXISTENTE)
+
+    for (const codigo of CODIGOS_DE_F3) {
+      expect(mensajeDeError(codigo)).not.toBe(generico)
+    }
+  })
+
+  it('traduce cada código de F3 a un mensaje accionable', () => {
+    for (const codigo of CODIGOS_DE_F3) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje.length).toBeGreaterThan(20)
+      expect(mensaje.trim()).toBe(mensaje)
+    }
+  })
+
+  it('ningún mensaje de F3 filtra un código ni detalle técnico', () => {
+    for (const codigo of CODIGOS_DE_F3) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje).not.toMatch(/_[A-Z]/)
+      expect(mensaje.toLowerCase()).not.toContain('undefined')
+      expect(mensaje.toLowerCase()).not.toContain('null')
+    }
+  })
+})

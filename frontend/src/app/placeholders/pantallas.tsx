@@ -6,18 +6,9 @@ import { PantallaDeModulo } from './PantallaDeModulo'
 */
 
 /*
-  Conferencias ya no está aquí: F2 la sustituyó por la pantalla real, que vive
-  en `features/conferencias/screens`.
+  Conferencias y Cargar conferencia ya no están aquí: F2 y F3 las sustituyeron
+  por sus pantallas reales, que viven en `features/conferencias/screens`.
 */
-
-export function PantallaCargarConferencia() {
-  return (
-    <PantallaDeModulo
-      titulo="Cargar conferencia"
-      descripcion="Recibe el audio o la transcripción de una sesión, la registra con su evento y fecha, y sigue su procesamiento hasta que las fichas quedan disponibles."
-    />
-  )
-}
 
 export function PantallaCatalogo() {
   return (

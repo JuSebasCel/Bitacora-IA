@@ -73,7 +73,7 @@ frontend/src/
   app/        # router, layout del shell, providers
   features/   # un directorio por dominio del producto
     auth/         # acceso, registro y sesión
-    conferencias/ # dashboard y detalle de conferencia
+    conferencias/ # dashboard, detalle y carga de conferencia
   shared/     # primitivos de interfaz, catálogo de errores, almacenamiento
   styles/     # tokens de diseño
 ```
@@ -85,6 +85,7 @@ Dentro de cada dominio, la separación es por responsabilidad y no por tipo de a
 | `data/` | Tipos del dominio y datos de ejemplo, con sus invariantes probadas |
 | `query/` | Reglas de acceso, filtrado, orden y conteo, como funciones puras sin React |
 | `tags/` | Etiquetas personales: operaciones, persistencia y su hook |
+| `carga/` | Validación y simulación de la subida de una conferencia nueva |
 | `components/` | Piezas de interfaz locales al dominio |
 | `screens/` | Las pantallas que el router monta |
 

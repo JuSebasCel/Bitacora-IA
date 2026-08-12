@@ -1,0 +1,1 @@
+Archivo minimo para las pruebas E2E de carga de conferencia (F3). No es un MP3 real: la validacion de F3 solo revisa extension y tamano, no el contenido decodificado.
