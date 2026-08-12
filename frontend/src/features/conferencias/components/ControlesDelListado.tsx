@@ -64,6 +64,7 @@ export function ControlesDelListado({
         etiquetasSeleccionadas={criterios.etiquetas}
         alCambiarEstado={(estado: FiltroDeEstado) => alCambiar({ estado })}
         alAlternarEtiqueta={alAlternarEtiqueta}
+        alQuitarTodasLasEtiquetas={() => alCambiar({ etiquetas: [] })}
         alCrearEtiqueta={alCrearEtiqueta}
       />
     </div>

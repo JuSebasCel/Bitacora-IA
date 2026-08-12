@@ -313,3 +313,38 @@ describe('PantallaConferencias, etiquetas', () => {
     expect(conTesis.length).toBeGreaterThan(0)
   })
 })
+
+describe('PantallaConferencias, ocultar', () => {
+  /*
+    Ocultar es una preferencia de vista, no una regla de acceso: no hace falta
+    volver a montar la pantalla para comprobar que persiste, con que la fila
+    desaparezca del listado actual ya queda probado que la acción funcionó.
+  */
+  it('ocultar una conferencia la saca del listado', async () => {
+    const usuario = userEvent.setup()
+    montar()
+
+    const filasIniciales = await filas()
+    expect(filasIniciales).toHaveLength(7)
+
+    const [botonDeQuitar] = screen.getAllByRole('button', { name: /quitar «.*» de tu listado/i })
+    if (botonDeQuitar === undefined) throw new Error('se esperaba al menos un botón de quitar')
+    await usuario.click(botonDeQuitar)
+
+    await waitFor(async () => expect(await filas()).toHaveLength(6))
+  })
+
+  it('funciona igual sobre una conferencia compartida', async () => {
+    const usuario = userEvent.setup()
+    montar('/conferencias?segmento=compartidas')
+
+    const filasIniciales = await filas()
+    expect(filasIniciales).toHaveLength(4)
+
+    const [botonDeQuitar] = screen.getAllByRole('button', { name: /quitar «.*» de tu listado/i })
+    if (botonDeQuitar === undefined) throw new Error('se esperaba al menos un botón de quitar')
+    await usuario.click(botonDeQuitar)
+
+    await waitFor(async () => expect(await filas()).toHaveLength(3))
+  })
+})

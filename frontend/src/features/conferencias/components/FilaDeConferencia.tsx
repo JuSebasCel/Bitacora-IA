@@ -1,3 +1,4 @@
+import { EyeSlashIcon } from '@phosphor-icons/react/dist/csr/EyeSlash'
 import { motion } from 'motion/react'
 import { Link } from 'react-router'
 import { Insignia, Pastilla } from '@/shared/ui'
@@ -40,6 +41,8 @@ type PropiedadesFila = {
   misEtiquetas: readonly Etiqueta[]
   alAlternarAsignacion: (idEtiqueta: string) => void
   alCrearYAsignar: (nombre: string) => ResultadoCreacion
+  /** Quita esta conferencia del propio listado, propia o compartida. Ver `ocultas/`. */
+  alOcultar: () => void
 }
 
 const TONO_POR_ESTADO: Record<EstadoDeProcesamiento, TonoDeInsignia> = {
@@ -68,6 +71,7 @@ export function FilaDeConferencia({
   misEtiquetas,
   alAlternarAsignacion,
   alCrearYAsignar,
+  alOcultar,
 }: PropiedadesFila) {
   const { conferencia, procedencia } = visible
   const nombreDelDueno = nombreDePersona(conferencia.idDueno)
@@ -84,6 +88,22 @@ export function FilaDeConferencia({
         aria-hidden="true"
         className="absolute top-2 bottom-2 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
       />
+
+      {/*
+        Fantasma hasta que se necesita: visible siempre para quien navega con
+        teclado (group-focus-within) y al pasar el mouse, para no ensuciar la
+        fila con un icono que casi nunca se usa. `z-10` es obligatorio: sin
+        eso, el `::after` del enlace del título (el "stretched link" que cubre
+        toda la fila) le tapa el clic.
+      */}
+      <button
+        type="button"
+        onClick={alOcultar}
+        aria-label={`Quitar «${conferencia.titulo}» de tu listado`}
+        className="absolute top-3 right-3 z-10 rounded-md p-1.5 text-texto-tenue opacity-0 transition-colors hover:bg-fondo hover:text-texto focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        <EyeSlashIcon size={15} weight="regular" aria-hidden="true" />
+      </button>
 
       <div className="flex flex-row items-baseline gap-3 sm:flex-col sm:gap-1">
         <span className="coordenada text-xs text-texto-tenue">

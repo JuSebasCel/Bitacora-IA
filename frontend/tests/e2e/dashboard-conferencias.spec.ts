@@ -118,6 +118,18 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
     await page.keyboard.press('Escape')
   })
 
+  await test.step('"Quitar todas" limpia de un tajo las etiquetas seleccionadas', async () => {
+    await botonDeFiltros.click()
+
+    await expect(page.getByRole('button', { name: 'Quitar todas' })).toBeVisible()
+    await page.getByRole('button', { name: 'Quitar todas' }).click()
+
+    await expect(filas).toHaveCount(7)
+    await expect(botonDeFiltros).toHaveText('Filtros')
+
+    await page.keyboard.press('Escape')
+  })
+
   await test.step('una combinación imposible muestra el vacío de filtros', async () => {
     await page.getByLabel(/Buscar por conferencia/).fill('termodinámica cuántica')
 
@@ -191,4 +203,25 @@ test('recorrido completo del dashboard de conferencias', async ({ page }) => {
 
     await expect(page.getByRole('alert')).toHaveText(inexistente ?? '')
   })
+})
+
+test('ocultar una conferencia la saca del listado sin borrarla del todo', async ({ page }) => {
+  const filas = page.getByRole('list', { name: 'Conferencias' }).getByRole('listitem')
+
+  await acceder(page)
+  await expect(filas).toHaveCount(7)
+
+  const primeraFila = filas.first()
+  const enlace = primeraFila.getByRole('link')
+  const titulo = (await enlace.textContent()) ?? ''
+  const href = await enlace.getAttribute('href')
+
+  await primeraFila.getByRole('button', { name: /quitar «.*» de tu listado/i }).click()
+
+  await expect(filas).toHaveCount(6)
+  await expect(page.getByText(titulo, { exact: true })).toHaveCount(0)
+
+  /* Es una preferencia de vista, no un borrado real: sigue accesible por su URL. */
+  await page.goto(href ?? '')
+  await expect(page.getByRole('heading', { level: 1, name: titulo })).toBeVisible()
 })
