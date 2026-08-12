@@ -12,8 +12,10 @@ import type { FuenteDeConferencia } from '../data'
 
 export type DatosDeCarga = {
   readonly titulo: string
-  readonly ponente: string
-  readonly evento: string
+  /** Id del ponente elegido en el directorio compartido, no texto libre. */
+  readonly idPonente: string
+  /** Id del evento elegido en el directorio compartido, no texto libre. */
+  readonly idEvento: string
   readonly fechaDelEvento: string
   readonly fuente: FuenteDeConferencia
 }
@@ -36,7 +38,7 @@ export const TAMANO_MAXIMO_POR_FUENTE: Record<FuenteDeConferencia, number> = {
   la acción que sigue es la misma (completarlo).
 */
 export function validarDatos(datos: DatosDeCarga): ResultadoDeCarga {
-  const campos = [datos.titulo, datos.ponente, datos.evento, datos.fechaDelEvento]
+  const campos = [datos.titulo, datos.idPonente, datos.idEvento, datos.fechaDelEvento]
 
   if (campos.some((campo) => campo.trim() === '')) {
     return { ok: false, codigo: 'CARGA_CAMPO_REQUERIDO' }

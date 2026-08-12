@@ -24,7 +24,7 @@ export type PropsSelect = SelectHTMLAttributes<HTMLSelectElement> & {
 */
 const CLASES_BASE =
   'block w-full appearance-none rounded-md border bg-panel px-3 py-2 text-sm text-texto ' +
-  'transition-colors enabled:hover:border-acento focus:border-acento ' +
+  'transition-colors enabled:cursor-pointer enabled:hover:border-acento focus:border-acento ' +
   'disabled:cursor-not-allowed disabled:opacity-55'
 
 export function Select({

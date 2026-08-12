@@ -27,9 +27,20 @@ export type CodigoError =
   | 'CARGA_ARCHIVO_NO_SOPORTADO'
   | 'CARGA_ARCHIVO_MUY_GRANDE'
   | 'CARGA_FALLO_INESPERADO'
+  /* Directorio compartido de eventos y ponentes (F3). */
+  | 'DIR_EVENTO_NOMBRE_REQUERIDO'
+  | 'DIR_EVENTO_YA_EXISTE'
+  | 'DIR_EVENTO_NOMBRE_MUY_LARGO'
+  | 'DIR_PONENTE_NOMBRE_REQUERIDO'
+  | 'DIR_PONENTE_YA_EXISTE'
+  | 'DIR_PONENTE_NOMBRE_MUY_LARGO'
 
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
+
+/** Nombres de evento y ponente admiten más largo que una etiqueta: son texto libre real, no un chip. */
+export const LARGO_MAXIMO_DE_EVENTO = 80
+export const LARGO_MAXIMO_DE_PONENTE = 60
 
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
@@ -62,6 +73,14 @@ const MENSAJES: Record<CodigoError, string> = {
     'Ese archivo no tiene un formato admitido para la fuente elegida. Revísalo e inténtalo de nuevo.',
   CARGA_ARCHIVO_MUY_GRANDE: 'Ese archivo supera el tamaño máximo admitido. Usa uno más liviano.',
   CARGA_FALLO_INESPERADO: 'No pudimos recibir la conferencia. Vuelve a intentarlo en unos momentos.',
+
+  DIR_EVENTO_NOMBRE_REQUERIDO: 'Escribe un nombre para el evento antes de crearlo.',
+  DIR_EVENTO_YA_EXISTE: 'Ya existe un evento con ese nombre. Elígelo de la lista o usa otro nombre.',
+  DIR_EVENTO_NOMBRE_MUY_LARGO: `El nombre del evento admite hasta ${LARGO_MAXIMO_DE_EVENTO} caracteres. Acórtalo para guardarlo.`,
+  DIR_PONENTE_NOMBRE_REQUERIDO: 'Escribe un nombre para el ponente antes de crearlo.',
+  DIR_PONENTE_YA_EXISTE:
+    'Ese ponente ya está registrado en este evento. Elígelo de la lista o usa otro nombre.',
+  DIR_PONENTE_NOMBRE_MUY_LARGO: `El nombre del ponente admite hasta ${LARGO_MAXIMO_DE_PONENTE} caracteres. Acórtalo para guardarlo.`,
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'

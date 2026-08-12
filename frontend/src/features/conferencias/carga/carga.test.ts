@@ -4,8 +4,8 @@ import type { DatosDeCarga } from './validacion'
 
 const DATOS_VALIDOS: DatosDeCarga = {
   titulo: 'Series de tiempo aplicadas a la demanda de transporte urbano',
-  ponente: 'Tomás Iriarte Villalba',
-  evento: 'Coloquio de Ciencia de Datos del Norte',
+  idPonente: 'pon-evt-ccdn-tomas-iriarte-villalba',
+  idEvento: 'evt-ccdn',
   fechaDelEvento: '2026-05-14',
   fuente: 'audio',
 }

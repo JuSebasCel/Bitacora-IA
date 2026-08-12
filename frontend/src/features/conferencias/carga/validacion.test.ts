@@ -9,8 +9,8 @@ import type { DatosDeCarga } from './validacion'
 
 const DATOS_VALIDOS: DatosDeCarga = {
   titulo: 'Series de tiempo aplicadas a la demanda de transporte urbano',
-  ponente: 'Tomás Iriarte Villalba',
-  evento: 'Coloquio de Ciencia de Datos del Norte',
+  idPonente: 'pon-evt-ccdn-tomas-iriarte-villalba',
+  idEvento: 'evt-ccdn',
   fechaDelEvento: '2026-05-14',
   fuente: 'audio',
 }
@@ -33,7 +33,7 @@ describe('validarDatos', () => {
     expect(validarDatos(DATOS_VALIDOS)).toEqual({ ok: true })
   })
 
-  it.each(['titulo', 'ponente', 'evento', 'fechaDelEvento'] as const)(
+  it.each(['titulo', 'idPonente', 'idEvento', 'fechaDelEvento'] as const)(
     'rechaza cuando %s está vacío',
     (campo) => {
       const resultado = validarDatos({ ...DATOS_VALIDOS, [campo]: '' })
