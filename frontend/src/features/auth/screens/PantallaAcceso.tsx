@@ -2,10 +2,9 @@ import { useState, type FormEvent, type ReactElement } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
-import { Button, Field, Input } from '@/shared/ui'
+import { Button, Field, Input, MensajeDeFormulario } from '@/shared/ui'
 import { destinoTrasAcceder } from './destino'
 import { CLASES_ENLACE, MarcoDeAcceso, PieDeMarco } from './MarcoDeAcceso'
-import { MensajeDeFormulario } from './MensajeDeFormulario'
 
 const ID_ERROR = 'acceso-error'
 

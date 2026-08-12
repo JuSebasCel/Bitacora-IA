@@ -13,6 +13,7 @@ export type {
   EstadoDeValidacion,
   Etiqueta,
   Ficha,
+  FuenteDeConferencia,
   PrivacidadDeComparticion,
   TipoDeUnidad,
 } from './tipos'

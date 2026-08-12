@@ -4,9 +4,9 @@ import type { ReactElement, ReactNode } from 'react'
 /*
   Error de nivel pantalla.
 
-  Es distinto de `MensajeDeFormulario`, que vive en las pantallas de acceso y
-  acompaña a un campo concreto: aquel dice "revisa este dato", este dice "esto
-  no se pudo mostrar".
+  Es distinto de `MensajeDeFormulario`, que acompaña a un formulario o a un
+  campo concreto: aquel dice "revisa este dato", este dice "esto no se pudo
+  mostrar".
 
   Recibe el mensaje ya resuelto por `mensajeDeError`. No conoce los códigos, y
   esa ignorancia es deliberada: un componente que no los ve no puede filtrar

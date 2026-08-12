@@ -26,6 +26,9 @@ export type TipoDeUnidad =
 */
 export type EstadoDeValidacion = 'validada' | 'pendiente' | 'automatica'
 
+/** De dónde viene el contenido original de una conferencia. Nombrado aparte (F3) para que el formulario de carga y `Conferencia` compartan la misma unión. */
+export type FuenteDeConferencia = 'audio' | 'transcripcion'
+
 export type Ficha = {
   readonly id: string
   readonly idConferencia: string
@@ -84,7 +87,7 @@ export type Conferencia = {
   readonly estado: EstadoDeProcesamiento
   readonly temaPrincipal: string
   readonly resumen: string
-  readonly fuente: 'audio' | 'transcripcion'
+  readonly fuente: FuenteDeConferencia
   readonly comparticiones: readonly Comparticion[]
 }
 

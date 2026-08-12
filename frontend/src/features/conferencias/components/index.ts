@@ -9,6 +9,7 @@ export { CreadorDeEtiqueta } from './CreadorDeEtiqueta'
 export { FilaDeConferencia } from './FilaDeConferencia'
 export { FiltroDeEtiquetas } from './FiltroDeEtiquetas'
 export { PopoverDeFiltros } from './PopoverDeFiltros'
+export { SegmentacionDeFuente } from './SegmentacionDeFuente'
 export { SegmentacionDeOrigen } from './SegmentacionDeOrigen'
 export { SelectorDeOrden } from './SelectorDeOrden'
 

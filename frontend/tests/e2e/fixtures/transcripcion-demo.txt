@@ -1,0 +1,1 @@
+Archivo mínimo para las pruebas E2E de carga de conferencia (F3). Su contenido no se procesa de verdad, solo se valida su extensión y tamaño.

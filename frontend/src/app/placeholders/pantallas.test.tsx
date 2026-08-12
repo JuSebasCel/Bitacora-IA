@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
-  PantallaCargarConferencia,
   PantallaCatalogo,
   PantallaConfiguracion,
   PantallaMemorias,
@@ -9,13 +8,13 @@ import {
 } from './index'
 
 /*
-  Conferencias salió de esta lista al construirse F2: su pantalla real tiene sus
-  propias pruebas de política en `features/conferencias/screens/politica.test.tsx`,
-  con las mismas reglas menos las palabras que en ese módulo son vocabulario de
-  dominio y no lenguaje de obra en curso.
+  Conferencias y Cargar conferencia salieron de esta lista al construirse F2 y
+  F3: sus pantallas reales tienen sus propias pruebas de política en
+  `features/conferencias/screens/politica.test.tsx`, con las mismas reglas
+  menos las palabras que en ese módulo son vocabulario de dominio y no
+  lenguaje de obra en curso.
 */
 const PANTALLAS = [
-  { titulo: 'Cargar conferencia', Pantalla: PantallaCargarConferencia },
   { titulo: 'Catálogo', Pantalla: PantallaCatalogo },
   { titulo: 'Memorias', Pantalla: PantallaMemorias },
   { titulo: 'Plantillas', Pantalla: PantallaPlantillas },
