@@ -13,9 +13,12 @@ export type PropsTarjetaDeMemoria = {
 }
 
 /*
-  Tarjeta del listado de memorias: mismo vocabulario visual de superficies
-  (`bg-panel`, sombra) que `TarjetaDePlantilla.tsx`. Sin miniatura propia —
-  el documento generado se ve al entrar, no aquí.
+  Tarjeta del listado de memorias. Mismo lenguaje de "registro vivo" que
+  `FilaDeConferencia.tsx`: la superficie (`bg-panel`) ya separa cada tarjeta
+  en reposo, y el hover no inventa el contraste desde cero, solo lo acentúa
+  — sombra, barra de acento a la izquierda y el título pasa al color de
+  acento. Sin eso la tarjeta se sentía plana frente al resto de la app, que
+  sí trae ese vocabulario en Conferencias.
 */
 export function TarjetaDeMemoria({
   memoria,
@@ -30,17 +33,26 @@ export function TarjetaDeMemoria({
   }
 
   return (
-    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm">
+    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm transition-shadow hover:shadow-md">
+      <span
+        aria-hidden="true"
+        className="absolute top-3 bottom-3 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
+      />
+
       <Link to={`/memorias/${memoria.id}`} className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <FileTextIcon size={16} weight="bold" className="shrink-0 text-texto-tenue" aria-hidden="true" />
-          <span className="truncate text-sm font-medium text-texto">{memoria.nombre}</span>
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-acento-tenue text-acento">
+            <FileTextIcon size={15} weight="bold" aria-hidden="true" />
+          </span>
+          <span className="truncate text-sm font-medium text-texto transition-colors group-hover:text-acento">
+            {memoria.nombre}
+          </span>
         </div>
 
         <div className="flex flex-col gap-0.5 text-xs text-texto-tenue">
           <span className="truncate">{nombreConferencia}</span>
           <span className="truncate">{nombrePlantilla}</span>
-          <span>{formatearFecha(memoria.generadaEl.slice(0, 10))}</span>
+          <span className="coordenada">{formatearFecha(memoria.generadaEl.slice(0, 10))}</span>
         </div>
       </Link>
 
