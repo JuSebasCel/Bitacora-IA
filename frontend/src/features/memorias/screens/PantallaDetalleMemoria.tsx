@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasVisibles } from '@/features/conferencias/query'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
+import { leerTaxonomia } from '@/features/taxonomia'
 import type { CodigoError } from '@/shared/errors'
 import { mensajeDeError } from '@/shared/errors'
 import { PanelDeError } from '@/shared/ui'
@@ -42,6 +43,14 @@ export function PantallaDetalleMemoria(): ReactElement {
   const conferenciaVisible = visibles.find((visible) => visible.conferencia.id === memoria?.idConferencia)
   const plantilla = plantillas.find((candidata) => candidata.id === memoria?.idPlantilla)
 
+  /*
+    El campo fijo `tema_principal` sale del id que guarda la conferencia, así
+    que la generación necesita el pool para escribir el nombre. Se lee una vez
+    por montaje y no dentro del efecto, para que un arreglo nuevo en cada
+    render no vuelva a disparar la generación en bucle.
+  */
+  const temas = useMemo(() => leerTaxonomia().temas, [])
+
   const [resultado, setResultado] = useState<ResultadoDeMemoria | null>(null)
   const [error, setError] = useState<CodigoError | null>(null)
 
@@ -66,7 +75,7 @@ export function PantallaDetalleMemoria(): ReactElement {
 
     const fichas = fichasVisibles(FICHAS_DE_EJEMPLO, conferenciaVisible)
 
-    generarMemoria(plantilla, conferenciaVisible.conferencia, fichas)
+    generarMemoria(plantilla, conferenciaVisible.conferencia, fichas, temas)
       .then((valor) => {
         if (!cancelado) {
           setResultado(valor)
@@ -81,7 +90,7 @@ export function PantallaDetalleMemoria(): ReactElement {
     return () => {
       cancelado = true
     }
-  }, [memoria, conferenciaVisible, plantilla])
+  }, [memoria, conferenciaVisible, plantilla, temas])
 
   if (memoria === undefined) {
     return (

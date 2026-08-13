@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import type { Tema } from '@/features/taxonomia'
 import type { Ficha } from '../data'
 import { ListadoDeFichas } from './ListadoDeFichas'
 
@@ -17,16 +18,19 @@ const FICHA: Ficha = {
   hablante: 'Mariana Escobar Vallejo',
   segundoInicio: 185,
   segundoFin: 210,
-  tema: 'Modelos de lenguaje',
+  idTema: 'tem-modelos-de-lenguaje',
   tipoDeUnidad: 'cita-textual',
   estadoDeValidacion: 'validada',
   confianzaAutomatica: 0.95,
   contextoMinimo: 'Justo antes de mostrar el diagrama del flujo.',
 }
 
+/* La ficha guarda el id del tema, así que el listado necesita el pool para nombrarlo. */
+const TEMAS: readonly Tema[] = [{ id: 'tem-modelos-de-lenguaje', nombre: 'Modelos de lenguaje' }]
+
 describe('ListadoDeFichas', () => {
   it('lista cada ficha con su coordenada y su estado', () => {
-    render(<ListadoDeFichas fichas={[FICHA]} />)
+    render(<ListadoDeFichas fichas={[FICHA]} temas={TEMAS} />)
 
     expect(screen.getByRole('listitem')).toHaveTextContent('00:03:05')
     expect(screen.getByText('Validada')).toBeInTheDocument()
@@ -41,14 +45,14 @@ describe('ListadoDeFichas', () => {
 */
 describe('ListadoDeFichas, sin ninguna ficha', () => {
   it('atribuye el vacío al procesamiento cuando se ve todo', () => {
-    render(<ListadoDeFichas fichas={[]} ocultaPendientes={false} />)
+    render(<ListadoDeFichas fichas={[]} temas={TEMAS} ocultaPendientes={false} />)
 
     expect(screen.getByText(/terminó sin extraer ninguna ficha/i)).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
   it('atribuye el vacío a la privacidad de la compartición cuando oculta las pendientes', () => {
-    render(<ListadoDeFichas fichas={[]} ocultaPendientes />)
+    render(<ListadoDeFichas fichas={[]} temas={TEMAS} ocultaPendientes />)
 
     expect(screen.getByText(/solo las ya revisadas/i)).toBeInTheDocument()
     expect(screen.queryByText(/terminó sin extraer ninguna ficha/i)).not.toBeInTheDocument()

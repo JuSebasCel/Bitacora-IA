@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Conferencia, Ficha } from '@/features/conferencias/data'
+import type { Tema } from '@/features/taxonomia'
 import { mapearConferenciaACampos } from './mapeo'
 
 const CONFERENCIA: Conferencia = {
@@ -12,11 +13,14 @@ const CONFERENCIA: Conferencia = {
   duracionEnSegundos: 1200,
   idDueno: 'usr-prueba',
   estado: 'procesada',
-  temaPrincipal: 'Un tema de prueba',
+  idTemaPrincipal: 'tem-de-prueba',
   resumen: 'Resumen general de la charla.',
   fuente: 'audio',
   comparticiones: [],
 }
+
+/* La conferencia guarda el id del tema; el nombre para la memoria sale de este pool. */
+const TEMAS: readonly Tema[] = [{ id: 'tem-de-prueba', nombre: 'Un tema de prueba' }]
 
 function ficha(datos: Partial<Ficha>): Ficha {
   return {
@@ -26,7 +30,7 @@ function ficha(datos: Partial<Ficha>): Ficha {
     hablante: CONFERENCIA.ponente,
     segundoInicio: 0,
     segundoFin: 10,
-    tema: CONFERENCIA.temaPrincipal,
+    idTema: CONFERENCIA.idTemaPrincipal,
     tipoDeUnidad: 'dato-de-impacto',
     estadoDeValidacion: 'automatica',
     confianzaAutomatica: 0.9,
@@ -37,7 +41,7 @@ function ficha(datos: Partial<Ficha>): Ficha {
 
 describe('mapearConferenciaACampos', () => {
   it('nombre_ponente, fecha_evento y tema_principal salen directo de la conferencia', () => {
-    const registro = mapearConferenciaACampos(CONFERENCIA, [])
+    const registro = mapearConferenciaACampos(CONFERENCIA, [], TEMAS)
 
     expect(registro.nombre_ponente).toEqual({ parrafo: 'Rodrigo Peñaloza', lista: ['Rodrigo Peñaloza'] })
     expect(registro.fecha_evento?.parrafo).toContain('2026')
@@ -50,7 +54,7 @@ describe('mapearConferenciaACampos', () => {
       ficha({ id: 'fch-2', tipoDeUnidad: 'cita-textual', fragmento: 'Segunda cita.' }),
     ]
 
-    const registro = mapearConferenciaACampos(CONFERENCIA, fichas)
+    const registro = mapearConferenciaACampos(CONFERENCIA, fichas, TEMAS)
 
     expect(registro.cita_destacada).toEqual({
       parrafo: 'Primera cita.',
@@ -59,7 +63,7 @@ describe('mapearConferenciaACampos', () => {
   })
 
   it('sin fichas de cita-textual, cita_destacada queda ausente del registro', () => {
-    const registro = mapearConferenciaACampos(CONFERENCIA, [ficha({ tipoDeUnidad: 'metodo' })])
+    const registro = mapearConferenciaACampos(CONFERENCIA, [ficha({ tipoDeUnidad: 'metodo' })], TEMAS)
 
     expect(registro.cita_destacada).toBeUndefined()
   })
@@ -70,7 +74,7 @@ describe('mapearConferenciaACampos', () => {
       ficha({ id: 'fch-2', tipoDeUnidad: 'cita-textual', fragmento: 'Validada.', estadoDeValidacion: 'validada' }),
     ]
 
-    const registro = mapearConferenciaACampos(CONFERENCIA, fichas)
+    const registro = mapearConferenciaACampos(CONFERENCIA, fichas, TEMAS)
 
     expect(registro.cita_destacada).toEqual({ parrafo: 'Validada.', lista: ['Validada.'] })
   })
@@ -78,7 +82,7 @@ describe('mapearConferenciaACampos', () => {
   it('resumen_metodo usa las fichas de tipo método cuando existen', () => {
     const fichas = [ficha({ tipoDeUnidad: 'metodo', fragmento: 'Se usó una metodología mixta.' })]
 
-    const registro = mapearConferenciaACampos(CONFERENCIA, fichas)
+    const registro = mapearConferenciaACampos(CONFERENCIA, fichas, TEMAS)
 
     expect(registro.resumen_metodo).toEqual({
       parrafo: 'Se usó una metodología mixta.',
@@ -87,7 +91,7 @@ describe('mapearConferenciaACampos', () => {
   })
 
   it('sin fichas de método pero con resumen de la conferencia, usa el resumen', () => {
-    const registro = mapearConferenciaACampos(CONFERENCIA, [])
+    const registro = mapearConferenciaACampos(CONFERENCIA, [], TEMAS)
 
     expect(registro.resumen_metodo).toEqual({
       parrafo: 'Resumen general de la charla.',
@@ -96,7 +100,7 @@ describe('mapearConferenciaACampos', () => {
   })
 
   it('sin fichas de método y sin resumen, resumen_metodo queda ausente del registro', () => {
-    const registro = mapearConferenciaACampos({ ...CONFERENCIA, resumen: '' }, [])
+    const registro = mapearConferenciaACampos({ ...CONFERENCIA, resumen: '' }, [], TEMAS)
 
     expect(registro.resumen_metodo).toBeUndefined()
   })
@@ -104,7 +108,7 @@ describe('mapearConferenciaACampos', () => {
   it('ignora fichas que pertenecen a otra conferencia', () => {
     const fichas = [ficha({ tipoDeUnidad: 'cita-textual', idConferencia: 'cnf-otra' })]
 
-    const registro = mapearConferenciaACampos(CONFERENCIA, fichas)
+    const registro = mapearConferenciaACampos(CONFERENCIA, fichas, TEMAS)
 
     expect(registro.cita_destacada).toBeUndefined()
   })

@@ -23,7 +23,7 @@ describe('useCatalogo', () => {
     const { result } = renderHook(() => useCatalogo(ALCANTARA), { wrapper: envolver() })
 
     expect(result.current.entradas).toHaveLength(totalVisibleDe(ALCANTARA))
-    expect(result.current.criterios.tema).toBeNull()
+    expect(result.current.criterios.idTema).toBeNull()
   })
 
   it('alCambiar filtra por tema y lo refleja en el estado', () => {
@@ -32,11 +32,13 @@ describe('useCatalogo', () => {
     if (primeraEntrada === undefined) throw new Error('el fixture no tiene fichas para esta cuenta')
 
     act(() => {
-      result.current.alCambiar({ tema: primeraEntrada.ficha.tema })
+      result.current.alCambiar({ idTema: primeraEntrada.ficha.idTema })
     })
 
-    expect(result.current.criterios.tema).toBe(primeraEntrada.ficha.tema)
-    expect(result.current.entradas.every((entrada) => entrada.ficha.tema === primeraEntrada.ficha.tema)).toBe(true)
+    expect(result.current.criterios.idTema).toBe(primeraEntrada.ficha.idTema)
+    expect(
+      result.current.entradas.every((entrada) => entrada.ficha.idTema === primeraEntrada.ficha.idTema),
+    ).toBe(true)
   })
 
   it('alCambiar aplica sobre los criterios actuales, sin perder los anteriores', () => {
@@ -72,7 +74,7 @@ describe('useCatalogo', () => {
     const { result } = renderHook(() => useCatalogo(ALCANTARA), { wrapper: envolver() })
 
     for (const tema of result.current.temasDisponibles) {
-      expect(result.current.entradas.some((entrada) => entrada.ficha.tema === tema)).toBe(true)
+      expect(result.current.entradas.some((entrada) => entrada.ficha.idTema === tema.id)).toBe(true)
     }
   })
 

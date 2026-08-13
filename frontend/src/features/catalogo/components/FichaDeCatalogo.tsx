@@ -7,6 +7,19 @@ import { Insignia } from '@/shared/ui'
 
 export type PropsFichaDeCatalogo = {
   entrada: FichaDelCatalogo
+  /*
+    El nombre del tema llega ya resuelto y no se resuelve aquí.
+
+    Criterio del proyecto para el id de tema (F9): `nombreDeTema` es el único
+    resolutor, y quien lo llama depende de cuántos temas pinta el componente.
+    Esta tarjeta pinta una sola ficha, así que recibe el nombre como prop y se
+    queda sin conocer la taxonomía; el contenedor, que ya recorre la lista,
+    resuelve de paso. Los componentes que pintan una lista de fichas
+    (`ListadoDeFichas`) reciben en cambio el pool y llaman a `nombreDeTema`
+    por fila, porque un nombre por prop obligaría a recorrer la lista dos
+    veces solo para armarlo.
+  */
+  nombreDelTema: string
   /** Cadena de consulta del catálogo en ese momento, para poder volver a la misma vista filtrada. */
   busqueda?: string
 }
@@ -52,7 +65,11 @@ function enlaceDeRegresoAlCatalogo(busqueda: string): string {
   Se conserva el hover de la casa (barra de acento, sombra, título a color de
   acento): lo que debía cambiar era la silueta, no el idioma de interacción.
 */
-export function FichaDeCatalogo({ entrada, busqueda = '' }: PropsFichaDeCatalogo): ReactElement {
+export function FichaDeCatalogo({
+  entrada,
+  nombreDelTema,
+  busqueda = '',
+}: PropsFichaDeCatalogo): ReactElement {
   const { ficha, conferencia } = entrada
 
   return (
@@ -62,7 +79,25 @@ export function FichaDeCatalogo({ entrada, busqueda = '' }: PropsFichaDeCatalogo
         className="absolute top-4 bottom-4 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
       />
 
+      {/*
+        El tema va aquí arriba y no en el pie.
+
+        Estuvo abajo, en monoespaciada y pegado al minuto (`Calidad de datos ·
+        00:03:10`), y ahí era ilegible por dos razones: la monoespaciada es en
+        esta aplicación el vestido de las coordenadas verificables (fecha,
+        código de evento, minuto), así que disfrazaba de dato de trazabilidad
+        lo que en realidad es la clasificación principal de la ficha; y quedaba
+        justo debajo del título de la conferencia, que suele empezar por el
+        mismo tema, con lo que se leía como un pedazo repetido del título.
+
+        Es el eje de comparabilidad entre eventos de `PLAN.md` 3.1: lo que
+        permite preguntar cómo se trató un tema a lo largo del tiempo. Tiene
+        que verse antes que la cita, no después de ella.
+      */}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <span className="rounded-md bg-acento-tenue px-1.5 py-0.5 text-xs font-medium text-acento">
+          Tema: {nombreDelTema}
+        </span>
         <Insignia tono={TONO_POR_VALIDACION[ficha.estadoDeValidacion]}>
           {VALIDACION_EN_SINGULAR[ficha.estadoDeValidacion]}
         </Insignia>
@@ -91,11 +126,8 @@ export function FichaDeCatalogo({ entrada, busqueda = '' }: PropsFichaDeCatalogo
           {formatearFecha(conferencia.fechaDelEvento)}
         </p>
 
-        <p className="coordenada text-xs text-texto-tenue">
-          {ficha.tema}
-          {' · '}
-          {formatearTimestamp(ficha.segundoInicio)}
-        </p>
+        {/* En el pie queda solo la coordenada de verdad: en qué minuto de la charla se dijo. */}
+        <p className="coordenada text-xs text-texto-tenue">{formatearTimestamp(ficha.segundoInicio)}</p>
       </div>
     </article>
   )

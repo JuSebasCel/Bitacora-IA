@@ -1,3 +1,5 @@
+import { nombreDeTema } from '@/features/taxonomia'
+import type { Tema } from '@/features/taxonomia'
 import { Insignia } from '@/shared/ui'
 import { formatearTimestamp } from '../data'
 import type { Ficha } from '../data'
@@ -22,11 +24,19 @@ import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from '.
 
 type PropiedadesListadoDeFichas = {
   fichas: readonly Ficha[]
+  /*
+    La ficha guarda el id del tema, así que el nombre hay que resolverlo.
+    Aquí llega el pool y se resuelve fila a fila con `nombreDeTema` (el único
+    resolutor del proyecto): pasar un nombre por prop, como hace
+    `catalogo/components/FichaDeCatalogo.tsx`, obligaría al contenedor a
+    recorrer las mismas fichas otra vez solo para armar esa lista.
+  */
+  temas: readonly Tema[]
   /** Si la conferencia es ajena y su dueño eligió no mostrar las fichas pendientes. */
   ocultaPendientes?: boolean
 }
 
-export function ListadoDeFichas({ fichas, ocultaPendientes = false }: PropiedadesListadoDeFichas) {
+export function ListadoDeFichas({ fichas, temas, ocultaPendientes = false }: PropiedadesListadoDeFichas) {
   /*
     Llegar a cero fichas no siempre significa lo mismo, y decir lo mismo en
     los dos casos manda a la persona a conclusiones equivocadas: en una
@@ -63,7 +73,7 @@ export function ListadoDeFichas({ fichas, ocultaPendientes = false }: Propiedade
               <Insignia tono={TONO_POR_VALIDACION[ficha.estadoDeValidacion]}>
                 {VALIDACION_EN_SINGULAR[ficha.estadoDeValidacion]}
               </Insignia>
-              <span className="text-xs text-texto-tenue">{ficha.tema}</span>
+              <span className="text-xs text-texto-tenue">Tema: {nombreDeTema(temas, ficha.idTema)}</span>
             </div>
 
             <blockquote className="border-l-2 border-acento/50 pl-3 text-base leading-relaxed text-texto">

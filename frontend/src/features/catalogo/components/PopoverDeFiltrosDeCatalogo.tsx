@@ -1,5 +1,6 @@
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple'
 import type { ReactElement } from 'react'
+import { Link } from 'react-router'
 import {
   TIPO_EN_SINGULAR,
   TIPOS_EN_ORDEN,
@@ -7,6 +8,7 @@ import {
   VALIDACIONES_EN_ORDEN,
 } from '@/features/conferencias/components/vocabulario'
 import type { TipoDeUnidad } from '@/features/conferencias/data'
+import type { Tema } from '@/features/taxonomia'
 import { Popover } from '@/shared/ui'
 import type { CriteriosDeCatalogo, FiltroDeEstadoDeValidacion } from '../filtros'
 
@@ -16,16 +18,19 @@ import type { CriteriosDeCatalogo, FiltroDeEstadoDeValidacion } from '../filtros
   `fieldset` de chips con un input de radio oculto debajo, y el contador
   sobre el botón dice cuántos están activos sin abrir el panel.
 
-  Tema y evento son texto libre (vienen de `temasDisponibles`/
-  `eventosDisponibles`, ya acotados a lo que esa persona puede ver);
-  tipo de unidad y estado son enumeraciones fijas del dominio.
+  Tema y evento vienen de `temasDisponibles`/`eventosDisponibles`, ya
+  acotados a lo que esa persona puede ver; tipo de unidad y estado son
+  enumeraciones fijas del dominio.
+
+  El chip de tema muestra el nombre pero vale el id: es lo que viaja al
+  criterio y a la URL, para que renombrar el tema no invalide el filtro.
 */
 
 const TODOS = '__todos__'
 
 export type PropsPopoverDeFiltrosDeCatalogo = {
   criterios: CriteriosDeCatalogo
-  temasDisponibles: readonly string[]
+  temasDisponibles: readonly Tema[]
   eventosDisponibles: readonly string[]
   alCambiar: (parche: Partial<CriteriosDeCatalogo>) => void
 }
@@ -84,7 +89,7 @@ export function PopoverDeFiltrosDeCatalogo({
   alCambiar,
 }: PropsPopoverDeFiltrosDeCatalogo): ReactElement {
   const filtrosActivos =
-    (criterios.tema === null ? 0 : 1) +
+    (criterios.idTema === null ? 0 : 1) +
     (criterios.tipoDeUnidad === null ? 0 : 1) +
     (criterios.evento === null ? 0 : 1) +
     (criterios.estado === 'todos' ? 0 : 1)
@@ -110,11 +115,11 @@ export function PopoverDeFiltrosDeCatalogo({
           <GrupoDeRadios
             etiqueta="Tema"
             nombre="catalogo-tema"
-            valorActivo={criterios.tema ?? TODOS}
-            alCambiar={(valor) => alCambiar({ tema: valor === TODOS ? null : valor })}
+            valorActivo={criterios.idTema ?? TODOS}
+            alCambiar={(valor) => alCambiar({ idTema: valor === TODOS ? null : valor })}
             opciones={[
               { valor: TODOS, texto: 'Todos los temas' },
-              ...temasDisponibles.map((tema) => ({ valor: tema, texto: tema })),
+              ...temasDisponibles.map((tema) => ({ valor: tema.id, texto: tema.nombre })),
             ]}
           />
 
@@ -150,6 +155,23 @@ export function PopoverDeFiltrosDeCatalogo({
               ...VALIDACIONES_EN_ORDEN.map((estado) => ({ valor: estado, texto: VALIDACION_EN_SINGULAR[estado] })),
             ]}
           />
+
+          {/*
+            Salida hacia donde se administra este vocabulario.
+
+            Los temas que ofrece este panel son solo los que ya tienen fichas a
+            la vista, así que quien busca uno que no aparece no tiene forma de
+            saber si no existe, si no está activo en ningún evento suyo, o si
+            simplemente nadie ha clasificado nada con él todavía. El enlace es
+            el único punto de la aplicación desde el que se llega a esa
+            respuesta sin conocer la ruta de memoria.
+          */}
+          <Link
+            to="/taxonomia"
+            className="border-t border-filete pt-3 text-xs text-texto-tenue transition-colors hover:text-acento"
+          >
+            Administrar los temas
+          </Link>
         </div>
       )}
     </Popover>

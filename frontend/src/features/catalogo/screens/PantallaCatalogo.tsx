@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { useSearchParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
+import { nombreDeTema } from '@/features/taxonomia'
 import { Button, EncabezadoDeSeccion, Esqueleto, EstadoVacio } from '@/shared/ui'
 import { ControlesDelCatalogo, FichaDeCatalogo, ResumenDelCatalogo } from '../components'
 import type { CriteriosDeCatalogo } from '../filtros'
@@ -21,7 +22,7 @@ const DESCRIPCION =
 function hayFiltrosAplicados(criterios: CriteriosDeCatalogo): boolean {
   return (
     criterios.busqueda.trim().length > 0 ||
-    criterios.tema !== null ||
+    criterios.idTema !== null ||
     criterios.tipoDeUnidad !== null ||
     criterios.evento !== null ||
     criterios.estado !== 'todos'
@@ -33,8 +34,16 @@ export function PantallaCatalogo(): ReactElement {
   const idUsuario = usuario?.id ?? ''
   const [params] = useSearchParams()
 
-  const { carga, entradas, criterios, temasDisponibles, eventosDisponibles, alCambiar, alQuitarFiltros } =
-    useCatalogo(idUsuario)
+  const {
+    carga,
+    entradas,
+    criterios,
+    temas,
+    temasDisponibles,
+    eventosDisponibles,
+    alCambiar,
+    alQuitarFiltros,
+  } = useCatalogo(idUsuario)
 
   /* Viaja con cada resultado para que volver desde el detalle recupere esta misma vista filtrada. */
   const busqueda = params.toString() === '' ? '' : `?${params.toString()}`
@@ -87,7 +96,11 @@ export function PantallaCatalogo(): ReactElement {
             <ul aria-label="Catálogo" className="columns-1 gap-4 lg:columns-2">
               {entradas.map((entrada) => (
                 <li key={entrada.ficha.id} className="mb-4 break-inside-avoid">
-                  <FichaDeCatalogo entrada={entrada} busqueda={busqueda} />
+                  <FichaDeCatalogo
+                    entrada={entrada}
+                    nombreDelTema={nombreDeTema(temas, entrada.ficha.idTema)}
+                    busqueda={busqueda}
+                  />
                 </li>
               ))}
             </ul>

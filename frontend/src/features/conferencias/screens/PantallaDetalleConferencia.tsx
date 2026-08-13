@@ -3,6 +3,7 @@ import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
 import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
 import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
+import { leerTaxonomia } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import { PanelDeError } from '@/shared/ui'
 import { conferenciasCargadasDe } from '../carga'
@@ -80,6 +81,13 @@ export function PantallaDetalleConferencia() {
     () => (resultado.ok ? fichasVisibles(FICHAS_DE_EJEMPLO, resultado.visible) : []),
     [resultado],
   )
+
+  /*
+    El pool de temas se lee una vez por montaje: la ficha guarda el id y el
+    listado necesita el nombre. Es vocabulario del grupo, así que no cambia
+    mientras alguien lee el detalle de una conferencia.
+  */
+  const temas = useMemo(() => leerTaxonomia().temas, [])
 
   const etiquetas = useMemo(() => {
     if (!resultado.ok) {
@@ -207,7 +215,7 @@ export function PantallaDetalleConferencia() {
           </section>
 
           <section className="rounded-md bg-panel p-6 shadow-sm">
-            <ListadoDeFichas fichas={fichas} ocultaPendientes={ocultaPendientes} />
+            <ListadoDeFichas fichas={fichas} temas={temas} ocultaPendientes={ocultaPendientes} />
           </section>
         </>
       ) : null}

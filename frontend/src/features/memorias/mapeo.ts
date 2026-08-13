@@ -1,6 +1,8 @@
 import type { Conferencia, Ficha, TipoDeUnidad } from '@/features/conferencias/data'
 import { formatearFecha } from '@/features/conferencias/data'
 import type { RegistroDeDatosDeCampo } from '@/features/plantillas/data'
+import { nombreDeTema } from '@/features/taxonomia'
+import type { Tema } from '@/features/taxonomia'
 
 /*
   Traduce una conferencia y sus fichas al mismo formato de dato de campo
@@ -12,6 +14,10 @@ import type { RegistroDeDatosDeCampo } from '@/features/plantillas/data'
 
   Un campo sin dato real derivable de esta conferencia se omite del registro
   por completo — `campos.ts` ya sabe caer al dato de ejemplo cuando falta.
+
+  El pool de temas entra por parámetro y no por import para que esta capa siga
+  siendo pura: la memoria dice el nombre del tema, pero la conferencia solo
+  guarda su id.
 */
 
 /** Fichas de un tipo dado, de esta conferencia, priorizando las ya validadas cuando hay alguna. */
@@ -25,14 +31,17 @@ function fichasRelevantes(fichas: readonly Ficha[], idConferencia: string, tipo:
 export function mapearConferenciaACampos(
   conferencia: Conferencia,
   fichas: readonly Ficha[],
+  temas: readonly Tema[],
 ): RegistroDeDatosDeCampo {
+  const nombreDelTemaPrincipal = nombreDeTema(temas, conferencia.idTemaPrincipal)
+
   const registro: { -readonly [K in keyof RegistroDeDatosDeCampo]: RegistroDeDatosDeCampo[K] } = {
     nombre_ponente: { parrafo: conferencia.ponente, lista: [conferencia.ponente] },
     fecha_evento: {
       parrafo: formatearFecha(conferencia.fechaDelEvento),
       lista: [formatearFecha(conferencia.fechaDelEvento)],
     },
-    tema_principal: { parrafo: conferencia.temaPrincipal, lista: [conferencia.temaPrincipal] },
+    tema_principal: { parrafo: nombreDelTemaPrincipal, lista: [nombreDelTemaPrincipal] },
   }
 
   const citas = fichasRelevantes(fichas, conferencia.id, 'cita-textual')

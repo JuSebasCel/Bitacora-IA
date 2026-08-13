@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CUENTAS_DE_EJEMPLO } from '@/features/auth/session'
+import { TEMAS_DE_EJEMPLO, nombreDeTema } from '@/features/taxonomia'
 import { CONFERENCIAS_DE_EJEMPLO } from './conferencias.fixture'
 import { FICHAS_DE_EJEMPLO } from './fichas.fixture'
 import { ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO } from './etiquetas.fixture'
@@ -186,7 +187,8 @@ describe('fixture de conferencias', () => {
         conferencia.titulo,
         conferencia.ponente,
         conferencia.evento,
-        conferencia.temaPrincipal,
+        /* El fixture guarda el id del tema (F9); lo que se revisa es el texto que se ve. */
+        nombreDeTema(TEMAS_DE_EJEMPLO, conferencia.idTemaPrincipal),
         conferencia.resumen,
       ]
 
@@ -271,7 +273,7 @@ describe('fixture de fichas', () => {
       expect(ficha.fragmento.trim().length).toBeGreaterThan(20)
       expect(ficha.contextoMinimo.trim().length).toBeGreaterThan(0)
       expect(ficha.hablante.trim().length).toBeGreaterThan(0)
-      expect(ficha.tema.trim().length).toBeGreaterThan(0)
+      expect(ficha.idTema.trim().length).toBeGreaterThan(0)
       expect(ficha.fragmento).not.toContain(GUION_LARGO)
       expect(ficha.fragmento.toLowerCase()).not.toContain('lorem')
     }

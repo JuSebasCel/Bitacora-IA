@@ -2,6 +2,7 @@ import type { Conferencia, Ficha } from '@/features/conferencias/data'
 import { generarVistaPrevia } from '@/features/plantillas/editor/generarVistaPrevia'
 import { sustituirContenidoDePlantilla } from '@/features/plantillas/editor/sustituirContenidoDePlantilla'
 import type { JSONContent, Plantilla } from '@/features/plantillas/data'
+import type { Tema } from '@/features/taxonomia'
 import { mapearConferenciaACampos } from './mapeo'
 
 /*
@@ -20,8 +21,9 @@ export async function generarMemoria(
   plantilla: Plantilla,
   conferencia: Conferencia,
   fichas: readonly Ficha[],
+  temas: readonly Tema[],
 ): Promise<ResultadoDeMemoria> {
-  const datosReales = mapearConferenciaACampos(conferencia, fichas)
+  const datosReales = mapearConferenciaACampos(conferencia, fichas, temas)
 
   if (plantilla.origen === 'docx') {
     const blob = await generarVistaPrevia(plantilla.archivoOriginal, plantilla.marcadores, datosReales)

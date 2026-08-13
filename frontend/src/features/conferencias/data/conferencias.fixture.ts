@@ -28,7 +28,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2890,
     idDueno: 'usr-alcantara',
     estado: 'procesada',
-    temaPrincipal: 'Modelos de lenguaje',
+    idTemaPrincipal: 'tem-modelos-de-lenguaje',
     resumen:
       'Recorrido por el uso de modelos de lenguaje para el cribado de títulos y resúmenes, con énfasis en dónde el criterio humano sigue siendo insustituible.',
     fuente: 'audio',
@@ -55,7 +55,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2410,
     idDueno: 'usr-alcantara',
     estado: 'procesada',
-    temaPrincipal: 'Calidad de datos',
+    idTemaPrincipal: 'tem-calidad-de-datos',
     resumen:
       'Cómo sostener la cadena de procedencia de una variable a lo largo de diez años de seguimiento, cuando cambian los instrumentos y el personal que los aplica.',
     fuente: 'transcripcion',
@@ -71,7 +71,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 3180,
     idDueno: 'usr-alcantara',
     estado: 'procesada',
-    temaPrincipal: 'Sesgos algorítmicos',
+    idTemaPrincipal: 'tem-sesgos-algoritmicos',
     resumen:
       'Análisis de tres programas de transferencia condicionada donde el puntaje de focalización reprodujo desigualdades ya presentes en los registros de origen.',
     fuente: 'audio',
@@ -93,7 +93,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2650,
     idDueno: 'usr-alcantara',
     estado: 'procesando',
-    temaPrincipal: 'Métodos de investigación',
+    idTemaPrincipal: 'tem-metodos-de-investigacion',
     resumen:
       'Protocolo de anotación con hablantes nativos como jueces, y qué se pierde cuando la transcripción la hace alguien ajeno a la comunidad de habla.',
     fuente: 'audio',
@@ -109,7 +109,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2075,
     idDueno: 'usr-alcantara',
     estado: 'procesada',
-    temaPrincipal: 'Sensórica ambiental',
+    idTemaPrincipal: 'tem-sensorica-ambiental',
     resumen:
       'Cinco años de mediciones de caudal y turbidez con equipos de bajo costo, y las dos razones por las que la mitad de los nodos dejó de reportar.',
     fuente: 'transcripcion',
@@ -131,7 +131,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2760,
     idDueno: 'usr-berrio',
     estado: 'procesada',
-    temaPrincipal: 'Gobernanza de datos',
+    idTemaPrincipal: 'tem-gobernanza-de-datos',
     resumen:
       'Qué hace falta para que una política de datos abiertos sobreviva al cambio de rectoría, más allá del repositorio y del acto administrativo que lo crea.',
     fuente: 'audio',
@@ -153,7 +153,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2230,
     idDueno: 'usr-berrio',
     estado: 'procesada',
-    temaPrincipal: 'Analítica predictiva',
+    idTemaPrincipal: 'tem-analitica-predictiva',
     resumen:
       'Por qué una métrica agregada de exactitud oculta el error que importa, y cómo se ve el mismo modelo evaluado por cohorte de ingreso.',
     fuente: 'transcripcion',
@@ -169,7 +169,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 1980,
     idDueno: 'usr-berrio',
     estado: 'en-cola',
-    temaPrincipal: 'Infraestructura de investigación',
+    idTemaPrincipal: 'tem-infraestructura-de-investigacion',
     resumen:
       'Modelo de gobierno de un clúster compartido entre seis grupos, con reglas de prioridad acordadas antes de que apareciera la primera disputa por turnos.',
     fuente: 'audio',
@@ -185,7 +185,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2540,
     idDueno: 'usr-berrio',
     estado: 'procesada',
-    temaPrincipal: 'Métodos de investigación',
+    idTemaPrincipal: 'tem-metodos-de-investigacion',
     resumen:
       'Combinación de encuesta panel y entrevistas en profundidad para explicar por qué la adopción declarada y la observada difieren de forma sistemática.',
     fuente: 'audio',
@@ -201,7 +201,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 3320,
     idDueno: 'usr-zuluaga',
     estado: 'procesada',
-    temaPrincipal: 'Calidad de datos',
+    idTemaPrincipal: 'tem-calidad-de-datos',
     resumen:
       'Diagnóstico de completitud y consistencia sobre catorce millones de registros, y el costo real de limpiar lo que nunca se capturó bien en el punto de atención.',
     fuente: 'audio',
@@ -223,7 +223,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2180,
     idDueno: 'usr-zuluaga',
     estado: 'fallida',
-    temaPrincipal: 'Reproducibilidad',
+    idTemaPrincipal: 'tem-reproducibilidad',
     resumen:
       'Intento de reejecutar el código de sesenta artículos publicados en revistas del área, con el detalle de en qué punto exacto se rompió cada uno.',
     fuente: 'audio',
@@ -239,7 +239,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2620,
     idDueno: 'usr-zuluaga',
     estado: 'procesada',
-    temaPrincipal: 'Participación ciudadana',
+    idTemaPrincipal: 'tem-participacion-ciudadana',
     resumen:
       'Tres talleres de codiseño con usuarios de un trámite municipal, y cómo cambió el formulario cuando quienes lo llenan participaron en definirlo.',
     fuente: 'transcripcion',
@@ -255,7 +255,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 1840,
     idDueno: 'usr-penaloza',
     estado: 'procesada',
-    temaPrincipal: 'Analítica predictiva',
+    idTemaPrincipal: 'tem-analitica-predictiva',
     resumen:
       'Pronóstico de demanda por estación con datos de validación de tarjeta, y el efecto de los días atípicos sobre modelos entrenados sin marcarlos.',
     fuente: 'transcripcion',
@@ -271,7 +271,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     duracionEnSegundos: 2295,
     idDueno: 'usr-penaloza',
     estado: 'procesando',
-    temaPrincipal: 'Ética y automatización',
+    idTemaPrincipal: 'tem-etica-y-automatizacion',
     resumen:
       'Revisión de sistemas de preselección de hojas de vida en el sector público, con foco en qué decisiones quedan sin responsable identificable.',
     fuente: 'audio',

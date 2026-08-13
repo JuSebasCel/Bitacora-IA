@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { Tema } from '@/features/taxonomia'
 import { CRITERIOS_POR_DEFECTO } from './filtros'
 import type { CriteriosDeCatalogo } from './filtros'
 import { escribirCriteriosDeCatalogo, leerCriteriosDeCatalogo } from './parametros'
@@ -10,12 +11,16 @@ import { escribirCriteriosDeCatalogo, leerCriteriosDeCatalogo } from './parametr
   reconoce cae al valor por defecto.
 */
 
-const TEMAS_CONOCIDOS = ['Modelos de lenguaje', 'Sesgos algorítmicos']
+/* Desde F9 el parámetro `tema` lleva el id, no el nombre: el nombre puede cambiar, el id no. */
+const TEMAS_CONOCIDOS: readonly Tema[] = [
+  { id: 'tem-modelos-de-lenguaje', nombre: 'Modelos de lenguaje' },
+  { id: 'tem-sesgos-algoritmicos', nombre: 'Sesgos algorítmicos' },
+]
 const EVENTOS_CONOCIDOS = ['Simposio Andino de Investigación Aplicada']
 
 function leer(
   consulta: string,
-  temasConocidos?: readonly string[],
+  temasConocidos?: readonly Tema[],
   eventosConocidos?: readonly string[],
 ): CriteriosDeCatalogo {
   return leerCriteriosDeCatalogo(new URLSearchParams(consulta), temasConocidos, eventosConocidos)
@@ -43,27 +48,28 @@ describe('leerCriteriosDeCatalogo', () => {
 
   it('lee tema y evento cuando están entre los conocidos', () => {
     const criterios = leer(
-      'tema=Modelos+de+lenguaje&evento=Simposio+Andino+de+Investigación+Aplicada',
+      'tema=tem-modelos-de-lenguaje&evento=Simposio+Andino+de+Investigación+Aplicada',
       TEMAS_CONOCIDOS,
       EVENTOS_CONOCIDOS,
     )
 
-    expect(criterios.tema).toBe('Modelos de lenguaje')
+    expect(criterios.idTema).toBe('tem-modelos-de-lenguaje')
     expect(criterios.evento).toBe('Simposio Andino de Investigación Aplicada')
   })
 
+  /* Un id inventado se descarta igual que uno de un tema que esa persona no puede ver. */
   it('descarta un tema o evento que no está entre los conocidos', () => {
-    const criterios = leer('tema=Un+tema+inventado', TEMAS_CONOCIDOS)
+    const criterios = leer('tema=tem-inventado', TEMAS_CONOCIDOS)
 
-    expect(criterios.tema).toBeNull()
+    expect(criterios.idTema).toBeNull()
   })
 
   it('conserva tema y evento tal cual cuando no se le pasa con qué contrastarlos', () => {
-    expect(leer('tema=Lo+que+sea').tema).toBe('Lo que sea')
+    expect(leer('tema=tem-lo-que-sea').idTema).toBe('tem-lo-que-sea')
   })
 
   it('un tema o evento vacío cae a null, no a cadena vacía', () => {
-    expect(leer('tema=').tema).toBeNull()
+    expect(leer('tema=').idTema).toBeNull()
     expect(leer('evento=   ').evento).toBeNull()
   })
 })
@@ -76,13 +82,13 @@ describe('escribirCriteriosDeCatalogo', () => {
   it('agrega solo los criterios que se apartan del valor por defecto', () => {
     const criterios: CriteriosDeCatalogo = {
       ...CRITERIOS_POR_DEFECTO,
-      tema: 'Sesgos algorítmicos',
+      idTema: 'tem-sesgos-algoritmicos',
       estado: 'validada',
     }
 
     const params = escribirCriteriosDeCatalogo(criterios)
 
-    expect(params.get('tema')).toBe('Sesgos algorítmicos')
+    expect(params.get('tema')).toBe('tem-sesgos-algoritmicos')
     expect(params.get('estado')).toBe('validada')
     expect(params.has('tipo')).toBe(false)
     expect(params.has('evento')).toBe(false)
@@ -98,14 +104,18 @@ describe('escribirCriteriosDeCatalogo', () => {
   it('leer lo que se acaba de escribir devuelve los mismos criterios (ida y vuelta)', () => {
     const original: CriteriosDeCatalogo = {
       busqueda: 'modelos',
-      tema: 'Modelos de lenguaje',
+      idTema: 'tem-modelos-de-lenguaje',
       tipoDeUnidad: 'metodo',
       evento: 'Simposio Andino de Investigación Aplicada',
       estado: 'automatica',
     }
 
     const params = escribirCriteriosDeCatalogo(original)
-    const releido = leerCriteriosDeCatalogo(params, [original.tema ?? ''], [original.evento ?? ''])
+    const releido = leerCriteriosDeCatalogo(
+      params,
+      [{ id: original.idTema ?? '', nombre: 'Modelos de lenguaje' }],
+      [original.evento ?? ''],
+    )
 
     expect(releido).toEqual(original)
   })

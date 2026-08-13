@@ -7,6 +7,8 @@ import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { conferenciasVisibles, fichasDelCatalogo } from '@/features/conferencias/query'
+import type { FichaDelCatalogo } from '@/features/conferencias/query'
+import { TEMAS_DE_EJEMPLO, nombreDeTema } from '@/features/taxonomia'
 import { PantallaCatalogo } from './PantallaCatalogo'
 
 /*
@@ -40,6 +42,15 @@ const ALCANTARA = {
 
 function totalVisibleDe(idUsuario: string): number {
   return fichasDelCatalogo(FICHAS_DE_EJEMPLO, conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, idUsuario)).length
+}
+
+/*
+  La ficha guarda el id del tema (F9) y la pantalla pinta su nombre, así que la
+  prueba resuelve el nombre por el mismo camino que la pantalla: `nombreDeTema`
+  sobre el pool que `leerTaxonomia` devuelve sin nada guardado.
+*/
+function nombreDelTemaDe(entrada: FichaDelCatalogo): string {
+  return nombreDeTema(TEMAS_DE_EJEMPLO, entrada.ficha.idTema)
 }
 
 function Ubicacion() {
@@ -115,7 +126,7 @@ describe('PantallaCatalogo', () => {
     )
     if (primeraEntrada === undefined) throw new Error('el fixture no tiene fichas visibles para esta cuenta')
 
-    const [primeraPalabra = ''] = primeraEntrada.ficha.tema.split(' ')
+    const [primeraPalabra = ''] = nombreDelTemaDe(primeraEntrada).split(' ')
 
     await usuario.type(await screen.findByLabelText(/buscar/i), primeraPalabra)
 
@@ -137,14 +148,14 @@ describe('PantallaCatalogo', () => {
     if (primeraEntrada === undefined) throw new Error('el fixture no tiene fichas visibles para esta cuenta')
 
     await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    await usuario.click(await screen.findByRole('radio', { name: primeraEntrada.ficha.tema }))
+    await usuario.click(await screen.findByRole('radio', { name: nombreDelTemaDe(primeraEntrada) }))
 
     await waitFor(() => expect(ubicacion()).toContain('tema='))
 
     const filas = await resultados()
     expect(filas.length).toBeGreaterThan(0)
     for (const fila of filas) {
-      expect(fila.textContent).toContain(primeraEntrada.ficha.tema)
+      expect(fila.textContent).toContain(nombreDelTemaDe(primeraEntrada))
     }
   })
 
