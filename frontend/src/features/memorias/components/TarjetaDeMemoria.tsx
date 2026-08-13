@@ -1,9 +1,11 @@
 import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash'
 import type { ReactElement } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { formatearFecha } from '@/features/conferencias/data'
 import type { Memoria } from '../data'
+import { progresoDeGeneracion } from '../progreso'
 
 export type PropsTarjetaDeMemoria = {
   memoria: Memoria
@@ -17,8 +19,13 @@ export type PropsTarjetaDeMemoria = {
   `FilaDeConferencia.tsx`: la superficie (`bg-panel`) ya separa cada tarjeta
   en reposo, y el hover no inventa el contraste desde cero, solo lo acentúa
   — sombra, barra de acento a la izquierda y el título pasa al color de
-  acento. Sin eso la tarjeta se sentía plana frente al resto de la app, que
-  sí trae ese vocabulario en Conferencias.
+  acento.
+
+  La barra de "generando" vive aquí, no en el panel que la creó: al enviar
+  el panel, la memoria queda guardada y su tarjeta aparece de inmediato en
+  el listado con el avance de su generación (simulada, ver `../progreso.ts`)
+  — mismo criterio que una conferencia recién cargada aparece "Procesando"
+  en el dashboard (F3), en vez de bloquear el panel hasta que termine.
 */
 export function TarjetaDeMemoria({
   memoria,
@@ -26,6 +33,22 @@ export function TarjetaDeMemoria({
   nombrePlantilla,
   alEliminar,
 }: PropsTarjetaDeMemoria): ReactElement {
+  const [progreso, setProgreso] = useState(() => progresoDeGeneracion(memoria.generadaEl, Date.now()))
+
+  useEffect(() => {
+    if (progreso >= 100) {
+      return
+    }
+
+    const intervalo = setInterval(() => {
+      setProgreso(progresoDeGeneracion(memoria.generadaEl, Date.now()))
+    }, 200)
+
+    return () => clearInterval(intervalo)
+  }, [memoria.generadaEl, progreso])
+
+  const generando = progreso < 100
+
   function alPulsarEliminar(): void {
     if (window.confirm(`¿Eliminar la memoria «${memoria.nombre}»? Esta acción no se puede deshacer.`)) {
       alEliminar()
@@ -52,8 +75,27 @@ export function TarjetaDeMemoria({
         <div className="flex flex-col gap-0.5 text-xs text-texto-tenue">
           <span className="truncate">{nombreConferencia}</span>
           <span className="truncate">{nombrePlantilla}</span>
-          <span className="coordenada">{formatearFecha(memoria.generadaEl.slice(0, 10))}</span>
+          {generando ? null : <span className="coordenada">{formatearFecha(memoria.generadaEl.slice(0, 10))}</span>}
         </div>
+
+        {generando ? (
+          <div className="flex flex-col gap-1.5 pt-0.5">
+            <div
+              role="progressbar"
+              aria-label={`Generando «${memoria.nombre}»`}
+              aria-valuenow={progreso}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-1 w-full overflow-hidden rounded-full bg-fondo"
+            >
+              <div
+                className="h-full rounded-full bg-acento transition-[width] duration-200 ease-linear"
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
+            <span className="text-xs text-texto-tenue">Generando…</span>
+          </div>
+        ) : null}
       </Link>
 
       <button
