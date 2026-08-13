@@ -43,17 +43,17 @@ const VACIO_POR_SEGMENTO: Record<Segmento, { titulo: string; descripcion: string
   todas: {
     titulo: 'Todavía no hay conferencias',
     descripcion:
-      'Cuando cargues una charla o alguien comparta la suya contigo, aparecerá aquí con su tema, su estado y sus fichas.',
+      'Cuando cargues una conferencia o alguien comparta la suya contigo, aparecerá aquí con su tema, su estado y sus fichas.',
   },
   propias: {
     titulo: 'Todavía no has cargado ninguna conferencia',
     descripcion:
-      'Carga el audio o la transcripción de una charla para que el sistema la procese y la deje aquí con sus fichas.',
+      'Carga el audio o la transcripción de una conferencia para que el sistema la procese y la deje aquí con sus fichas.',
   },
   compartidas: {
     titulo: 'Nadie ha compartido conferencias contigo',
     descripcion:
-      'Cuando alguien del grupo te dé acceso a sus charlas, las verás aquí junto a las tuyas.',
+      'Cuando alguien del grupo te dé acceso a sus conferencias, las verás aquí junto a las tuyas.',
   },
 }
 

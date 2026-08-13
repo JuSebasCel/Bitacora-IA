@@ -100,14 +100,14 @@ test('recorrido completo del catálogo con filtros', async ({ page }) => {
     await expect(botonDeFiltros).toHaveText('Filtros')
     await page.keyboard.press('Escape')
 
-    await page.getByLabel(/buscar por fragmento o tema/i).fill('algoritmicos')
+    await page.getByLabel(/buscar por fragmento, tema, conferencia o ponente/i).fill('algoritmicos')
 
     await expect(resultados).toHaveCount(5)
     await expect(page).toHaveURL(/buscar=algoritmicos/)
   })
 
   await test.step('una búsqueda que solo aparece en el fragmento también encuentra la ficha', async () => {
-    await page.getByLabel(/buscar por fragmento o tema/i).fill('catorce')
+    await page.getByLabel(/buscar por fragmento, tema, conferencia o ponente/i).fill('catorce')
 
     await expect(resultados).toHaveCount(1)
     await expect(page.getByText(/Catorce millones de registros/)).toBeVisible()
@@ -126,7 +126,7 @@ test('recorrido completo del catálogo con filtros', async ({ page }) => {
     await page.goBack()
     await expect(page).toHaveURL(/\/catalogo/)
 
-    await page.getByLabel(/buscar por fragmento o tema/i).fill('termodinámica cuántica')
+    await page.getByLabel(/buscar por fragmento, tema, conferencia o ponente/i).fill('termodinámica cuántica')
 
     await expect(page.getByText(/Ningún resultado con estos filtros/)).toBeVisible()
 

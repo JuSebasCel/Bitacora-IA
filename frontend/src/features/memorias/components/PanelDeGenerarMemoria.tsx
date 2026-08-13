@@ -208,7 +208,11 @@ export function PanelDeGenerarMemoria({
           </div>
 
           <Field id="memoria-nombre" etiqueta="Nombre">
-            <Input value={nombre} onChange={(evento) => elegirNombre(evento.target.value)} />
+            <Input
+              value={nombre}
+              onChange={(evento) => elegirNombre(evento.target.value)}
+              placeholder="ej. Memoria de <título de la conferencia>"
+            />
           </Field>
 
           {error === null ? null : <MensajeDeFormulario id={ID_ERROR}>{error}</MensajeDeFormulario>}

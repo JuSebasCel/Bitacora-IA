@@ -51,7 +51,12 @@ describe('FichaDeCatalogo', () => {
 
     expect(screen.getByText(FICHA.fragmento)).toBeInTheDocument()
     expect(screen.getByText('Cita textual')).toBeInTheDocument()
-    expect(screen.getByText('Modelos de lenguaje')).toBeInTheDocument()
+    /*
+      Tema y coordenada comparten el párrafo del pie. Se busca la cadena
+      completa porque el título de la conferencia de este fixture también
+      empieza por el nombre del tema.
+    */
+    expect(screen.getByText(/Modelos de lenguaje · 00:03:05/)).toBeInTheDocument()
   })
 
   it('muestra una insignia con el estado de validación', () => {
@@ -63,7 +68,7 @@ describe('FichaDeCatalogo', () => {
   it('muestra la coordenada en formato de reloj', () => {
     montar()
 
-    expect(screen.getByText('00:03:05')).toBeInTheDocument()
+    expect(screen.getByText(/00:03:05/)).toBeInTheDocument()
   })
 
   it('muestra de qué conferencia, ponente y evento viene', () => {
@@ -74,12 +79,16 @@ describe('FichaDeCatalogo', () => {
     expect(screen.getByText(new RegExp(CONFERENCIA.evento))).toBeInTheDocument()
   })
 
-  it('enlaza a la conferencia de origen', () => {
+  /*
+    El enlace marca su origen para que el detalle sepa devolver al catálogo y
+    no al dashboard, que es a donde mandaba antes a todo el mundo.
+  */
+  it('enlaza a la conferencia de origen, marcando que se viene del catálogo', () => {
     montar()
 
     expect(screen.getByRole('link', { name: CONFERENCIA.titulo })).toHaveAttribute(
       'href',
-      `/conferencias/${CONFERENCIA.id}`,
+      `/conferencias/${CONFERENCIA.id}?origen=catalogo`,
     )
   })
 })

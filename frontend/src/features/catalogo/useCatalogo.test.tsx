@@ -83,4 +83,15 @@ describe('useCatalogo', () => {
 
     expect(result.current.criterios.estado).toBe('validada')
   })
+
+  /*
+    El hook descartaba el `carga` de `useConferenciasVisibles`, así que la
+    pantalla no tenía forma de distinguir "todavía cargando" de "ya se sabe
+    que no hay nada" y podía pintar el vacío equivocado en el primer render.
+  */
+  it('expone el estado de carga de las conferencias visibles', () => {
+    const { result } = renderHook(() => useCatalogo(ALCANTARA), { wrapper: envolver() })
+
+    expect(result.current.carga).toBe('listo')
+  })
 })

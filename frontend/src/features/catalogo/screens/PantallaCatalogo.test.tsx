@@ -1,12 +1,30 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
+import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { conferenciasVisibles, fichasDelCatalogo } from '@/features/conferencias/query'
 import { PantallaCatalogo } from './PantallaCatalogo'
+
+/*
+  `useConferenciasVisibles` resuelve su efecto dentro del mismo render en las
+  pruebas, así que el estado "cargando" nunca llega a observarse montando la
+  pantalla normal (mismo caso ya documentado en
+  `conferencias/screens/PantallaConferencias.test.tsx`). Para probar que
+  `PantallaCatalogo` sí atiende ese estado hay que forzarlo desde el mock.
+*/
+vi.mock('@/features/conferencias/components/useConferenciasVisibles', async (importarOriginal) => {
+  const original =
+    await importarOriginal<typeof import('@/features/conferencias/components/useConferenciasVisibles')>()
+
+  return {
+    ...original,
+    useConferenciasVisibles: vi.fn(original.useConferenciasVisibles),
+  }
+})
 
 /*
   Alcántara es la cuenta de referencia porque ya se usa en `useCatalogo.test.tsx`
@@ -135,6 +153,19 @@ describe('PantallaCatalogo', () => {
 
     expect(await screen.findByText(/ningún resultado/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /quitar filtros/i })).toBeInTheDocument()
+  })
+
+  it('muestra un esqueleto de carga mientras se resuelve lo visible, no el vacío', () => {
+    vi.mocked(useConferenciasVisibles).mockReturnValueOnce({
+      carga: 'cargando',
+      visibles: [],
+      recargar: vi.fn(),
+    })
+
+    montar()
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no hay fichas/i)).not.toBeInTheDocument()
   })
 
   it('restablece el catálogo completo al quitar los filtros', async () => {

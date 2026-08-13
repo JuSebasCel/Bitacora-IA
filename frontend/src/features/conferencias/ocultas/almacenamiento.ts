@@ -53,3 +53,17 @@ export function ocultarConferencia(idUsuario: string, idConferencia: string): re
 
   return nuevos
 }
+
+/*
+  El inverso de `ocultarConferencia`. Sin él, quitar una conferencia del
+  listado era irreversible desde la interfaz (solo se recuperaba entrando por
+  la URL directa, que nadie tiene por qué adivinar), y encima ocurría sin
+  confirmación: un clic accidental en el ojo tachado no tenía vuelta atrás.
+*/
+export function mostrarConferencia(idUsuario: string, idConferencia: string): readonly string[] {
+  const nuevos = idsOcultosDe(idUsuario).filter((id) => id !== idConferencia)
+
+  escribirJson(CLAVE_OCULTAS, { ...leerMapaGuardado(), [idUsuario]: nuevos })
+
+  return nuevos
+}

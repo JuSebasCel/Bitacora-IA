@@ -93,6 +93,32 @@ describe('PantallaDetalleConferencia, resumen', () => {
     expect(regreso).toHaveAttribute('href', expect.stringContaining('segmento=propias'))
     expect(regreso).toHaveAttribute('href', expect.stringContaining('orden=titulo-asc'))
   })
+
+  /*
+    A este detalle se llega desde el dashboard y desde el catálogo. Quien venía
+    del catálogo aterrizaba en el dashboard y perdía sus filtros, así que el
+    catálogo marca su origen y el enlace lo respeta.
+  */
+  it('viniendo del catálogo, devuelve al catálogo conservando lo demás', async () => {
+    montar('/conferencias/cnf-zul-01?origen=catalogo&buscar=datos')
+
+    const regreso = await screen.findByRole('link', { name: /volver al catálogo/i })
+
+    expect(regreso).toHaveAttribute('href', '/catalogo?buscar=datos')
+  })
+
+  /*
+    La marca de origen es solo para decidir el destino: si viajara con los demás
+    parámetros quedaría pegada en la URL de la pantalla a la que se vuelve,
+    donde no significa nada y se propagaría a cada enlace que salga de ahí.
+  */
+  it('no arrastra la marca de origen a la pantalla de destino', async () => {
+    montar('/conferencias/cnf-zul-01?origen=otra-cosa&segmento=propias')
+
+    const regreso = await screen.findByRole('link', { name: /volver al listado/i })
+
+    expect(regreso).toHaveAttribute('href', '/conferencias?segmento=propias')
+  })
 })
 
 describe('PantallaDetalleConferencia, generar memoria', () => {

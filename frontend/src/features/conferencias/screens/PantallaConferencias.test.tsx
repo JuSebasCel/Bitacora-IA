@@ -336,6 +336,29 @@ describe('PantallaConferencias, ocultar', () => {
     await waitFor(async () => expect(await filas()).toHaveLength(6))
   })
 
+  /*
+    Sin esta salida, quitar una conferencia del listado solo se deshacía
+    conociendo la URL directa. La línea además hace visible que lo ocultado
+    sigue ahí: sin ella, el listado mentiría por omisión.
+  */
+  it('anuncia lo oculto y lo devuelve al listado completo', async () => {
+    const usuario = userEvent.setup()
+    montar()
+
+    expect(await filas()).toHaveLength(7)
+
+    const [botonDeQuitar] = screen.getAllByRole('button', { name: /quitar «.*» de tu listado/i })
+    if (botonDeQuitar === undefined) throw new Error('se esperaba al menos un botón de quitar')
+    await usuario.click(botonDeQuitar)
+
+    expect(await screen.findByText(/hay 1 conferencia oculta/i)).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: /volver a mostrarlas/i }))
+
+    await waitFor(async () => expect(await filas()).toHaveLength(7))
+    expect(screen.queryByText(/conferencia oculta/i)).not.toBeInTheDocument()
+  })
+
   it('funciona igual sobre una conferencia compartida', async () => {
     const usuario = userEvent.setup()
     montar('/conferencias?segmento=compartidas')

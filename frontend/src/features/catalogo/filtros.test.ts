@@ -53,6 +53,61 @@ describe('buscarEnCatalogo', () => {
 
     expect(buscarEnCatalogo(entradas, 'palabra-que-no-existe-en-ningun-lado')).toHaveLength(0)
   })
+
+  /*
+    El catálogo cruza fichas de conferencias distintas, así que buscar solo
+    dentro de la ficha deja fuera lo que de verdad distingue una entrada de
+    otra: de qué charla viene. Mismo alcance que `buscar` de F2 (título,
+    ponente, evento), más lo propio de la ficha.
+  */
+  it('encuentra por título de la conferencia de origen', () => {
+    const entradas = entradasDe(ALCANTARA)
+
+    const resultado = buscarEnCatalogo(entradas, 'subsidios')
+
+    expect(resultado.length).toBeGreaterThan(0)
+    expect(resultado.every((entrada) => entrada.conferencia.titulo.toLowerCase().includes('subsidios'))).toBe(true)
+  })
+
+  it('encuentra por ponente de la conferencia de origen', () => {
+    const entradas = entradasDe(ALCANTARA)
+
+    const resultado = buscarEnCatalogo(entradas, 'Ferreira')
+
+    expect(resultado.length).toBeGreaterThan(0)
+    expect(resultado.every((entrada) => entrada.conferencia.ponente.includes('Ferreira'))).toBe(true)
+  })
+
+  it('encuentra por evento de la conferencia de origen', () => {
+    const entradas = entradasDe(ALCANTARA)
+
+    const resultado = buscarEnCatalogo(entradas, 'Coloquio')
+
+    expect(resultado.length).toBeGreaterThan(0)
+    expect(resultado.every((entrada) => entrada.conferencia.evento.includes('Coloquio'))).toBe(true)
+  })
+
+  /*
+    La misma regla de inicio de palabra que ya rige en F2: "IA" no puede
+    traer "Mariana" ni "Ingeniería" por la subcadena "ia" a mitad de palabra.
+    Aquí importa el doble, porque ahora se busca también sobre ponente y
+    evento, que es justo donde vivían esos falsos positivos.
+  */
+  it('no empareja por subcadena a mitad de palabra en ponente ni evento', () => {
+    const entradas = entradasDe(ALCANTARA)
+
+    const resultado = buscarEnCatalogo(entradas, 'IA')
+
+    for (const entrada of resultado) {
+      const texto = `${entrada.ficha.fragmento} ${entrada.ficha.tema} ${entrada.conferencia.titulo} ${entrada.conferencia.ponente} ${entrada.conferencia.evento}`
+      const empiezaAlgunaPalabraEnIa = texto
+        .toLowerCase()
+        .split(/[^a-záéíóúñ0-9]+/)
+        .some((palabra) => palabra.startsWith('ia'))
+
+      expect(empiezaAlgunaPalabraEnIa).toBe(true)
+    }
+  })
 })
 
 describe('filtrarPorTema', () => {

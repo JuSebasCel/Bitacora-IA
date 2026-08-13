@@ -67,6 +67,7 @@ export function PantallaRegistro(): ReactElement {
             type="text"
             name="nombre"
             autoComplete="name"
+            placeholder="Nombre Apellido Apellido"
             value={nombre}
             onChange={(evento) => setNombre(evento.target.value)}
           />
@@ -77,6 +78,7 @@ export function PantallaRegistro(): ReactElement {
             type="email"
             name="correo"
             autoComplete="email"
+            placeholder="nombre.apellido@labanfora.org"
             value={correo}
             onChange={(evento) => setCorreo(evento.target.value)}
           />
@@ -87,6 +89,7 @@ export function PantallaRegistro(): ReactElement {
             type="password"
             name="contrasena"
             autoComplete="new-password"
+            placeholder="••••••••"
             value={contrasena}
             onChange={(evento) => setContrasena(evento.target.value)}
           />
