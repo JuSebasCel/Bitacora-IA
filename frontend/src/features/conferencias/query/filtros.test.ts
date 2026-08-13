@@ -14,7 +14,9 @@ import {
   filtrarPorEtiquetas,
   filtrarPorSegmento,
   listarConferencias,
+  normalizarTexto,
   ordenar,
+  palabrasDe,
 } from './filtros'
 
 const ALCANTARA = 'usr-alcantara'
@@ -49,6 +51,34 @@ describe('filtrarPorSegmento', () => {
 
   it('no filtra nada con el segmento de todas', () => {
     expect(filtrarPorSegmento(visiblesDe(ZULUAGA), 'todas')).toHaveLength(7)
+  })
+})
+
+/*
+  `palabrasDe` se exporta desde F6 (catálogo) hacia afuera: el catálogo busca
+  sobre fichas con el mismo emparejamiento por inicio de palabra que ya usa
+  `buscar` para conferencias, para no arriesgar reintroducir el bug de
+  subcadena que el comentario de `buscar` documenta. Solo separa por tramos
+  que no son letra ASCII ni número — no quita tildes por su cuenta, por eso
+  todo llamador la compone siempre con `normalizarTexto` primero (`buscar`
+  ya lo hace así).
+*/
+describe('palabrasDe', () => {
+  it('separa por cualquier tramo que no sea letra o número, sobre texto ya normalizado', () => {
+    expect(palabrasDe(normalizarTexto('Revisión sistemática, de literatura'))).toEqual([
+      'revision',
+      'sistematica',
+      'de',
+      'literatura',
+    ])
+  })
+
+  it('descarta los tramos vacíos', () => {
+    expect(palabrasDe(normalizarTexto('  IA   '))).toEqual(['ia'])
+  })
+
+  it('con texto vacío, devuelve un arreglo vacío', () => {
+    expect(palabrasDe('')).toEqual([])
   })
 })
 

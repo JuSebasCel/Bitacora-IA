@@ -5,9 +5,10 @@
   llegada del backend real no obligue a reescribir las reglas.
 */
 
-export type { ConferenciaVisible, Procedencia, ResultadoConferencia } from './acceso'
+export type { ConferenciaVisible, FichaDelCatalogo, Procedencia, ResultadoConferencia } from './acceso'
 export {
   conferenciasVisibles,
+  fichasDelCatalogo,
   fichasVisibles,
   obtenerConferencia,
   privacidadEfectiva,
@@ -29,6 +30,7 @@ export {
   listarConferencias,
   normalizarTexto,
   ordenar,
+  palabrasDe,
 } from './filtros'
 
 export type { ConteoPorEstado, ConteoPorTipo, ResumenDeFichas } from './resumen'

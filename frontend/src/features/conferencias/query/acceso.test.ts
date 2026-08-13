@@ -3,6 +3,7 @@ import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '../data'
 import type { Conferencia, Ficha } from '../data'
 import {
   conferenciasVisibles,
+  fichasDelCatalogo,
   fichasVisibles,
   obtenerConferencia,
   privacidadEfectiva,
@@ -233,5 +234,50 @@ describe('fichasVisibles', () => {
 
       expect(actual.segundoInicio).toBeGreaterThanOrEqual(anterior.segundoInicio)
     }
+  })
+})
+
+/*
+  Base del catálogo (F6): las fichas de TODAS las conferencias que esa
+  persona puede ver, cada una con su propia conferencia de origen. No es una
+  regla de acceso nueva — reusa `fichasVisibles` por cada conferencia
+  visible, así que hereda su misma cobertura de privacidad sin duplicarla.
+*/
+describe('fichasDelCatalogo', () => {
+  it('junta las fichas visibles de todas las conferencias visibles, cada una con su conferencia', () => {
+    const visibles = conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, ALCANTARA)
+    const entradas = fichasDelCatalogo(FICHAS_DE_EJEMPLO, visibles)
+
+    expect(entradas.length).toBeGreaterThan(0)
+
+    for (const entrada of entradas) {
+      expect(entrada.ficha.idConferencia).toBe(entrada.conferencia.id)
+    }
+  })
+
+  it('el total coincide con la suma de fichasVisibles de cada conferencia visible', () => {
+    const visibles = conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, ZULUAGA)
+    const entradas = fichasDelCatalogo(FICHAS_DE_EJEMPLO, visibles)
+
+    const esperado = visibles.reduce(
+      (total, visible) => total + fichasVisibles(FICHAS_DE_EJEMPLO, visible).length,
+      0,
+    )
+
+    expect(entradas).toHaveLength(esperado)
+  })
+
+  it('oculta las fichas pendientes de una conferencia compartida sin ese permiso', () => {
+    const visibles = conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, ZULUAGA)
+    const entradas = fichasDelCatalogo(FICHAS_DE_EJEMPLO, visibles)
+
+    const deLaAjena = entradas.filter((entrada) => entrada.conferencia.id === 'cnf-alc-03')
+
+    expect(deLaAjena.length).toBeGreaterThan(0)
+    expect(deLaAjena.every((entrada) => entrada.ficha.estadoDeValidacion !== 'pendiente')).toBe(true)
+  })
+
+  it('sin conferencias visibles, devuelve un arreglo vacío', () => {
+    expect(fichasDelCatalogo(FICHAS_DE_EJEMPLO, [])).toEqual([])
   })
 })

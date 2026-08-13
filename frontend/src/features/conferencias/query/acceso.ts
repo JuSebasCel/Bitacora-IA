@@ -125,3 +125,25 @@ export function fichasVisibles(
     return true
   })
 }
+
+/** Una ficha del catálogo (F6), junto con la conferencia de la que viene. */
+export type FichaDelCatalogo = {
+  readonly ficha: Ficha
+  readonly conferencia: Conferencia
+}
+
+/*
+  Base del catálogo: las fichas de TODAS las conferencias visibles para esa
+  persona, no solo una. No es una regla de acceso nueva — reusa
+  `fichasVisibles` por cada conferencia visible, así que hereda su misma
+  cobertura de privacidad (fichas pendientes ocultas cuando la compartición
+  no las incluye) sin duplicarla.
+*/
+export function fichasDelCatalogo(
+  todas: readonly Ficha[],
+  visibles: readonly ConferenciaVisible[],
+): readonly FichaDelCatalogo[] {
+  return visibles.flatMap((visible) =>
+    fichasVisibles(todas, visible).map((ficha) => ({ ficha, conferencia: visible.conferencia })),
+  )
+}

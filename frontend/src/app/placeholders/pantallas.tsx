@@ -6,20 +6,11 @@ import { PantallaDeModulo } from './PantallaDeModulo'
 */
 
 /*
-  Conferencias, Cargar conferencia, Plantillas y Memorias ya no están aquí: F2,
-  F3, F4 y F5 las sustituyeron por sus pantallas reales, que viven en
-  `features/conferencias/screens`, `features/plantillas/screens` y
-  `features/memorias/screens`.
+  Conferencias, Cargar conferencia, Catálogo, Plantillas y Memorias ya no
+  están aquí: F2, F3, F4, F5 y F6 las sustituyeron por sus pantallas reales,
+  que viven en `features/conferencias/screens`, `features/catalogo/screens`,
+  `features/plantillas/screens` y `features/memorias/screens`.
 */
-
-export function PantallaCatalogo() {
-  return (
-    <PantallaDeModulo
-      titulo="Catálogo"
-      descripcion="Filtra las fichas por tema, tipo de unidad, evento y estado de validación, y abre cada una en su coordenada dentro de la conferencia de origen."
-    />
-  )
-}
 
 export function PantallaConfiguracion() {
   return (

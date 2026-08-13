@@ -5,10 +5,11 @@ import { SessionProvider } from '@/features/auth/session'
 import { ShellLayout } from '@/app/layout'
 import { RutaProtegida } from '@/app/RutaProtegida'
 import { RutaPublica } from '@/app/RutaPublica'
+import { PantallaCatalogo } from '@/features/catalogo/screens'
 import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
 import { PantallaDetalleMemoria, PantallaMemorias } from '@/features/memorias/screens'
 import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/plantillas/screens'
-import { PantallaCatalogo, PantallaConfiguracion } from '@/app/placeholders'
+import { PantallaConfiguracion } from '@/app/placeholders'
 
 /*
   Mapa de rutas de la aplicación.

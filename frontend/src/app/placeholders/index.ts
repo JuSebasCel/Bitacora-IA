@@ -1,2 +1,2 @@
-export { PantallaCatalogo, PantallaConfiguracion } from './pantallas'
+export { PantallaConfiguracion } from './pantallas'
 export { PantallaDeModulo } from './PantallaDeModulo'
