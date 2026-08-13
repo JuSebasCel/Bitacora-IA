@@ -61,7 +61,6 @@ describe('esSeccionActiva', () => {
       '/catalogo',
       '/memorias',
       '/plantillas',
-      '/taxonomia',
       '/configuracion',
     ]
 

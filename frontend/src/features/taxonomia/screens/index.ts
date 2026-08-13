@@ -1,1 +1,0 @@
-export { PantallaTaxonomia } from './PantallaTaxonomia'

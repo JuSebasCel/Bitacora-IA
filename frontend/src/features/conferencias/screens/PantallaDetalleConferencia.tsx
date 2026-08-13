@@ -1,8 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
 import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
+import { ShareNetworkIcon } from '@phosphor-icons/react/dist/csr/ShareNetwork'
 import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
+import { conComparticionesAgregadas, leerComparticionesAgregadas } from '@/features/configuracion/comparticiones'
+import { DialogoDeCompartir } from '@/features/configuracion/components'
 import { leerTaxonomia } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import { PanelDeError } from '@/shared/ui'
@@ -18,6 +21,7 @@ import type { ResultadoCreacion } from '../components'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '../data'
 import { fichasVisibles, obtenerConferencia, privacidadEfectiva, resumirFichas } from '../query'
 import { espacioDe, etiquetasVisibles, useEtiquetas } from '../tags'
+import { fichasConValidacionesAplicadas, leerValidaciones, marcarComoValidada } from '../validacion'
 
 /*
   Detalle de una conferencia: su resumen, la distribución de sus fichas y las
@@ -70,17 +74,29 @@ export function PantallaDetalleConferencia() {
   const resultado = useMemo(
     () =>
       obtenerConferencia(
-        [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)],
+        conComparticionesAgregadas(
+          [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)],
+          leerComparticionesAgregadas(),
+        ),
         idUsuario,
         idConferencia,
       ),
     [idUsuario, idConferencia],
   )
 
-  const fichas = useMemo(
-    () => (resultado.ok ? fichasVisibles(FICHAS_DE_EJEMPLO, resultado.visible) : []),
-    [resultado],
-  )
+  /* Fuerza a `fichas` a releer las validaciones guardadas tras marcar una: `leerValidaciones()` no es reactivo por sí solo. */
+  const [refrescoDeValidaciones, setRefrescoDeValidaciones] = useState(0)
+  const [dialogoCompartirAbierto, setDialogoCompartirAbierto] = useState(false)
+
+  const fichas = useMemo(() => {
+    void refrescoDeValidaciones
+    return resultado.ok ? fichasVisibles(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), resultado.visible) : []
+  }, [resultado, refrescoDeValidaciones])
+
+  function alValidar(idFicha: string): void {
+    marcarComoValidada(idFicha)
+    setRefrescoDeValidaciones((anterior) => anterior + 1)
+  }
 
   /*
     El pool de temas se lee una vez por montaje: la ficha guarda el id y el
@@ -149,6 +165,10 @@ export function PantallaDetalleConferencia() {
   const { conferencia } = visible
   const ocultaPendientes =
     visible.procedencia === 'compartida' && !privacidadEfectiva(visible).compartirFichasPendientes
+  /* El dueño siempre puede validar lo suyo; un invitado solo si quien compartió lo permitió explícitamente. */
+  const puedeValidar = visible.procedencia === 'propia' || privacidadEfectiva(visible).permitirValidarFichas
+  /* Mismo criterio que validar: propia siempre, ajena solo con permiso explícito de recompartir. */
+  const puedeCompartir = visible.procedencia === 'propia' || privacidadEfectiva(visible).permitirRecompartir
 
   return (
     <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
@@ -168,8 +188,29 @@ export function PantallaDetalleConferencia() {
             alAlternar={alAlternarAsignacion}
             alCrear={alCrearYAsignar}
           />
+
+          {puedeCompartir ? (
+            <button
+              type="button"
+              onClick={() => setDialogoCompartirAbierto(true)}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-texto-tenue transition-colors hover:bg-fondo hover:text-texto"
+            >
+              <ShareNetworkIcon size={14} weight="regular" aria-hidden="true" />
+              Compartir
+            </button>
+          ) : null}
         </div>
       </section>
+
+      {puedeCompartir ? (
+        <DialogoDeCompartir
+          abierto={dialogoCompartirAbierto}
+          conferencia={conferencia}
+          idUsuario={idUsuario}
+          puedeCompartir={puedeCompartir}
+          alCerrar={() => setDialogoCompartirAbierto(false)}
+        />
+      ) : null}
 
       {conferencia.estado === 'fallida' ? (
         <PanelDeError mensaje={mensajeDeError('CONF_PROCESAMIENTO_FALLIDO')} />
@@ -215,7 +256,13 @@ export function PantallaDetalleConferencia() {
           </section>
 
           <section className="rounded-md bg-panel p-6 shadow-sm">
-            <ListadoDeFichas fichas={fichas} temas={temas} ocultaPendientes={ocultaPendientes} />
+            <ListadoDeFichas
+              fichas={fichas}
+              temas={temas}
+              ocultaPendientes={ocultaPendientes}
+              puedeValidar={puedeValidar}
+              alValidar={alValidar}
+            />
           </section>
         </>
       ) : null}

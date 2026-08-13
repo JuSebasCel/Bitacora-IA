@@ -3,6 +3,7 @@ import { ListIcon } from '@phosphor-icons/react/dist/csr/List'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import type { RefObject } from 'react'
 import { useSession } from '@/features/auth/session'
+import { NotificacionesDropdown } from './NotificacionesDropdown'
 import { PESO_DE_ICONO, TAMANO_DE_ICONO } from './navegacion'
 
 type PropiedadesBarraSuperior = {
@@ -12,6 +13,7 @@ type PropiedadesBarraSuperior = {
   alternarCajon: () => void
   /** El shell necesita el botón para encerrar el foco y devolvérselo al cerrar. */
   refDelBotonDelCajon: RefObject<HTMLButtonElement | null>
+  alAbrirChat: () => void
 }
 
 const CLASES_DE_CONTROL =
@@ -26,6 +28,7 @@ export function BarraSuperior({
   idDeNavegacion,
   alternarCajon,
   refDelBotonDelCajon,
+  alAbrirChat,
 }: PropiedadesBarraSuperior) {
   const { usuario, cerrarSesion } = useSession()
   const IconoDelCajon = cajonAbierto ? XIcon : ListIcon
@@ -47,8 +50,11 @@ export function BarraSuperior({
       <p className="text-lg font-semibold tracking-tight text-texto">Bitácora AI</p>
 
       <div className="ml-auto flex items-center gap-2 md:gap-3">
+        {usuario === null ? null : <NotificacionesDropdown idUsuario={usuario.id} />}
+
         <button
           type="button"
+          onClick={alAbrirChat}
           aria-label="Abrir el panel de chat"
           className={`${CLASES_DE_CONTROL} px-2`}
         >

@@ -31,6 +31,8 @@ export type ResultadoConferencia =
 const PRIVACIDAD_SIN_RESTRICCIONES: PrivacidadDeComparticion = {
   compartirEtiquetas: true,
   compartirFichasPendientes: true,
+  permitirValidarFichas: true,
+  permitirRecompartir: true,
 }
 
 function visibilidadDe(conferencia: Conferencia, idUsuario: string): ConferenciaVisible | null {

@@ -36,7 +36,6 @@ function montarShell(rutaInicial = '/conferencias') {
               <Route path="/catalogo" element={<p>Contenido del catálogo</p>} />
               <Route path="/memorias" element={<p>Contenido de memorias</p>} />
               <Route path="/plantillas" element={<p>Contenido de plantillas</p>} />
-              <Route path="/taxonomia" element={<p>Contenido de taxonomía</p>} />
               <Route path="/configuracion" element={<p>Contenido de configuración</p>} />
             </Route>
           </Route>
@@ -77,18 +76,17 @@ describe('ShellLayout', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-  it('lista las seis secciones de navegación en el orden definido', () => {
+  it('lista las cinco secciones de navegación en el orden definido', () => {
     montarShell()
 
     const enlaces = within(barraDeNavegacion()).getAllByRole('link')
 
-    expect(enlaces).toHaveLength(6)
+    expect(enlaces).toHaveLength(5)
     expect(enlaces.map((enlace) => enlace.textContent?.trim())).toEqual([
       'Conferencias',
       'Catálogo',
       'Memorias',
       'Plantillas',
-      'Taxonomía',
       'Configuración',
     ])
     expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual([
@@ -96,7 +94,6 @@ describe('ShellLayout', () => {
       '/catalogo',
       '/memorias',
       '/plantillas',
-      '/taxonomia',
       '/configuracion',
     ])
   })
@@ -281,11 +278,11 @@ describe('ShellLayout', () => {
 })
 
 describe('SECCIONES_DE_NAVEGACION', () => {
-  it('define seis secciones con ruta única e icono', () => {
-    expect(SECCIONES_DE_NAVEGACION).toHaveLength(6)
+  it('define cinco secciones con ruta única e icono', () => {
+    expect(SECCIONES_DE_NAVEGACION).toHaveLength(5)
 
     const rutas = SECCIONES_DE_NAVEGACION.map((seccion) => seccion.ruta)
-    expect(new Set(rutas).size).toBe(6)
+    expect(new Set(rutas).size).toBe(5)
 
     for (const seccion of SECCIONES_DE_NAVEGACION) {
       expect(seccion.etiqueta.trim().length).toBeGreaterThan(0)

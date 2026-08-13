@@ -5,6 +5,7 @@ import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasVisibles } from '@/features/conferencias/query'
+import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
 import { leerTaxonomia } from '@/features/taxonomia'
 import type { CodigoError } from '@/shared/errors'
@@ -73,7 +74,7 @@ export function PantallaDetalleMemoria(): ReactElement {
     setError(null)
     setResultado(null)
 
-    const fichas = fichasVisibles(FICHAS_DE_EJEMPLO, conferenciaVisible)
+    const fichas = fichasVisibles(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), conferenciaVisible)
 
     generarMemoria(plantilla, conferenciaVisible.conferencia, fichas, temas)
       .then((valor) => {

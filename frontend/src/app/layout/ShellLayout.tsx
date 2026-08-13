@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router'
+import { PanelDeChat } from '@/features/chat/components'
 import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
 
@@ -22,6 +23,7 @@ function comoElemento(nodo: Element | null): HTMLElement | null {
 */
 export function ShellLayout() {
   const [cajonAbierto, setCajonAbierto] = useState(false)
+  const [panelDeChatAbierto, setPanelDeChatAbierto] = useState(false)
   const refDelCajon = useRef<HTMLElement>(null)
   const refDelBotonDelCajon = useRef<HTMLButtonElement>(null)
 
@@ -109,7 +111,10 @@ export function ShellLayout() {
         idDeNavegacion={ID_DE_NAVEGACION}
         alternarCajon={alternarCajon}
         refDelBotonDelCajon={refDelBotonDelCajon}
+        alAbrirChat={() => setPanelDeChatAbierto(true)}
       />
+
+      <PanelDeChat abierto={panelDeChatAbierto} alCerrar={() => setPanelDeChatAbierto(false)} />
 
       <div className="flex">
         <BarraLateral

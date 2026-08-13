@@ -68,6 +68,10 @@ export type PrivacidadDeComparticion = {
   readonly compartirEtiquetas: boolean
   /** Si el invitado ve también las fichas que siguen pendientes de revisión. */
   readonly compartirFichasPendientes: boolean
+  /** Si el invitado puede marcar como validada una ficha de esta conferencia (F8). */
+  readonly permitirValidarFichas: boolean
+  /** Si el invitado puede compartir esta misma conferencia con alguien más (F8). */
+  readonly permitirRecompartir: boolean
 }
 
 export type Comparticion = {

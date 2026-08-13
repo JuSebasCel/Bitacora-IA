@@ -46,8 +46,8 @@ test('acceso, navegación protegida y cierre de sesión', async ({ page }) => {
 
   const navegacion = page.getByRole('navigation', { name: 'Secciones de Bitácora AI' })
 
-  await test.step('la barra lateral lista las seis secciones y marca la activa', async () => {
-    await expect(navegacion.getByRole('link')).toHaveCount(6)
+  await test.step('la barra lateral lista las cinco secciones y marca la activa', async () => {
+    await expect(navegacion.getByRole('link')).toHaveCount(5)
 
     await expect(
       navegacion.getByRole('link', { name: 'Conferencias', exact: true }),

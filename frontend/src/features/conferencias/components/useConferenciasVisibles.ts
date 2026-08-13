@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { conComparticionesAgregadas, leerComparticionesAgregadas } from '@/features/configuracion/comparticiones'
 import { conferenciasCargadasDe } from '../carga'
 import { CONFERENCIAS_DE_EJEMPLO } from '../data'
 import { conferenciasVisibles } from '../query'
@@ -33,7 +34,9 @@ export function useConferenciasVisibles(idUsuario: string): ConferenciasVisibles
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
-    const todas = [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)]
+    const base = [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)]
+    /* Las invitaciones enviadas desde F8 se mezclan aquí, antes de resolver quién ve qué. */
+    const todas = conComparticionesAgregadas(base, leerComparticionesAgregadas())
 
     setEstado({
       carga: 'listo',
