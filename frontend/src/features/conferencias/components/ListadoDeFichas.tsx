@@ -73,7 +73,7 @@ export function ListadoDeFichas({ fichas, temas, ocultaPendientes = false }: Pro
               <Insignia tono={TONO_POR_VALIDACION[ficha.estadoDeValidacion]}>
                 {VALIDACION_EN_SINGULAR[ficha.estadoDeValidacion]}
               </Insignia>
-              <span className="text-xs text-texto-tenue">{nombreDeTema(temas, ficha.idTema)}</span>
+              <span className="text-xs text-texto-tenue">Tema: {nombreDeTema(temas, ficha.idTema)}</span>
             </div>
 
             <blockquote className="border-l-2 border-acento/50 pl-3 text-base leading-relaxed text-texto">
