@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { MarcadorDeDocx } from '../data'
+import type { MarcadorDeDocx, RegistroDeDatosDeCampo } from '../data'
 import { detectarMarcadoresEnDocx } from './detectarMarcadoresEnDocx'
 import { prepararComandos } from './prepararComandos'
 
@@ -21,6 +21,10 @@ function documentoXml(parrafos: readonly string[]): string {
 
 function conCampo(marcador: MarcadorDeDocx, etiqueta: string): MarcadorDeDocx {
   return { ...marcador, origenDeDato: { tipo: 'personalizado', etiqueta } }
+}
+
+function conCampoFijo(marcador: MarcadorDeDocx): MarcadorDeDocx {
+  return { ...marcador, origenDeDato: { tipo: 'campo', campo: 'nombre_ponente' } }
 }
 
 describe('prepararComandos', () => {
@@ -94,5 +98,31 @@ describe('prepararComandos', () => {
     expect(documentXml).not.toContain('[[Bullet points de la agenda]]')
     expect(documentXml).not.toContain('[[Desarrollo por puntos 1, 2, 3…, n]]')
     expect(Object.keys(datos)).toHaveLength(5)
+  })
+
+  it('con datos reales para el campo del marcador, los usa en vez del dato de ejemplo', () => {
+    const xml = documentoXml([parrafo('Ponente: [[Nombre]]')])
+    const [detectado] = detectarMarcadoresEnDocx(xml)
+    if (detectado === undefined) throw new Error('se esperaba un marcador')
+    const marcador = conCampoFijo(detectado)
+
+    const datosReales: RegistroDeDatosDeCampo = {
+      nombre_ponente: { parrafo: 'Rodrigo Peñaloza', lista: ['Rodrigo Peñaloza'] },
+    }
+
+    const { datos } = prepararComandos(xml, [marcador], datosReales)
+
+    expect(Object.values(datos)).toEqual(['Rodrigo Peñaloza'])
+  })
+
+  it('sin datos reales para ese campo, sigue usando el dato de ejemplo', () => {
+    const xml = documentoXml([parrafo('Ponente: [[Nombre]]')])
+    const [detectado] = detectarMarcadoresEnDocx(xml)
+    if (detectado === undefined) throw new Error('se esperaba un marcador')
+    const marcador = conCampoFijo(detectado)
+
+    const { datos } = prepararComandos(xml, [marcador])
+
+    expect(Object.values(datos)).toEqual(['Mariana Escobar Vallejo'])
   })
 })

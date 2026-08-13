@@ -45,6 +45,13 @@ export type CodigoError =
   | 'PLANT_DOCX_FALLO_IMPORTACION'
   | 'PLANT_DOCX_FALLO_GENERACION'
   | 'PLANT_ETIQUETA_REQUERIDA'
+  /* Generador de memoria (F5). */
+  | 'MEM_CONFERENCIA_REQUERIDA'
+  | 'MEM_PLANTILLA_REQUERIDA'
+  | 'MEM_NOMBRE_REQUERIDO'
+  | 'MEM_NOMBRE_MUY_LARGO'
+  | 'MEM_NO_ENCONTRADA'
+  | 'MEM_FALLO_GENERACION'
 
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
@@ -64,6 +71,9 @@ export const TAMANO_MAXIMO_DE_DOCX_MB = 10
 
 /** Largo máximo de una etiqueta personalizada de marcador (texto libre, no un campo fijo). */
 export const LARGO_MAXIMO_DE_ETIQUETA_DE_MARCADOR = 120
+
+/** Nombre de una memoria generada: mismo criterio que el nombre de una plantilla. */
+export const LARGO_MAXIMO_DE_MEMORIA = 80
 
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
@@ -118,6 +128,14 @@ const MENSAJES: Record<CodigoError, string> = {
   PLANT_DOCX_FALLO_GENERACION:
     'No pudimos generar la vista previa. Revisa que las marcas [[SI:...]]/[[FIN SI]] y [[REPETIR:...]]/[[FIN REPETIR]] estén completas y bien escritas en el documento.',
   PLANT_ETIQUETA_REQUERIDA: 'Escribe una descripción para el campo personalizado antes de agregarlo.',
+
+  MEM_CONFERENCIA_REQUERIDA: 'Elige la conferencia de la que quieres generar la memoria.',
+  MEM_PLANTILLA_REQUERIDA: 'Elige la plantilla que quieres usar para la memoria.',
+  MEM_NOMBRE_REQUERIDO: 'Escribe un nombre para la memoria antes de generarla.',
+  MEM_NOMBRE_MUY_LARGO: `El nombre de la memoria admite hasta ${LARGO_MAXIMO_DE_MEMORIA} caracteres. Acórtalo para generarla.`,
+  MEM_NO_ENCONTRADA: 'No encontramos esa memoria. Puede que ya se haya eliminado.',
+  MEM_FALLO_GENERACION:
+    'No pudimos generar la memoria. Puede que la conferencia o la plantilla de origen ya no estén disponibles.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'

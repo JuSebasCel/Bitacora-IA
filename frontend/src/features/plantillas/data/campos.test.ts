@@ -8,7 +8,7 @@ import {
   resolverListaDeMarcador,
   resolverMarcador,
 } from './campos'
-import type { OrigenDeMarcador } from './tipos'
+import type { OrigenDeMarcador, RegistroDeDatosDeCampo } from './tipos'
 
 describe('etiquetaDeOrigen', () => {
   it('para un campo fijo, devuelve su etiqueta legible', () => {
@@ -42,6 +42,34 @@ describe('resolverMarcador', () => {
     expect(typeof parrafo).toBe('string')
     expect(parrafo).toContain('Puntos de la agenda')
   })
+
+  it('con datos reales para el campo, los usa en vez del dato de ejemplo', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'nombre_ponente' }
+    const datosReales: RegistroDeDatosDeCampo = {
+      nombre_ponente: { parrafo: 'Rodrigo Peñaloza', lista: ['Rodrigo Peñaloza'] },
+    }
+
+    expect(resolverMarcador(origen, 'parrafo', datosReales)).toBe('Rodrigo Peñaloza')
+  })
+
+  it('con datos reales que no cubren ese campo, cae al dato de ejemplo', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'cita_destacada' }
+    const datosReales: RegistroDeDatosDeCampo = {
+      nombre_ponente: { parrafo: 'Mariana Escobar Vallejo', lista: ['Mariana Escobar Vallejo'] },
+    }
+
+    expect(resolverMarcador(origen, 'parrafo', datosReales)).toBe(DATOS_DE_EJEMPLO.cita_destacada.parrafo)
+  })
+
+  it('un origen personalizado ignora los datos reales, siempre usa el dato de ejemplo', () => {
+    const origen: OrigenDeMarcador = { tipo: 'personalizado', etiqueta: 'Puntos de la agenda' }
+    const datosReales: RegistroDeDatosDeCampo = {
+      tema_principal: { parrafo: 'Un tema real', lista: ['Un tema real'] },
+    }
+
+    const parrafo = resolverMarcador(origen, 'parrafo', datosReales)
+    expect(parrafo).toContain('Puntos de la agenda')
+  })
 })
 
 describe('resolverListaDeMarcador', () => {
@@ -49,6 +77,15 @@ describe('resolverListaDeMarcador', () => {
     const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'resumen_metodo' }
 
     expect(resolverListaDeMarcador(origen)).toEqual(DATOS_DE_EJEMPLO.resumen_metodo.lista)
+  })
+
+  it('con datos reales para el campo, devuelve esa lista en vez de la de ejemplo', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'cita_destacada' }
+    const datosReales: RegistroDeDatosDeCampo = {
+      cita_destacada: { parrafo: 'Una cita real', lista: ['Una cita real', 'Otra cita real'] },
+    }
+
+    expect(resolverListaDeMarcador(origen, datosReales)).toEqual(['Una cita real', 'Otra cita real'])
   })
 })
 
@@ -59,5 +96,23 @@ describe('resolverCondicionDeMarcador', () => {
     }
 
     expect(resolverCondicionDeMarcador({ tipo: 'personalizado', etiqueta: 'Lo que sea' })).toBe(true)
+  })
+
+  it('con datos reales vacíos para el campo, la condición es falsa', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'cita_destacada' }
+    const datosReales: RegistroDeDatosDeCampo = {
+      cita_destacada: { parrafo: '', lista: [] },
+    }
+
+    expect(resolverCondicionDeMarcador(origen, datosReales)).toBe(false)
+  })
+
+  it('con datos reales para otro campo, la condición de este sigue cayendo al dato de ejemplo (verdadera)', () => {
+    const origen: OrigenDeMarcador = { tipo: 'campo', campo: 'resumen_metodo' }
+    const datosReales: RegistroDeDatosDeCampo = {
+      cita_destacada: { parrafo: '', lista: [] },
+    }
+
+    expect(resolverCondicionDeMarcador(origen, datosReales)).toBe(true)
   })
 })

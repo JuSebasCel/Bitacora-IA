@@ -1,6 +1,8 @@
+import JSZip from 'jszip'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import type { RegistroDeDatosDeCampo } from '../data'
 import { generarVistaPrevia } from './generarVistaPrevia'
 import { importarDocx } from './importarDocx'
 
@@ -36,5 +38,36 @@ describe('generarVistaPrevia', () => {
 
   it('con un data URL que no es un .docx válido, la promesa se rechaza', async () => {
     await expect(generarVistaPrevia('data:application/octet-stream;base64,AA==', [])).rejects.toThrow()
+  })
+
+  it('acepta datos reales y los usa para los marcadores de campo fijo, sin alterar los personalizados', async () => {
+    const importado = await importarDocx(archivoDocxReal())
+    expect(importado.ok).toBe(true)
+    if (!importado.ok) return
+
+    /*
+      Todos los marcadores de `tem.docx` son de etiqueta personalizada (así
+      detecta un `.docx` importado, siempre): pasar datos reales para un
+      campo fijo no debería cambiar el contenido sustituido frente a no pasar
+      nada, porque ningún marcador de este archivo referencia ese campo.
+      Se compara el `word/document.xml` ya sustituido, no los bytes crudos
+      del `.docx`: el empaquetado ZIP incrusta una marca de tiempo con
+      granularidad de 2 segundos en cada entrada, así que dos llamadas
+      consecutivas pueden diferir en ese byte sin que el contenido real haya
+      cambiado — comparar bytes crudos aquí sería una prueba intermitente.
+    */
+    const datosReales: RegistroDeDatosDeCampo = {
+      nombre_ponente: { parrafo: 'Rodrigo Peñaloza', lista: ['Rodrigo Peñaloza'] },
+    }
+
+    const sinDatos = await generarVistaPrevia(importado.archivoOriginal, importado.marcadores)
+    const conDatos = await generarVistaPrevia(importado.archivoOriginal, importado.marcadores, datosReales)
+
+    const [xmlSinDatos, xmlConDatos] = await Promise.all([
+      JSZip.loadAsync(await sinDatos.arrayBuffer()).then((zip) => zip.file('word/document.xml')?.async('string')),
+      JSZip.loadAsync(await conDatos.arrayBuffer()).then((zip) => zip.file('word/document.xml')?.async('string')),
+    ])
+
+    expect(xmlConDatos).toEqual(xmlSinDatos)
   })
 })

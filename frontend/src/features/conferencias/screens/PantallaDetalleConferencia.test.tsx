@@ -95,6 +95,28 @@ describe('PantallaDetalleConferencia, resumen', () => {
   })
 })
 
+describe('PantallaDetalleConferencia, generar memoria', () => {
+  it('en una conferencia procesada, ofrece un enlace para generar su memoria', async () => {
+    montar('/conferencias/cnf-zul-01')
+
+    const enlace = await screen.findByRole('link', { name: /generar memoria/i })
+
+    expect(enlace).toHaveAttribute('href', '/memorias?conferencia=cnf-zul-01')
+  })
+
+  it('en una conferencia sin procesar, no ofrece generar memoria', async () => {
+    montar('/conferencias/cnf-pen-02', {
+      id: 'usr-penaloza',
+      nombre: 'Rodrigo Peñaloza Marín',
+      correo: 'rodrigo.penaloza@labanfora.org',
+    })
+
+    await screen.findByText(/todavía se está procesando/i)
+
+    expect(screen.queryByRole('link', { name: /generar memoria/i })).not.toBeInTheDocument()
+  })
+})
+
 describe('PantallaDetalleConferencia, conteos', () => {
   it('reparte las fichas entre los tres estados de validación', async () => {
     montar('/conferencias/cnf-zul-01')

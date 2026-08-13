@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CODIGOS_DE_ERROR, LARGO_MAXIMO_DE_PLANTILLA, mensajeDeError, type CodigoError } from './index'
+import { CODIGOS_DE_ERROR, LARGO_MAXIMO_DE_MEMORIA, LARGO_MAXIMO_DE_PLANTILLA, mensajeDeError, type CodigoError } from './index'
 
 describe('catálogo de errores', () => {
   it('resuelve cada código conocido a un mensaje no vacío', () => {
@@ -264,5 +264,54 @@ describe('códigos de error de plantillas', () => {
 
   it('indica el límite exacto en el mensaje de nombre de plantilla demasiado largo', () => {
     expect(mensajeDeError('PLANT_NOMBRE_MUY_LARGO')).toContain(String(LARGO_MAXIMO_DE_PLANTILLA))
+  })
+})
+
+/* Códigos del generador de memoria (F5). */
+const CODIGOS_DE_MEMORIAS = [
+  'MEM_CONFERENCIA_REQUERIDA',
+  'MEM_PLANTILLA_REQUERIDA',
+  'MEM_NOMBRE_REQUERIDO',
+  'MEM_NOMBRE_MUY_LARGO',
+  'MEM_NO_ENCONTRADA',
+  'MEM_FALLO_GENERACION',
+] as const
+
+describe('códigos de error de memorias', () => {
+  it('registra en el catálogo los códigos de memorias', () => {
+    for (const codigo of CODIGOS_DE_MEMORIAS) {
+      expect(CODIGOS_DE_ERROR).toContain(codigo)
+    }
+  })
+
+  it('ningún código de memorias cae al mensaje genérico', () => {
+    const generico = mensajeDeError(CODIGO_INEXISTENTE)
+
+    for (const codigo of CODIGOS_DE_MEMORIAS) {
+      expect(mensajeDeError(codigo)).not.toBe(generico)
+    }
+  })
+
+  it('traduce cada código de memorias a un mensaje accionable', () => {
+    for (const codigo of CODIGOS_DE_MEMORIAS) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje.length).toBeGreaterThan(20)
+      expect(mensaje.trim()).toBe(mensaje)
+    }
+  })
+
+  it('ningún mensaje de memorias filtra un código ni detalle técnico', () => {
+    for (const codigo of CODIGOS_DE_MEMORIAS) {
+      const mensaje = mensajeDeError(codigo)
+
+      expect(mensaje).not.toMatch(/_[A-Z]/)
+      expect(mensaje.toLowerCase()).not.toContain('undefined')
+      expect(mensaje.toLowerCase()).not.toContain('null')
+    }
+  })
+
+  it('indica el límite exacto en el mensaje de nombre de memoria demasiado largo', () => {
+    expect(mensajeDeError('MEM_NOMBRE_MUY_LARGO')).toContain(String(LARGO_MAXIMO_DE_MEMORIA))
   })
 })

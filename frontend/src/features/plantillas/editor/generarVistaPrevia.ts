@@ -1,6 +1,6 @@
 import { createReport } from 'docx-templates'
 import JSZip from 'jszip'
-import type { MarcadorDeDocx } from '../data'
+import type { MarcadorDeDocx, RegistroDeDatosDeCampo } from '../data'
 import { prepararComandos } from './prepararComandos'
 
 const TIPO_MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -21,6 +21,7 @@ async function dataUrlAArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
 export async function generarVistaPrevia(
   archivoOriginal: string,
   marcadores: readonly MarcadorDeDocx[],
+  datosReales?: RegistroDeDatosDeCampo,
 ): Promise<Blob> {
   const bufferOriginal = await dataUrlAArrayBuffer(archivoOriginal)
   const zip = await JSZip.loadAsync(bufferOriginal)
@@ -30,7 +31,7 @@ export async function generarVistaPrevia(
     throw new Error('El .docx no tiene un word/document.xml válido')
   }
 
-  const { documentXml, datos } = prepararComandos(documentXmlOriginal, marcadores)
+  const { documentXml, datos } = prepararComandos(documentXmlOriginal, marcadores, datosReales)
   zip.file('word/document.xml', documentXml)
 
   const bufferDeComandos = await zip.generateAsync({ type: 'arraybuffer' })

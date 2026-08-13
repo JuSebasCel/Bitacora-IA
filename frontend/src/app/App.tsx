@@ -6,8 +6,9 @@ import { ShellLayout } from '@/app/layout'
 import { RutaProtegida } from '@/app/RutaProtegida'
 import { RutaPublica } from '@/app/RutaPublica'
 import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
+import { PantallaDetalleMemoria, PantallaMemorias } from '@/features/memorias/screens'
 import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/plantillas/screens'
-import { PantallaCatalogo, PantallaConfiguracion, PantallaMemorias } from '@/app/placeholders'
+import { PantallaCatalogo, PantallaConfiguracion } from '@/app/placeholders'
 
 /*
   Mapa de rutas de la aplicación.
@@ -40,6 +41,7 @@ export function App(): ReactElement {
             <Route path="/conferencias/:idConferencia" element={<PantallaDetalleConferencia />} />
             <Route path="/catalogo" element={<PantallaCatalogo />} />
             <Route path="/memorias" element={<PantallaMemorias />} />
+            <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
             <Route path="/plantillas" element={<PantallaPlantillas />} />
             <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
             <Route path="/configuracion" element={<PantallaConfiguracion />} />

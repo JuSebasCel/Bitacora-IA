@@ -1,4 +1,4 @@
-import type { CampoDeMarcador, FormatoDeMarcador, OrigenDeMarcador } from './tipos'
+import type { CampoDeMarcador, FormatoDeMarcador, OrigenDeMarcador, RegistroDeDatosDeCampo } from './tipos'
 
 /*
   Metadata fija de los cinco campos del repositorio que un marcador puede
@@ -86,26 +86,45 @@ export function etiquetaDeOrigen(origen: OrigenDeMarcador): string {
   return origen.tipo === 'campo' ? ETIQUETAS_DE_CAMPO[origen.campo] : origen.etiqueta
 }
 
-function datoDeEjemplo(origen: OrigenDeMarcador): DatoDeEjemplo {
-  return origen.tipo === 'campo' ? DATOS_DE_EJEMPLO[origen.campo] : datoDeEjemploPersonalizado(origen.etiqueta)
+/*
+  `datosReales` (F5, "generar una memoria") sustituye el dato de ejemplo de
+  un campo fijo por el dato real de la conferencia elegida — nunca el de un
+  origen personalizado: a qué dato real se liga una etiqueta de texto libre
+  es una decisión de la IA que queda para B9, no algo que este módulo simule.
+  Un campo ausente en `datosReales` (la conferencia no trae ese dato) cae al
+  mismo dato de ejemplo de siempre, nunca lanza.
+*/
+function datoDeEjemplo(origen: OrigenDeMarcador, datosReales?: RegistroDeDatosDeCampo): DatoDeEjemplo {
+  if (origen.tipo === 'personalizado') {
+    return datoDeEjemploPersonalizado(origen.etiqueta)
+  }
+
+  return datosReales?.[origen.campo] ?? DATOS_DE_EJEMPLO[origen.campo]
 }
 
-/** Resuelve el dato de muestra de un marcador según su origen y formato. */
+/** Resuelve el dato (real si se provee, de ejemplo si no) de un marcador según su origen y formato. */
 export function resolverMarcador(
   origen: OrigenDeMarcador,
   formato: FormatoDeMarcador,
+  datosReales?: RegistroDeDatosDeCampo,
 ): string | readonly string[] {
-  const dato = datoDeEjemplo(origen)
+  const dato = datoDeEjemplo(origen, datosReales)
 
   return formato === 'parrafo' ? dato.parrafo : dato.lista
 }
 
-/** Arreglo de muestra para una sección repetible (`FOR` de `docx-templates`). */
-export function resolverListaDeMarcador(origen: OrigenDeMarcador): readonly string[] {
-  return datoDeEjemplo(origen).lista
+/** Arreglo (real si se provee, de ejemplo si no) para una sección repetible (`FOR` de `docx-templates`). */
+export function resolverListaDeMarcador(
+  origen: OrigenDeMarcador,
+  datosReales?: RegistroDeDatosDeCampo,
+): readonly string[] {
+  return datoDeEjemplo(origen, datosReales).lista
 }
 
-/** Condición de muestra para una sección condicional (`IF` de `docx-templates`): siempre presente en datos de ejemplo. */
-export function resolverCondicionDeMarcador(origen: OrigenDeMarcador): boolean {
-  return datoDeEjemplo(origen).parrafo.trim().length > 0
+/** Condición (real si se provee, de ejemplo si no) para una sección condicional (`IF` de `docx-templates`). */
+export function resolverCondicionDeMarcador(
+  origen: OrigenDeMarcador,
+  datosReales?: RegistroDeDatosDeCampo,
+): boolean {
+  return datoDeEjemplo(origen, datosReales).parrafo.trim().length > 0
 }
