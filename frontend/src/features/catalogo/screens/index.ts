@@ -1,0 +1,1 @@
+export { PantallaCatalogo } from './PantallaCatalogo'

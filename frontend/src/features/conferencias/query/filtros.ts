@@ -57,8 +57,13 @@ export function filtrarPorSegmento(
   return visibles.filter((visible) => visible.procedencia === procedencia)
 }
 
-/** Separa en palabras por cualquier tramo que no sea letra o número. */
-function palabrasDe(texto: string): readonly string[] {
+/**
+ * Separa en palabras por cualquier tramo que no sea letra o número. No quita
+ * tildes por su cuenta — se compone siempre con `normalizarTexto` antes.
+ * Se exporta para que el catálogo (F6) busque sobre fichas con el mismo
+ * emparejamiento por inicio de palabra, sin reimplementarlo.
+ */
+export function palabrasDe(texto: string): readonly string[] {
   return texto.split(/[^a-z0-9]+/).filter((palabra) => palabra.length > 0)
 }
 
