@@ -249,7 +249,8 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
         duracionEnSegundos: 0,
         idDueno: idUsuario,
         estado: 'procesando',
-        temaPrincipal: '',
+        /* Sin tema todavía: lo asigna el procesamiento al clasificar la charla contra la taxonomía. */
+        idTemaPrincipal: '',
         resumen: '',
         fuente: datos.fuente,
         comparticiones: [],

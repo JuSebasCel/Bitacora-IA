@@ -1,4 +1,5 @@
 import type { TipoDeUnidad } from '@/features/conferencias/data'
+import type { Tema } from '@/features/taxonomia'
 import { CRITERIOS_POR_DEFECTO } from './filtros'
 import type { CriteriosDeCatalogo, FiltroDeEstadoDeValidacion } from './filtros'
 
@@ -40,12 +41,17 @@ function esTipoDeUnidad(valor: string): valor is TipoDeUnidad {
 }
 
 /*
-  Tema y evento son texto libre (no un enum fijo, a diferencia de tipo de
-  unidad y estado), así que se validan contra la lista de valores realmente
-  presentes en lo que esa persona puede ver — mismo criterio que las
-  etiquetas de F2, que se descartan si no existen en el espacio de quien
-  abre el enlace. `conocidos` es opcional para poder leer la URL antes de
-  tener cargado el catálogo, sin perder el valor por el camino.
+  Tema y evento no son un enum fijo (a diferencia de tipo de unidad y estado),
+  así que se validan contra la lista de valores realmente presentes en lo que
+  esa persona puede ver — mismo criterio que las etiquetas de F2, que se
+  descartan si no existen en el espacio de quien abre el enlace. `conocidos`
+  es opcional para poder leer la URL antes de tener cargado el catálogo, sin
+  perder el valor por el camino.
+
+  Desde F9 el parámetro `tema` lleva el id del tema (`tem-sesgos-algoritmicos`)
+  y no su nombre: así el enlace sigue apuntando al mismo tema aunque la
+  administración lo renombre. Los ids son legibles a propósito, para que un
+  enlace compartido se siga entendiendo al leerlo.
 */
 function leerValorLibre(crudo: string | null, conocidos?: readonly string[]): string | null {
   if (crudo === null) {
@@ -67,14 +73,17 @@ function leerValorLibre(crudo: string | null, conocidos?: readonly string[]): st
 
 export function leerCriteriosDeCatalogo(
   params: URLSearchParams,
-  temasConocidos?: readonly string[],
+  temasConocidos?: readonly Tema[],
   eventosConocidos?: readonly string[],
 ): CriteriosDeCatalogo {
   const tipoCrudo = params.get(PARAMETRO.tipoDeUnidad)
 
   return {
     busqueda: params.get(PARAMETRO.busqueda)?.trim() ?? CRITERIOS_POR_DEFECTO.busqueda,
-    tema: leerValorLibre(params.get(PARAMETRO.tema), temasConocidos),
+    idTema: leerValorLibre(
+      params.get(PARAMETRO.tema),
+      temasConocidos?.map((tema) => tema.id),
+    ),
     tipoDeUnidad: tipoCrudo !== null && esTipoDeUnidad(tipoCrudo) ? tipoCrudo : null,
     evento: leerValorLibre(params.get(PARAMETRO.evento), eventosConocidos),
     estado: valorConocido(params.get(PARAMETRO.estado), ESTADOS, CRITERIOS_POR_DEFECTO.estado),
@@ -93,8 +102,8 @@ export function escribirCriteriosDeCatalogo(criterios: CriteriosDeCatalogo): URL
     params.set(PARAMETRO.busqueda, busqueda)
   }
 
-  if (criterios.tema !== null) {
-    params.set(PARAMETRO.tema, criterios.tema)
+  if (criterios.idTema !== null) {
+    params.set(PARAMETRO.tema, criterios.idTema)
   }
 
   if (criterios.tipoDeUnidad !== null) {

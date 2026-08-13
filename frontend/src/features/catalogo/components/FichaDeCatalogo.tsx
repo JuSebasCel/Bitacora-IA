@@ -7,6 +7,19 @@ import { Insignia } from '@/shared/ui'
 
 export type PropsFichaDeCatalogo = {
   entrada: FichaDelCatalogo
+  /*
+    El nombre del tema llega ya resuelto y no se resuelve aquí.
+
+    Criterio del proyecto para el id de tema (F9): `nombreDeTema` es el único
+    resolutor, y quien lo llama depende de cuántos temas pinta el componente.
+    Esta tarjeta pinta una sola ficha, así que recibe el nombre como prop y se
+    queda sin conocer la taxonomía; el contenedor, que ya recorre la lista,
+    resuelve de paso. Los componentes que pintan una lista de fichas
+    (`ListadoDeFichas`) reciben en cambio el pool y llaman a `nombreDeTema`
+    por fila, porque un nombre por prop obligaría a recorrer la lista dos
+    veces solo para armarlo.
+  */
+  nombreDelTema: string
   /** Cadena de consulta del catálogo en ese momento, para poder volver a la misma vista filtrada. */
   busqueda?: string
 }
@@ -52,7 +65,11 @@ function enlaceDeRegresoAlCatalogo(busqueda: string): string {
   Se conserva el hover de la casa (barra de acento, sombra, título a color de
   acento): lo que debía cambiar era la silueta, no el idioma de interacción.
 */
-export function FichaDeCatalogo({ entrada, busqueda = '' }: PropsFichaDeCatalogo): ReactElement {
+export function FichaDeCatalogo({
+  entrada,
+  nombreDelTema,
+  busqueda = '',
+}: PropsFichaDeCatalogo): ReactElement {
   const { ficha, conferencia } = entrada
 
   return (
@@ -92,7 +109,7 @@ export function FichaDeCatalogo({ entrada, busqueda = '' }: PropsFichaDeCatalogo
         </p>
 
         <p className="coordenada text-xs text-texto-tenue">
-          {ficha.tema}
+          {nombreDelTema}
           {' · '}
           {formatearTimestamp(ficha.segundoInicio)}
         </p>

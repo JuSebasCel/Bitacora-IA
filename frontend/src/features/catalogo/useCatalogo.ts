@@ -5,6 +5,8 @@ import { useConferenciasVisibles } from '@/features/conferencias/components/useC
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
+import { leerTaxonomia } from '@/features/taxonomia'
+import type { Tema } from '@/features/taxonomia'
 import { CRITERIOS_POR_DEFECTO, eventosDisponibles, listarCatalogo, temasDisponibles } from './filtros'
 import type { CriteriosDeCatalogo } from './filtros'
 import { escribirCriteriosDeCatalogo, leerCriteriosDeCatalogo } from './parametros'
@@ -13,7 +15,10 @@ export type ValorDeCatalogo = {
   readonly carga: EstadoDeCarga
   readonly entradas: readonly FichaDelCatalogo[]
   readonly criterios: CriteriosDeCatalogo
-  readonly temasDisponibles: readonly string[]
+  /** Pool completo de temas, para resolver el nombre de cualquier ficha del catálogo. */
+  readonly temas: readonly Tema[]
+  /** Solo los temas presentes en lo visible, que son los que se ofrecen como filtro. */
+  readonly temasDisponibles: readonly Tema[]
   readonly eventosDisponibles: readonly string[]
   readonly alCambiar: (parche: Partial<CriteriosDeCatalogo>) => void
   readonly alQuitarFiltros: () => void
@@ -35,17 +40,27 @@ export function useCatalogo(idUsuario: string): ValorDeCatalogo {
     [visibles],
   )
 
-  const temas = useMemo(() => temasDisponibles(todasLasEntradas), [todasLasEntradas])
+  /*
+    La taxonomía se lee una vez por montaje: es vocabulario del grupo, no
+    cambia mientras alguien recorre el catálogo, y releerla en cada render
+    obligaría a memorizar de nuevo todo lo que depende de ella.
+  */
+  const temas = useMemo(() => leerTaxonomia().temas, [])
+
+  const temasEnCatalogo = useMemo(
+    () => temasDisponibles(todasLasEntradas, temas),
+    [todasLasEntradas, temas],
+  )
   const eventos = useMemo(() => eventosDisponibles(todasLasEntradas), [todasLasEntradas])
 
   const criterios = useMemo(
-    () => leerCriteriosDeCatalogo(searchParams, temas, eventos),
-    [searchParams, temas, eventos],
+    () => leerCriteriosDeCatalogo(searchParams, temasEnCatalogo, eventos),
+    [searchParams, temasEnCatalogo, eventos],
   )
 
   const entradas = useMemo(
-    () => listarCatalogo({ entradas: todasLasEntradas, criterios }),
-    [todasLasEntradas, criterios],
+    () => listarCatalogo({ entradas: todasLasEntradas, criterios, temas }),
+    [todasLasEntradas, criterios, temas],
   )
 
   /*
@@ -92,7 +107,8 @@ export function useCatalogo(idUsuario: string): ValorDeCatalogo {
     carga,
     entradas,
     criterios,
-    temasDisponibles: temas,
+    temas,
+    temasDisponibles: temasEnCatalogo,
     eventosDisponibles: eventos,
     alCambiar,
     alQuitarFiltros,

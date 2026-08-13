@@ -15,7 +15,7 @@ const CONFERENCIA: Conferencia = {
   duracionEnSegundos: 2890,
   idDueno: 'usr-alcantara',
   estado: 'procesada',
-  temaPrincipal: 'Modelos de lenguaje',
+  idTemaPrincipal: 'tem-modelos-de-lenguaje',
   resumen: 'Resumen de prueba.',
   fuente: 'audio',
   comparticiones: [],
@@ -28,7 +28,7 @@ const FICHA: Ficha = {
   hablante: CONFERENCIA.ponente,
   segundoInicio: 185,
   segundoFin: 210,
-  tema: 'Modelos de lenguaje',
+  idTema: 'tem-modelos-de-lenguaje',
   tipoDeUnidad: 'cita-textual',
   estadoDeValidacion: 'validada',
   confianzaAutomatica: 0.95,
@@ -37,10 +37,11 @@ const FICHA: Ficha = {
 
 const ENTRADA: FichaDelCatalogo = { ficha: FICHA, conferencia: CONFERENCIA }
 
-function montar(entrada = ENTRADA) {
+/* El nombre del tema llega ya resuelto por prop: la tarjeta no conoce la taxonomía. */
+function montar(entrada = ENTRADA, nombreDelTema = 'Modelos de lenguaje') {
   return render(
     <MemoryRouter>
-      <FichaDeCatalogo entrada={entrada} />
+      <FichaDeCatalogo entrada={entrada} nombreDelTema={nombreDelTema} />
     </MemoryRouter>,
   )
 }

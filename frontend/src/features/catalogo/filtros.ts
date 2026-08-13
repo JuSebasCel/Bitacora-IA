@@ -1,6 +1,8 @@
 import type { EstadoDeValidacion, TipoDeUnidad } from '@/features/conferencias/data'
 import { normalizarTexto, palabrasDe } from '@/features/conferencias/query'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
+import { nombreDeTema } from '@/features/taxonomia'
+import type { Tema } from '@/features/taxonomia'
 
 /*
   Filtrado, búsqueda y orden del catálogo (F6): las fichas de todas las
@@ -12,13 +14,18 @@ import type { FichaDelCatalogo } from '@/features/conferencias/query'
   A diferencia de las etiquetas de F2 (una colección, se exigen todas a la
   vez), tema/tipo/evento/estado son "acotar a este uno" — de ahí que cada
   criterio sea un único valor o `null`/`'todos'`, no un arreglo.
+
+  El pool de temas (F9) entra siempre por parámetro y nunca por import: este
+  archivo se prueba con temas inventados y no debe depender de que exista un
+  fixture concreto ni de lo que haya guardado la administración.
 */
 
 export type FiltroDeEstadoDeValidacion = 'todos' | EstadoDeValidacion
 
 export type CriteriosDeCatalogo = {
   readonly busqueda: string
-  readonly tema: string | null
+  /** Id del tema (`tem-...`), no su nombre: el nombre puede cambiar sin que cambie el filtro. */
+  readonly idTema: string | null
   readonly tipoDeUnidad: TipoDeUnidad | null
   readonly evento: string | null
   readonly estado: FiltroDeEstadoDeValidacion
@@ -26,7 +33,7 @@ export type CriteriosDeCatalogo = {
 
 export const CRITERIOS_POR_DEFECTO: CriteriosDeCatalogo = {
   busqueda: '',
-  tema: null,
+  idTema: null,
   tipoDeUnidad: null,
   evento: null,
   estado: 'todos',
@@ -43,10 +50,15 @@ export const CRITERIOS_POR_DEFECTO: CriteriosDeCatalogo = {
   (`conferencias/query/filtros.ts`), reutilizando `normalizarTexto`/
   `palabrasDe` de ahí para no arriesgar reintroducir el bug de subcadena que
   ese archivo ya documentó y corrigió.
+
+  Necesita el pool de temas porque la ficha solo guarda el id: buscar sobre
+  `tem-sesgos-algoritmicos` en vez de sobre "Sesgos algorítmicos" haría que
+  escribir el tema tal como se ve en pantalla no encontrara nada.
 */
 export function buscarEnCatalogo(
   entradas: readonly FichaDelCatalogo[],
   texto: string,
+  temas: readonly Tema[],
 ): readonly FichaDelCatalogo[] {
   const palabrasBuscadas = palabrasDe(normalizarTexto(texto))
 
@@ -57,7 +69,7 @@ export function buscarEnCatalogo(
   return entradas.filter((entrada) => {
     const palabrasDelTexto = palabrasDe(
       normalizarTexto(
-        `${entrada.ficha.fragmento} ${entrada.ficha.tema} ${entrada.conferencia.titulo} ${entrada.conferencia.ponente} ${entrada.conferencia.evento}`,
+        `${entrada.ficha.fragmento} ${nombreDeTema(temas, entrada.ficha.idTema)} ${entrada.conferencia.titulo} ${entrada.conferencia.ponente} ${entrada.conferencia.evento}`,
       ),
     )
 
@@ -65,15 +77,19 @@ export function buscarEnCatalogo(
   })
 }
 
+/*
+  Compara por id y no por nombre: dos fichas clasificadas con el mismo tema
+  siguen filtrándose juntas aunque la administración lo renombre después.
+*/
 export function filtrarPorTema(
   entradas: readonly FichaDelCatalogo[],
-  tema: string | null,
+  idTema: string | null,
 ): readonly FichaDelCatalogo[] {
-  if (tema === null) {
+  if (idTema === null) {
     return entradas
   }
 
-  return entradas.filter((entrada) => entrada.ficha.tema === tema)
+  return entradas.filter((entrada) => entrada.ficha.idTema === idTema)
 }
 
 export function filtrarPorTipoDeUnidad(
@@ -109,11 +125,24 @@ export function filtrarPorEstado(
   return entradas.filter((entrada) => entrada.ficha.estadoDeValidacion === estado)
 }
 
-/** Temas distintos ya presentes en lo que esa persona puede ver — nunca del fixture completo. */
-export function temasDisponibles(entradas: readonly FichaDelCatalogo[]): readonly string[] {
-  return [...new Set(entradas.map((entrada) => entrada.ficha.tema))].sort((izquierda, derecha) =>
-    izquierda.localeCompare(derecha),
-  )
+/*
+  Temas distintos ya presentes en lo que esa persona puede ver — nunca el pool
+  completo. Devuelve el tema entero y no su id porque quien lo pinta necesita
+  las dos mitades a la vez: el nombre para mostrarlo y el id para filtrar.
+
+  Un id que ya no esté en el pool (tema retirado tras clasificar la ficha)
+  sigue apareciendo con el nombre que `nombreDeTema` le dé, en vez de
+  desaparecer y dejar fichas imposibles de acotar desde el panel.
+*/
+export function temasDisponibles(
+  entradas: readonly FichaDelCatalogo[],
+  temas: readonly Tema[],
+): readonly Tema[] {
+  const idsPresentes = [...new Set(entradas.map((entrada) => entrada.ficha.idTema))]
+
+  return idsPresentes
+    .map((idTema) => ({ id: idTema, nombre: nombreDeTema(temas, idTema) }))
+    .sort((izquierda, derecha) => izquierda.nombre.localeCompare(derecha.nombre))
 }
 
 /** Eventos distintos ya presentes en lo que esa persona puede ver. */
@@ -161,15 +190,20 @@ export function ordenarCatalogo(entradas: readonly FichaDelCatalogo[]): readonly
 export type EntradaDeListadoDeCatalogo = {
   readonly entradas: readonly FichaDelCatalogo[]
   readonly criterios: CriteriosDeCatalogo
+  /** Pool de temas con el que resolver el nombre al buscar por palabra clave. */
+  readonly temas: readonly Tema[]
 }
 
 /** Aplica los cinco criterios en orden y devuelve el catálogo tal como se pinta. */
 export function listarCatalogo(entrada: EntradaDeListadoDeCatalogo): readonly FichaDelCatalogo[] {
-  const { entradas, criterios } = entrada
+  const { entradas, criterios, temas } = entrada
 
   const filtradas = filtrarPorEstado(
     filtrarPorEvento(
-      filtrarPorTipoDeUnidad(filtrarPorTema(buscarEnCatalogo(entradas, criterios.busqueda), criterios.tema), criterios.tipoDeUnidad),
+      filtrarPorTipoDeUnidad(
+        filtrarPorTema(buscarEnCatalogo(entradas, criterios.busqueda, temas), criterios.idTema),
+        criterios.tipoDeUnidad,
+      ),
       criterios.evento,
     ),
     criterios.estado,

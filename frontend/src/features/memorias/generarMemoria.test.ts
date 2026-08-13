@@ -5,6 +5,7 @@ import type { Conferencia, Ficha } from '@/features/conferencias/data'
 import { importarDocx } from '@/features/plantillas/editor/importarDocx'
 import { actualizarContenido, crearPlantillaDesdeDocx, crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
 import type { JSONContent } from '@/features/plantillas/data'
+import type { Tema } from '@/features/taxonomia'
 import { generarMemoria } from './generarMemoria'
 
 const TIPO_MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -25,13 +26,16 @@ const CONFERENCIA: Conferencia = {
   duracionEnSegundos: 1200,
   idDueno: 'usr-prueba',
   estado: 'procesada',
-  temaPrincipal: 'Un tema de prueba',
+  idTemaPrincipal: 'tem-de-prueba',
   resumen: 'Resumen general de la charla.',
   fuente: 'audio',
   comparticiones: [],
 }
 
 const FICHAS: readonly Ficha[] = []
+
+/* Pool mínimo con el que resolver el nombre del tema principal de la conferencia. */
+const TEMAS: readonly Tema[] = [{ id: 'tem-de-prueba', nombre: 'Un tema de prueba' }]
 
 describe('generarMemoria', () => {
   it('para una plantilla en blanco, sustituye su contenido y lo devuelve como origen «blanco»', async () => {
@@ -51,7 +55,7 @@ describe('generarMemoria', () => {
     }
     const plantilla = actualizarContenido(crearPlantillaEnBlanco(), contenidoConMarcador)
 
-    const resultado = await generarMemoria(plantilla, CONFERENCIA, FICHAS)
+    const resultado = await generarMemoria(plantilla, CONFERENCIA, FICHAS, TEMAS)
 
     expect(resultado.origen).toBe('blanco')
     if (resultado.origen === 'blanco') {
@@ -65,7 +69,7 @@ describe('generarMemoria', () => {
     if (!importado.ok) return
     const plantilla = crearPlantillaDesdeDocx(importado.archivoOriginal, 'Prueba', importado.marcadores)
 
-    const resultado = await generarMemoria(plantilla, CONFERENCIA, FICHAS)
+    const resultado = await generarMemoria(plantilla, CONFERENCIA, FICHAS, TEMAS)
 
     expect(resultado.origen).toBe('docx')
     if (resultado.origen === 'docx') {

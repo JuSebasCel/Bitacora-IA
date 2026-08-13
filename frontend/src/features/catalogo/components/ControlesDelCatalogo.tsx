@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import type { Tema } from '@/features/taxonomia'
 import type { CriteriosDeCatalogo } from '../filtros'
 import { BarraDeBusquedaDelCatalogo } from './BarraDeBusquedaDelCatalogo'
 import { PopoverDeFiltrosDeCatalogo } from './PopoverDeFiltrosDeCatalogo'
@@ -13,7 +14,7 @@ import { PopoverDeFiltrosDeCatalogo } from './PopoverDeFiltrosDeCatalogo'
 
 export type PropsControlesDelCatalogo = {
   criterios: CriteriosDeCatalogo
-  temasDisponibles: readonly string[]
+  temasDisponibles: readonly Tema[]
   eventosDisponibles: readonly string[]
   alCambiar: (parche: Partial<CriteriosDeCatalogo>) => void
 }

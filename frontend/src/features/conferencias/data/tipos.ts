@@ -39,8 +39,13 @@ export type Ficha = {
   /** Trazabilidad al segundo exacto, requisito no funcional del PRD sección 9. */
   readonly segundoInicio: number
   readonly segundoFin: number
-  /** Tema de la taxonomía controlada del evento, no una etiqueta personal. */
-  readonly tema: string
+  /**
+   * Referencia a un tema del pool de `features/taxonomia`, no una etiqueta
+   * personal ni texto libre. Se guarda el id y no el nombre para que
+   * renombrar un tema desde la administración no desligue las fichas ya
+   * clasificadas con él.
+   */
+  readonly idTema: string
   readonly tipoDeUnidad: TipoDeUnidad
   readonly estadoDeValidacion: EstadoDeValidacion
   /** Confianza auto-reportada por el clasificador, entre 0 y 1. */
@@ -85,7 +90,8 @@ export type Conferencia = {
   /** Cuenta que cargó la conferencia y decide con quién se comparte. */
   readonly idDueno: string
   readonly estado: EstadoDeProcesamiento
-  readonly temaPrincipal: string
+  /** Tema dominante de la charla, referenciado por id igual que `Ficha.idTema`. */
+  readonly idTemaPrincipal: string
   readonly resumen: string
   readonly fuente: FuenteDeConferencia
   readonly comparticiones: readonly Comparticion[]

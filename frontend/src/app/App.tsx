@@ -9,6 +9,7 @@ import { PantallaCatalogo } from '@/features/catalogo/screens'
 import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
 import { PantallaDetalleMemoria, PantallaMemorias } from '@/features/memorias/screens'
 import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/plantillas/screens'
+import { PantallaTaxonomia } from '@/features/taxonomia/screens'
 import { PantallaConfiguracion } from '@/app/placeholders'
 
 /*
@@ -45,6 +46,7 @@ export function App(): ReactElement {
             <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
             <Route path="/plantillas" element={<PantallaPlantillas />} />
             <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
+            <Route path="/taxonomia" element={<PantallaTaxonomia />} />
             <Route path="/configuracion" element={<PantallaConfiguracion />} />
           </Route>
         </Route>
