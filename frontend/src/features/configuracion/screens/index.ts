@@ -1,0 +1,1 @@
+export { PantallaConfiguracion } from './PantallaConfiguracion'

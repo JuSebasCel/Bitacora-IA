@@ -57,9 +57,21 @@ export type CodigoError =
   | 'TAX_TEMA_NOMBRE_REQUERIDO'
   | 'TAX_TEMA_NOMBRE_MUY_LARGO'
   | 'TAX_TEMA_YA_EXISTE'
-  | 'TAX_TEMA_NO_ENCONTRADO'
-  | 'TAX_TEMA_EN_USO'
   | 'TAX_PROPUESTA_NO_ENCONTRADA'
+
+  /* Chat trazable (F7). */
+  | 'CHAT_MENSAJE_VACIO'
+  | 'CHAT_CONVERSACION_NO_ENCONTRADA'
+  | 'CHAT_MENSAJE_NO_ENCONTRADO'
+  | 'CHAT_ETIQUETA_SIN_FICHAS_CITADAS'
+  | 'CHAT_TITULO_REQUERIDO'
+
+  /* Configuración: API key y compartidos (F8). */
+  | 'CONFIG_API_KEY_REQUERIDA'
+  | 'CONFIG_CONFERENCIA_REQUERIDA'
+  | 'CONFIG_INVITADO_REQUERIDO'
+  | 'CONFIG_YA_COMPARTIDA'
+  | 'CONFIG_SIN_PERMISO_PARA_COMPARTIR'
 
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
@@ -151,11 +163,20 @@ const MENSAJES: Record<CodigoError, string> = {
   TAX_TEMA_NOMBRE_REQUERIDO: 'Escribe un nombre para el tema.',
   TAX_TEMA_NOMBRE_MUY_LARGO: `El nombre de un tema admite hasta ${LARGO_MAXIMO_DE_TEMA} caracteres. Acórtalo para guardarlo.`,
   TAX_TEMA_YA_EXISTE:
-    'Ya existe un tema con ese nombre. Reutilízalo en vez de crear uno nuevo: el vocabulario repetido rompe la comparación entre eventos.',
-  TAX_TEMA_NO_ENCONTRADO: 'No encontramos ese tema. Puede que ya se haya eliminado.',
-  TAX_TEMA_EN_USO:
-    'Este tema está en uso por fichas ya clasificadas, así que no se puede eliminar. Puedes desactivarlo en los eventos donde no lo necesites.',
+    'Ya existe un tema con ese nombre. Se reutiliza en vez de crear uno nuevo: el vocabulario repetido rompe la comparación entre eventos.',
   TAX_PROPUESTA_NO_ENCONTRADA: 'No encontramos esa propuesta. Puede que ya se haya revisado.',
+
+  CHAT_MENSAJE_VACIO: 'Escribe algo antes de enviarlo.',
+  CHAT_CONVERSACION_NO_ENCONTRADA: 'No encontramos esa conversación. Puede que ya se haya eliminado.',
+  CHAT_MENSAJE_NO_ENCONTRADO: 'No encontramos ese mensaje para editarlo.',
+  CHAT_ETIQUETA_SIN_FICHAS_CITADAS: 'Esta respuesta no cita ninguna ficha, así que no hay nada que etiquetar.',
+  CHAT_TITULO_REQUERIDO: 'Escribe un nombre para la conversación.',
+
+  CONFIG_API_KEY_REQUERIDA: 'Escribe tu API key antes de guardarla.',
+  CONFIG_CONFERENCIA_REQUERIDA: 'Elige la conferencia que quieres compartir.',
+  CONFIG_INVITADO_REQUERIDO: 'Elige con quién quieres compartirla.',
+  CONFIG_YA_COMPARTIDA: 'Esa persona ya tiene esta conferencia compartida.',
+  CONFIG_SIN_PERMISO_PARA_COMPARTIR: 'Quien te compartió esta conferencia no permitió que la vuelvas a compartir.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'

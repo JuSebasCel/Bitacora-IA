@@ -3,7 +3,6 @@ import { CardsIcon } from '@phosphor-icons/react/dist/csr/Cards'
 import { GearIcon } from '@phosphor-icons/react/dist/csr/Gear'
 import { LayoutIcon } from '@phosphor-icons/react/dist/csr/Layout'
 import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
-import { TreeStructureIcon } from '@phosphor-icons/react/dist/csr/TreeStructure'
 import type { Icon, IconWeight } from '@phosphor-icons/react'
 
 /*
@@ -49,16 +48,15 @@ export const SECCIONES_DE_NAVEGACION: readonly SeccionDeNavegacion[] = [
     icono: LayoutIcon,
   },
   /*
-    Taxonomía y Configuración cierran la lista porque las dos son de
-    administración, no del recorrido de una conferencia: las cuatro secciones
-    anteriores siguen el orden en que se trabaja (se carga, se consulta, se
-    redacta, se maqueta) y estas dos son el ajuste del sistema que las sostiene.
+    Configuración cierra la lista porque es administración, no del recorrido
+    de una conferencia: las cuatro secciones anteriores siguen el orden en que
+    se trabaja (se carga, se consulta, se redacta, se maqueta) y esta es el
+    ajuste del sistema que las sostiene.
+
+    La taxonomía de temas ya no tiene pantalla propia: se administra por
+    curaduría (aprobar/rechazar propuestas) desde la campana de notificaciones
+    de la barra superior, no como una sección de navegación aparte.
   */
-  {
-    etiqueta: 'Taxonomía',
-    ruta: '/taxonomia',
-    icono: TreeStructureIcon,
-  },
   {
     etiqueta: 'Configuración',
     ruta: '/configuracion',

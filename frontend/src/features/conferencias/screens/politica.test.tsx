@@ -8,8 +8,8 @@ import { PantallaConferencias } from './PantallaConferencias'
 /*
   Reglas de redacción de las pantallas de F2.
 
-  Son las mismas que `app/placeholders/pantallas.test.tsx` aplica a los
-  marcadores de posición, menos tres palabras que aquí no significan lo mismo.
+  Mismo criterio que el resto de pantallas del proyecto, menos tres palabras
+  que aquí no significan lo mismo.
 
   "Pendiente", "aún no" y "no disponible" quedan fuera de la lista prohibida en
   este módulo: describen el estado de un dato (una ficha pendiente de revisión,

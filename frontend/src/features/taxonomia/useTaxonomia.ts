@@ -2,19 +2,15 @@ import { useCallback, useState } from 'react'
 import { mensajeDeError } from '@/shared/errors'
 import { guardarTaxonomia, leerTaxonomia } from './almacenamiento'
 import type { Taxonomia } from './data/tipos'
-import {
-  activarEnEvento,
-  aprobarPropuesta,
-  crearTema,
-  desactivarEnEvento,
-  eliminarTema,
-  rechazarPropuesta,
-  renombrarTema,
-} from './taxonomia'
+import { aprobarPropuesta, rechazarPropuesta } from './taxonomia'
 import type { ResultadoDeTaxonomia } from './taxonomia'
 
 /*
   Envoltorio fino sobre las operaciones puras y el almacenamiento.
+
+  Solo aprobar/rechazar: nadie crea, renombra ni elimina un tema a mano. El
+  pool crece únicamente por curaduría de lo que el análisis de discurso
+  propuso (`PLAN.md` sección 3.1).
 
   Cada acción devuelve el mensaje ya traducido en el momento de intentarla,
   no un estado que llegue en un render posterior: así quien la disparó puede
@@ -27,11 +23,6 @@ export type ResultadoDeAccion = { readonly ok: true } | { readonly ok: false; re
 
 export type ValorDeTaxonomia = {
   readonly taxonomia: Taxonomia
-  readonly crear: (nombre: string) => ResultadoDeAccion
-  readonly renombrar: (idTema: string, nombre: string) => ResultadoDeAccion
-  readonly eliminar: (idTema: string, idsTemasEnUso: readonly string[]) => ResultadoDeAccion
-  readonly activar: (idEvento: string, idTema: string) => ResultadoDeAccion
-  readonly desactivar: (idEvento: string, idTema: string) => ResultadoDeAccion
   readonly aprobar: (idPropuesta: string) => ResultadoDeAccion
   readonly rechazar: (idPropuesta: string) => ResultadoDeAccion
 }
@@ -51,11 +42,6 @@ export function useTaxonomia(): ValorDeTaxonomia {
 
   return {
     taxonomia,
-    crear: (nombre) => aplicar(crearTema(taxonomia, nombre)),
-    renombrar: (idTema, nombre) => aplicar(renombrarTema(taxonomia, idTema, nombre)),
-    eliminar: (idTema, idsTemasEnUso) => aplicar(eliminarTema(taxonomia, idTema, idsTemasEnUso)),
-    activar: (idEvento, idTema) => aplicar(activarEnEvento(taxonomia, idEvento, idTema)),
-    desactivar: (idEvento, idTema) => aplicar(desactivarEnEvento(taxonomia, idEvento, idTema)),
     aprobar: (idPropuesta) => aplicar(aprobarPropuesta(taxonomia, idPropuesta)),
     rechazar: (idPropuesta) => aplicar(rechazarPropuesta(taxonomia, idPropuesta)),
   }

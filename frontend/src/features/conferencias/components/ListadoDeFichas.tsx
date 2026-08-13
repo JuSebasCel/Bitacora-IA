@@ -1,3 +1,4 @@
+import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
 import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import { Insignia } from '@/shared/ui'
@@ -34,9 +35,23 @@ type PropiedadesListadoDeFichas = {
   temas: readonly Tema[]
   /** Si la conferencia es ajena y su dueño eligió no mostrar las fichas pendientes. */
   ocultaPendientes?: boolean
+  /**
+   * Si esta persona puede marcar una ficha de esta conferencia como
+   * validada (F8): siempre para el dueño, y para un invitado solo cuando
+   * `permitirValidarFichas` está activo. Se resuelve en la pantalla, que sí
+   * conoce la privacidad efectiva; este componente solo obedece la bandera.
+   */
+  puedeValidar?: boolean
+  alValidar?: (idFicha: string) => void
 }
 
-export function ListadoDeFichas({ fichas, temas, ocultaPendientes = false }: PropiedadesListadoDeFichas) {
+export function ListadoDeFichas({
+  fichas,
+  temas,
+  ocultaPendientes = false,
+  puedeValidar = false,
+  alValidar,
+}: PropiedadesListadoDeFichas) {
   /*
     Llegar a cero fichas no siempre significa lo mismo, y decir lo mismo en
     los dos casos manda a la persona a conclusiones equivocadas: en una
@@ -74,6 +89,23 @@ export function ListadoDeFichas({ fichas, temas, ocultaPendientes = false }: Pro
                 {VALIDACION_EN_SINGULAR[ficha.estadoDeValidacion]}
               </Insignia>
               <span className="text-xs text-texto-tenue">Tema: {nombreDeTema(temas, ficha.idTema)}</span>
+
+              {/*
+                Primera pantalla de la app que deja cambiar el estado de
+                validación de una ficha: antes de F8 no existía ningún lugar
+                donde alguien, ni siquiera el dueño de su propia conferencia,
+                pudiera hacerlo.
+              */}
+              {puedeValidar && ficha.estadoDeValidacion !== 'validada' ? (
+                <button
+                  type="button"
+                  onClick={() => alValidar?.(ficha.id)}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-texto-tenue transition-colors hover:bg-validado/12 hover:text-validado"
+                >
+                  <CheckCircleIcon size={14} weight="regular" aria-hidden="true" />
+                  Marcar como validada
+                </button>
+              ) : null}
             </div>
 
             <blockquote className="border-l-2 border-acento/50 pl-3 text-base leading-relaxed text-texto">

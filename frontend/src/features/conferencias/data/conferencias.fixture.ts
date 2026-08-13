@@ -36,12 +36,12 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
       {
         idInvitado: 'usr-zuluaga',
         compartidaEl: '2026-03-19',
-        privacidad: { compartirEtiquetas: true, compartirFichasPendientes: true },
+        privacidad: { compartirEtiquetas: true, compartirFichasPendientes: true, permitirValidarFichas: true, permitirRecompartir: true },
       },
       {
         idInvitado: 'usr-penaloza',
         compartidaEl: '2026-04-02',
-        privacidad: { compartirEtiquetas: false, compartirFichasPendientes: true },
+        privacidad: { compartirEtiquetas: false, compartirFichasPendientes: true, permitirValidarFichas: true, permitirRecompartir: false },
       },
     ],
   },
@@ -79,7 +79,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
       {
         idInvitado: 'usr-zuluaga',
         compartidaEl: '2026-05-28',
-        privacidad: { compartirEtiquetas: false, compartirFichasPendientes: false },
+        privacidad: { compartirEtiquetas: false, compartirFichasPendientes: false, permitirValidarFichas: false, permitirRecompartir: false },
       },
     ],
   },
@@ -117,7 +117,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
       {
         idInvitado: 'usr-zuluaga',
         compartidaEl: '2026-01-22',
-        privacidad: { compartirEtiquetas: true, compartirFichasPendientes: false },
+        privacidad: { compartirEtiquetas: true, compartirFichasPendientes: false, permitirValidarFichas: false, permitirRecompartir: true },
       },
     ],
   },
@@ -139,7 +139,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
       {
         idInvitado: 'usr-zuluaga',
         compartidaEl: '2026-04-06',
-        privacidad: { compartirEtiquetas: false, compartirFichasPendientes: true },
+        privacidad: { compartirEtiquetas: false, compartirFichasPendientes: true, permitirValidarFichas: false, permitirRecompartir: false },
       },
     ],
   },
@@ -209,7 +209,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
       {
         idInvitado: 'usr-alcantara',
         compartidaEl: '2026-06-01',
-        privacidad: { compartirEtiquetas: true, compartirFichasPendientes: true },
+        privacidad: { compartirEtiquetas: true, compartirFichasPendientes: true, permitirValidarFichas: true, permitirRecompartir: false },
       },
     ],
   },

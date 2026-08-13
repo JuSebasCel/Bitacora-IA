@@ -5,6 +5,7 @@ import { useConferenciasVisibles } from '@/features/conferencias/components/useC
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
+import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { leerTaxonomia } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import { CRITERIOS_POR_DEFECTO, eventosDisponibles, listarCatalogo, temasDisponibles } from './filtros'
@@ -36,7 +37,7 @@ export function useCatalogo(idUsuario: string): ValorDeCatalogo {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const todasLasEntradas = useMemo(
-    () => fichasDelCatalogo(FICHAS_DE_EJEMPLO, visibles),
+    () => fichasDelCatalogo(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), visibles),
     [visibles],
   )
 

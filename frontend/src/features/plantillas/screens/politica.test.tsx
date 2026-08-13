@@ -6,8 +6,7 @@ import { PantallaPlantillas } from './PantallaPlantillas'
 
 /*
   Reglas de redacción de las pantallas de F4. Mismo criterio que
-  `features/conferencias/screens/politica.test.tsx`: reemplaza al recorrido
-  genérico de `app/placeholders/pantallas.test.tsx` con las palabras propias
+  `features/conferencias/screens/politica.test.tsx`, con las palabras propias
   de este dominio ya fuera de la lista prohibida donde aplica.
 */
 
