@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
+import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
 import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
@@ -163,9 +164,19 @@ export function PantallaDetalleConferencia() {
       {conferencia.estado === 'procesada' ? (
         <>
           <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
-            <h2 className="text-base font-semibold tracking-tight text-texto">
-              {fichas.length === 1 ? '1 ficha' : `${fichas.length} fichas`}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold tracking-tight text-texto">
+                {fichas.length === 1 ? '1 ficha' : `${fichas.length} fichas`}
+              </h2>
+
+              <Link
+                to={`/memorias?conferencia=${conferencia.id}`}
+                className="inline-flex items-center gap-1.5 text-sm text-acento hover:underline"
+              >
+                <FileTextIcon size={14} weight="bold" aria-hidden="true" />
+                Generar memoria
+              </Link>
+            </div>
 
             <ConteosDeFichas resumen={resumirFichas(fichas)} />
 

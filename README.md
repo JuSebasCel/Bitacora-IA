@@ -75,6 +75,7 @@ frontend/src/
     auth/         # acceso, registro y sesión
     conferencias/ # dashboard, detalle y carga de conferencia
     plantillas/   # editor de plantillas para memorias, en blanco o importadas desde .docx
+    memorias/     # genera la memoria de una conferencia combinándola con una plantilla
   shared/     # primitivos de interfaz, catálogo de errores, almacenamiento
   styles/     # tokens de diseño
 ```

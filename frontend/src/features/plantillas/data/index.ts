@@ -15,6 +15,7 @@ export type {
   Plantilla,
   PlantillaDesdeDocx,
   PlantillaEnBlanco,
+  RegistroDeDatosDeCampo,
 } from './tipos'
 
 export {

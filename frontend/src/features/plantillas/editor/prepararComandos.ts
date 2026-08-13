@@ -1,4 +1,4 @@
-import type { MarcadorDeDocx } from '../data'
+import type { MarcadorDeDocx, RegistroDeDatosDeCampo } from '../data'
 import { resolverCondicionDeMarcador, resolverListaDeMarcador, resolverMarcador } from '../data'
 import { parrafosDeNivelSuperior, reemplazarTextoDeParrafo, serializarDocumento, textoDeParrafo } from './xmlDeDocx'
 
@@ -36,6 +36,7 @@ export type ComandosPreparados = {
 export function prepararComandos(
   documentXmlOriginal: string,
   marcadores: readonly MarcadorDeDocx[],
+  datosReales?: RegistroDeDatosDeCampo,
 ): ComandosPreparados {
   const { doc, parrafos } = parrafosDeNivelSuperior(documentXmlOriginal)
   const datos: Record<string, unknown> = {}
@@ -52,7 +53,7 @@ export function prepararComandos(
       const marcador = restantes.shift()
       if (marcador?.tipo === 'condicional') {
         const variable = nombreDeVariable(marcador.id)
-        datos[variable] = resolverCondicionDeMarcador(marcador.origenDeDato)
+        datos[variable] = resolverCondicionDeMarcador(marcador.origenDeDato, datosReales)
         reemplazarTextoDeParrafo(doc, parrafo, `[[IF ${variable}]]`)
         dentroDeCondicional = true
       }
@@ -70,7 +71,7 @@ export function prepararComandos(
       const marcador = restantes.shift()
       if (marcador?.tipo === 'repetible') {
         const variable = nombreDeVariable(marcador.id)
-        datos[variable] = resolverListaDeMarcador(marcador.origenDeDato)
+        datos[variable] = resolverListaDeMarcador(marcador.origenDeDato, datosReales)
         reemplazarTextoDeParrafo(doc, parrafo, `[[FOR item_${variable} IN ${variable}]]`)
         variableDelRepetibleActivo = variable
       }
@@ -100,7 +101,7 @@ export function prepararComandos(
         }
 
         const variable = nombreDeVariable(marcador.id)
-        datos[variable] = resolverMarcador(marcador.origenDeDato, marcador.formato)
+        datos[variable] = resolverMarcador(marcador.origenDeDato, marcador.formato, datosReales)
         return `[[${variable}]]`
       })
 

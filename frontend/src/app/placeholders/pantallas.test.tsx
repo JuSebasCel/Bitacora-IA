@@ -1,18 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { PantallaCatalogo, PantallaConfiguracion, PantallaMemorias } from './index'
+import { PantallaCatalogo, PantallaConfiguracion } from './index'
 
 /*
-  Conferencias, Cargar conferencia y Plantillas salieron de esta lista al
-  construirse F2, F3 y F4: sus pantallas reales tienen sus propias pruebas de
-  política en `features/conferencias/screens/politica.test.tsx` y
-  `features/plantillas/screens/politica.test.tsx`, con las mismas reglas menos
+  Conferencias, Cargar conferencia, Plantillas y Memorias salieron de esta
+  lista al construirse F2, F3, F4 y F5: sus pantallas reales tienen sus
+  propias pruebas de política en `features/conferencias/screens/politica.test.tsx`,
+  `features/plantillas/screens/politica.test.tsx` y
+  `features/memorias/screens/politica.test.tsx`, con las mismas reglas menos
   las palabras que en esos módulos son vocabulario de dominio y no lenguaje de
   obra en curso.
 */
 const PANTALLAS = [
   { titulo: 'Catálogo', Pantalla: PantallaCatalogo },
-  { titulo: 'Memorias', Pantalla: PantallaMemorias },
   { titulo: 'Configuración', Pantalla: PantallaConfiguracion },
 ] as const
 

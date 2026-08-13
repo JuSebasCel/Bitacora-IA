@@ -101,4 +101,11 @@ export type PlantillaDesdeDocx = {
 
 export type Plantilla = PlantillaEnBlanco | PlantillaDesdeDocx
 
+/**
+ * Dato real de una conferencia para uno o más de los cinco campos fijos,
+ * usado por F5 al generar una memoria — ver `campos.ts`. Un campo ausente del
+ * registro cae al dato de ejemplo de ese campo, nunca lanza.
+ */
+export type RegistroDeDatosDeCampo = Partial<Record<CampoDeMarcador, { readonly parrafo: string; readonly lista: readonly string[] }>>
+
 export type { JSONContent }
