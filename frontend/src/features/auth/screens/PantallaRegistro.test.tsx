@@ -42,6 +42,17 @@ describe('PantallaRegistro', () => {
     expect(screen.getByLabelText('Contraseña')).toHaveAttribute('autocomplete', 'new-password')
   })
 
+  it('muestra un placeholder de ejemplo sin reemplazar la etiqueta visible', () => {
+    montar()
+
+    expect(screen.getByLabelText('Nombre')).toHaveAttribute('placeholder')
+    expect(screen.getByLabelText('Correo')).toHaveAttribute('placeholder')
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('placeholder')
+    expect(screen.getByText('Nombre')).toBeInTheDocument()
+    expect(screen.getByText('Correo')).toBeInTheDocument()
+    expect(screen.getByText('Contraseña')).toBeInTheDocument()
+  })
+
   it('al enviar el formulario vacío muestra un error legible, nunca el código crudo', async () => {
     const usuario = userEvent.setup()
     montar()

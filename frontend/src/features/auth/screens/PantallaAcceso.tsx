@@ -66,6 +66,7 @@ export function PantallaAcceso(): ReactElement {
             type="email"
             name="correo"
             autoComplete="email"
+            placeholder="nombre.apellido@labanfora.org"
             value={correo}
             onChange={(evento) => setCorreo(evento.target.value)}
           />
@@ -76,6 +77,7 @@ export function PantallaAcceso(): ReactElement {
             type="password"
             name="contrasena"
             autoComplete="current-password"
+            placeholder="••••••••"
             value={contrasena}
             onChange={(evento) => setContrasena(evento.target.value)}
           />

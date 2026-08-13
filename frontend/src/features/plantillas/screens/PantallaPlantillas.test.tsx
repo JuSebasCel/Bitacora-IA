@@ -100,6 +100,21 @@ describe('PantallaPlantillas', () => {
     expect(sessionStorage.getItem(CLAVE_PLANTILLAS) ?? '').not.toContain('Cita simple')
   })
 
+  /*
+    Cada tarjeta puede eliminarse, así que quedarse en cero es alcanzable y no
+    un caso imposible: sin este vacío la pantalla quedaba en blanco, sin decir
+    qué pasó ni por dónde salir. El arreglo vacío guardado es "se borró todo a
+    propósito", distinto de no haber guardado nunca nada (que cae a la semilla).
+  */
+  it('sin ninguna plantilla, explica el vacío en vez de dejar la lista en blanco', () => {
+    sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([]))
+
+    montar()
+
+    expect(screen.getByText('Todavía no hay plantillas')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Plantillas' })).not.toBeInTheDocument()
+  })
+
   it('al montar, poda cualquier plantilla en blanco abandonada que haya quedado guardada', () => {
     const abandonada = crearPlantillaEnBlanco()
     sessionStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify([abandonada]))

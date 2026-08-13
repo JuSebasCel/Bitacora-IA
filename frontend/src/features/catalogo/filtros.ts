@@ -33,6 +33,12 @@ export const CRITERIOS_POR_DEFECTO: CriteriosDeCatalogo = {
 }
 
 /*
+  Busca sobre la ficha (fragmento, tema) y también sobre la conferencia de
+  origen (título, ponente, evento): el catálogo cruza fichas de charlas
+  distintas, así que de qué charla viene una ficha es justo lo que distingue
+  una entrada de otra, y quedarse solo con el contenido de la ficha deja
+  fuera la mitad de lo que alguien recordaría para encontrarla.
+
   Mismo emparejamiento por inicio de palabra que `buscar` de conferencias
   (`conferencias/query/filtros.ts`), reutilizando `normalizarTexto`/
   `palabrasDe` de ahí para no arriesgar reintroducir el bug de subcadena que
@@ -49,7 +55,11 @@ export function buscarEnCatalogo(
   }
 
   return entradas.filter((entrada) => {
-    const palabrasDelTexto = palabrasDe(normalizarTexto(`${entrada.ficha.fragmento} ${entrada.ficha.tema}`))
+    const palabrasDelTexto = palabrasDe(
+      normalizarTexto(
+        `${entrada.ficha.fragmento} ${entrada.ficha.tema} ${entrada.conferencia.titulo} ${entrada.conferencia.ponente} ${entrada.conferencia.evento}`,
+      ),
+    )
 
     return palabrasBuscadas.every((buscada) => palabrasDelTexto.some((palabra) => palabra.startsWith(buscada)))
   })

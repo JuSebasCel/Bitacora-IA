@@ -54,7 +54,7 @@ export function VistaPreviaDeCarga({ datos, archivo, eventos, ponentes }: Propie
       <h2 className="text-sm font-medium text-texto">Vista previa</h2>
 
       {datos.titulo.trim() === '' ? (
-        <p className="text-sm text-texto-tenue">Título de la charla</p>
+        <p className="text-sm text-texto-tenue">Título de la conferencia</p>
       ) : (
         <p className="text-sm font-medium text-texto">{datos.titulo}</p>
       )}

@@ -1,9 +1,8 @@
 import type { ReactElement } from 'react'
+import { useSearchParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
-import { resumirFichas } from '@/features/conferencias/query'
-import { Button, EncabezadoDeSeccion, EstadoVacio } from '@/shared/ui'
-import { ConteosDeFichas } from '@/features/conferencias/components'
-import { ControlesDelCatalogo, FichaDeCatalogo } from '../components'
+import { Button, EncabezadoDeSeccion, Esqueleto, EstadoVacio } from '@/shared/ui'
+import { ControlesDelCatalogo, FichaDeCatalogo, ResumenDelCatalogo } from '../components'
 import type { CriteriosDeCatalogo } from '../filtros'
 import { useCatalogo } from '../useCatalogo'
 
@@ -19,10 +18,6 @@ import { useCatalogo } from '../useCatalogo'
 const DESCRIPCION =
   'Filtra las fichas por tema, tipo de unidad, evento y estado de validación, y abre cada una en su coordenada dentro de la conferencia de origen.'
 
-function textoDeConteo(total: number): string {
-  return total === 1 ? '1 ficha a la vista' : `${total} fichas a la vista`
-}
-
 function hayFiltrosAplicados(criterios: CriteriosDeCatalogo): boolean {
   return (
     criterios.busqueda.trim().length > 0 ||
@@ -36,9 +31,13 @@ function hayFiltrosAplicados(criterios: CriteriosDeCatalogo): boolean {
 export function PantallaCatalogo(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
+  const [params] = useSearchParams()
 
-  const { entradas, criterios, temasDisponibles, eventosDisponibles, alCambiar, alQuitarFiltros } =
+  const { carga, entradas, criterios, temasDisponibles, eventosDisponibles, alCambiar, alQuitarFiltros } =
     useCatalogo(idUsuario)
+
+  /* Viaja con cada resultado para que volver desde el detalle recupere esta misma vista filtrada. */
+  const busqueda = params.toString() === '' ? '' : `?${params.toString()}`
 
   return (
     <>
@@ -52,7 +51,9 @@ export function PantallaCatalogo(): ReactElement {
           alCambiar={alCambiar}
         />
 
-        {entradas.length === 0 ? (
+        {carga === 'cargando' ? (
+          <Esqueleto filas={4} etiqueta="Cargando el catálogo" />
+        ) : entradas.length === 0 ? (
           hayFiltrosAplicados(criterios) ? (
             <EstadoVacio
               titulo="Ningún resultado con estos filtros"
@@ -70,16 +71,23 @@ export function PantallaCatalogo(): ReactElement {
           )
         ) : (
           <div className="flex flex-col gap-4">
-            <p className="coordenada text-xs text-texto-tenue">{textoDeConteo(entradas.length)}</p>
+            <ResumenDelCatalogo entradas={entradas} />
 
-            <section className="rounded-md bg-panel p-4 shadow-sm">
-              <ConteosDeFichas resumen={resumirFichas(entradas.map((entrada) => entrada.ficha))} />
-            </section>
+            {/*
+              Mosaico por columnas CSS, no rejilla: los fragmentos varían
+              muchísimo de largo (una cita textual son dos renglones, un
+              método puede ser un párrafo entero), y una rejilla de filas
+              iguales dejaría huecos enormes bajo las tarjetas cortas. Con
+              `columns` cada tarjeta ocupa solo lo que necesita y la columna
+              siguiente arranca donde quedó la anterior.
 
-            <ul aria-label="Catálogo" className="flex flex-col gap-3">
+              Se queda en dos columnas como máximo: a tres, la medida de
+              línea cae por debajo de lo cómodo para leer una cita.
+            */}
+            <ul aria-label="Catálogo" className="columns-1 gap-4 lg:columns-2">
               {entradas.map((entrada) => (
-                <li key={entrada.ficha.id}>
-                  <FichaDeCatalogo entrada={entrada} />
+                <li key={entrada.ficha.id} className="mb-4 break-inside-avoid">
+                  <FichaDeCatalogo entrada={entrada} busqueda={busqueda} />
                 </li>
               ))}
             </ul>

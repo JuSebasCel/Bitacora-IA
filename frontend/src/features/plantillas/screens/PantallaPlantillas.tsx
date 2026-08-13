@@ -4,7 +4,7 @@ import type { ChangeEvent, ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
-import { Button, EncabezadoDeSeccion, MensajeDeFormulario } from '@/shared/ui'
+import { Button, EncabezadoDeSeccion, EstadoVacio, MensajeDeFormulario } from '@/shared/ui'
 import { TarjetaDePlantilla } from '../components'
 import { importarDocx } from '../editor/importarDocx'
 import { usePlantillas } from '../usePlantillas'
@@ -95,16 +95,28 @@ export function PantallaPlantillas(): ReactElement {
           {error === null ? null : <MensajeDeFormulario id={ID_ERROR}>{error}</MensajeDeFormulario>}
         </div>
 
-        <ul
-          aria-label="Plantillas"
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {plantillas.map((plantilla) => (
-            <li key={plantilla.id}>
-              <TarjetaDePlantilla plantilla={plantilla} alEliminar={() => eliminar(plantilla.id)} />
-            </li>
-          ))}
-        </ul>
+        {/*
+          Eliminar plantillas es una acción soportada desde cada tarjeta, así
+          que quedarse en cero es un estado alcanzable, no un caso imposible.
+          Sin este vacío, la pantalla quedaba en blanco y sin ninguna salida.
+        */}
+        {plantillas.length === 0 ? (
+          <EstadoVacio
+            titulo="Todavía no hay plantillas"
+            descripcion="Crea una plantilla en blanco para diseñarla aquí, o importa un .docx ya maquetado en Word para conservar su diseño intacto."
+          />
+        ) : (
+          <ul
+            aria-label="Plantillas"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {plantillas.map((plantilla) => (
+              <li key={plantilla.id}>
+                <TarjetaDePlantilla plantilla={plantilla} alEliminar={() => eliminar(plantilla.id)} />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </>
   )

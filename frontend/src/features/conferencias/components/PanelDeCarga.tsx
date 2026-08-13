@@ -60,10 +60,10 @@ function validarCamposLocalmente(datos: DatosDeCarga, archivo: File | null): Err
     errores.titulo = 'Escribe un título para la conferencia.'
   }
   if (datos.idEvento === '') {
-    errores.idEvento = 'Elige el evento al que pertenece esta charla.'
+    errores.idEvento = 'Elige el evento al que pertenece esta conferencia.'
   }
   if (datos.idPonente === '') {
-    errores.idPonente = 'Elige quién dio la charla.'
+    errores.idPonente = 'Elige quién dio la conferencia.'
   }
   if (datos.fechaDelEvento === '') {
     errores.fechaDelEvento = 'Elige la fecha del evento.'

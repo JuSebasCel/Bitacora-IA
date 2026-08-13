@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
+import type { EstadoDeCarga } from '@/features/conferencias/components/useConferenciasVisibles'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
@@ -9,6 +10,7 @@ import type { CriteriosDeCatalogo } from './filtros'
 import { escribirCriteriosDeCatalogo, leerCriteriosDeCatalogo } from './parametros'
 
 export type ValorDeCatalogo = {
+  readonly carga: EstadoDeCarga
   readonly entradas: readonly FichaDelCatalogo[]
   readonly criterios: CriteriosDeCatalogo
   readonly temasDisponibles: readonly string[]
@@ -25,7 +27,7 @@ export type ValorDeCatalogo = {
   local — una vista filtrada es compartible y sobrevive a un recargado.
 */
 export function useCatalogo(idUsuario: string): ValorDeCatalogo {
-  const { visibles } = useConferenciasVisibles(idUsuario)
+  const { carga, visibles } = useConferenciasVisibles(idUsuario)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const todasLasEntradas = useMemo(
@@ -47,22 +49,47 @@ export function useCatalogo(idUsuario: string): ValorDeCatalogo {
   )
 
   /*
-    Aplica el parche sobre los criterios que la URL tenga en ese momento
-    (`anteriores`), no sobre los del render actual: con la forma directa, dos
-    cambios seguidos antes de un re-render se pisaban entre sí — el mismo bug
-    que ya tuvo el dashboard de F2 y que ahí se corrigió igual.
+    Los criterios ya aplicados se recuerdan en una referencia, no se releen de
+    la URL en cada cambio.
+
+    La forma funcional de `setSearchParams` no basta: su `anteriores` sale del
+    estado ya confirmado por React, así que dos clics seguidos antes de que el
+    primero termine de renderizar hacían que el segundo partiera de la URL
+    vieja y resucitara el filtro que el primero acababa de quitar. Se veía
+    eligiendo "Todos los eventos" e inmediatamente un tipo de unidad: el
+    evento volvía solo. Con la referencia, el segundo cambio parte siempre de
+    lo último pedido, se haya renderizado o no.
+
+    La URL sigue mandando cuando cambia por fuera (botón atrás, enlace
+    compartido, "Quitar filtros"): ahí se resincroniza la referencia.
   */
+  const consultaActual = searchParams.toString()
+  const refCriterios = useRef(criterios)
+  const refConsulta = useRef(consultaActual)
+
+  if (refConsulta.current !== consultaActual) {
+    refConsulta.current = consultaActual
+    refCriterios.current = criterios
+  }
+
+  function aplicar(siguientes: CriteriosDeCatalogo): void {
+    const params = escribirCriteriosDeCatalogo(siguientes)
+
+    refCriterios.current = siguientes
+    refConsulta.current = params.toString()
+    setSearchParams(params)
+  }
+
   function alCambiar(parche: Partial<CriteriosDeCatalogo>): void {
-    setSearchParams((anteriores) =>
-      escribirCriteriosDeCatalogo({ ...leerCriteriosDeCatalogo(anteriores, temas, eventos), ...parche }),
-    )
+    aplicar({ ...refCriterios.current, ...parche })
   }
 
   function alQuitarFiltros(): void {
-    setSearchParams(escribirCriteriosDeCatalogo(CRITERIOS_POR_DEFECTO))
+    aplicar(CRITERIOS_POR_DEFECTO)
   }
 
   return {
+    carga,
     entradas,
     criterios,
     temasDisponibles: temas,

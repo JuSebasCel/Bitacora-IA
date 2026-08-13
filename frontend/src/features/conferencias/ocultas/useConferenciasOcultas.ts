@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { idsOcultosDe, ocultarConferencia } from './almacenamiento'
+import { idsOcultosDe, mostrarConferencia, ocultarConferencia } from './almacenamiento'
 
 /*
   Envoltorio fino sobre `almacenamiento.ts`, mismo criterio que `useEtiquetas`:
@@ -11,6 +11,7 @@ import { idsOcultosDe, ocultarConferencia } from './almacenamiento'
 export type ValorDeOcultas = {
   readonly idsOcultos: readonly string[]
   readonly ocultar: (idConferencia: string) => void
+  readonly mostrar: (idConferencia: string) => void
 }
 
 type EstadoDeOcultas = {
@@ -37,5 +38,12 @@ export function useConferenciasOcultas(idUsuario: string): ValorDeOcultas {
     [idUsuario],
   )
 
-  return { idsOcultos, ocultar }
+  const mostrar = useCallback(
+    (idConferencia: string) => {
+      setEstado({ idUsuario, idsOcultos: mostrarConferencia(idUsuario, idConferencia) })
+    },
+    [idUsuario],
+  )
+
+  return { idsOcultos, ocultar, mostrar }
 }

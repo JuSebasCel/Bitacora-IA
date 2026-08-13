@@ -22,9 +22,28 @@ import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from '.
 
 type PropiedadesListadoDeFichas = {
   fichas: readonly Ficha[]
+  /** Si la conferencia es ajena y su dueño eligió no mostrar las fichas pendientes. */
+  ocultaPendientes?: boolean
 }
 
-export function ListadoDeFichas({ fichas }: PropiedadesListadoDeFichas) {
+export function ListadoDeFichas({ fichas, ocultaPendientes = false }: PropiedadesListadoDeFichas) {
+  /*
+    Llegar a cero fichas no siempre significa lo mismo, y decir lo mismo en
+    los dos casos manda a la persona a conclusiones equivocadas: en una
+    conferencia compartida que solo muestra fichas validadas, el vacío no es
+    que la charla no produjera nada, sino que lo que produjo está en revisión
+    y su dueño eligió no compartirlo todavía.
+  */
+  if (fichas.length === 0) {
+    return (
+      <p className="max-w-prose text-sm leading-relaxed text-texto-tenue">
+        {ocultaPendientes
+          ? 'Esta conferencia todavía no tiene fichas validadas. Quien la compartió eligió mostrar solo las ya revisadas, así que las que siguen en revisión no aparecen aquí.'
+          : 'El procesamiento de esta conferencia terminó sin extraer ninguna ficha.'}
+      </p>
+    )
+  }
+
   return (
     <ul aria-label="Fichas de la conferencia" className="flex flex-col gap-3">
       {fichas.map((ficha) => (

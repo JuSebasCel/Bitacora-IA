@@ -53,8 +53,19 @@ export type CodigoError =
   | 'MEM_NO_ENCONTRADA'
   | 'MEM_FALLO_GENERACION'
 
+  /* Taxonomía de temas (F9). */
+  | 'TAX_TEMA_NOMBRE_REQUERIDO'
+  | 'TAX_TEMA_NOMBRE_MUY_LARGO'
+  | 'TAX_TEMA_YA_EXISTE'
+  | 'TAX_TEMA_NO_ENCONTRADO'
+  | 'TAX_TEMA_EN_USO'
+  | 'TAX_PROPUESTA_NO_ENCONTRADA'
+
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
+
+/** Un tema de la taxonomía es un rótulo corto y comparable entre eventos, no una descripción. */
+export const LARGO_MAXIMO_DE_TEMA = 60
 
 /** Nombres de evento y ponente admiten más largo que una etiqueta: son texto libre real, no un chip. */
 export const LARGO_MAXIMO_DE_EVENTO = 80
@@ -136,6 +147,15 @@ const MENSAJES: Record<CodigoError, string> = {
   MEM_NO_ENCONTRADA: 'No encontramos esa memoria. Puede que ya se haya eliminado.',
   MEM_FALLO_GENERACION:
     'No pudimos generar la memoria. Puede que la conferencia o la plantilla de origen ya no estén disponibles.',
+
+  TAX_TEMA_NOMBRE_REQUERIDO: 'Escribe un nombre para el tema.',
+  TAX_TEMA_NOMBRE_MUY_LARGO: `El nombre de un tema admite hasta ${LARGO_MAXIMO_DE_TEMA} caracteres. Acórtalo para guardarlo.`,
+  TAX_TEMA_YA_EXISTE:
+    'Ya existe un tema con ese nombre. Reutilízalo en vez de crear uno nuevo: el vocabulario repetido rompe la comparación entre eventos.',
+  TAX_TEMA_NO_ENCONTRADO: 'No encontramos ese tema. Puede que ya se haya eliminado.',
+  TAX_TEMA_EN_USO:
+    'Este tema está en uso por fichas ya clasificadas, así que no se puede eliminar. Puedes desactivarlo en los eventos donde no lo necesites.',
+  TAX_PROPUESTA_NO_ENCONTRADA: 'No encontramos esa propuesta. Puede que ya se haya revisado.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'

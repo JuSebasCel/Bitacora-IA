@@ -53,7 +53,7 @@ export function PantallaConferencias() {
   const [params, setParams] = useSearchParams()
   const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
   const { carga, visibles, recargar } = useConferenciasVisibles(idUsuario)
-  const { idsOcultos, ocultar } = useConferenciasOcultas(idUsuario)
+  const { idsOcultos, ocultar, mostrar } = useConferenciasOcultas(idUsuario)
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
 
   const idsDeEtiqueta = useMemo(
@@ -211,6 +211,27 @@ export function PantallaConferencias() {
           alCrearYAsignar={alCrearYAsignarEtiqueta}
           alOcultar={ocultar}
         />
+
+        {/*
+          Quitar una conferencia del listado no borra nada, pero hasta ahora
+          tampoco tenía vuelta atrás desde la interfaz: había que conocer la
+          URL directa. Esta línea es la salida, y de paso hace visible que lo
+          ocultado sigue ahí.
+        */}
+        {idsOcultos.length === 0 ? null : (
+          <p className="text-xs text-texto-tenue">
+            {idsOcultos.length === 1
+              ? 'Hay 1 conferencia oculta de tu listado.'
+              : `Hay ${idsOcultos.length} conferencias ocultas de tu listado.`}{' '}
+            <button
+              type="button"
+              onClick={() => idsOcultos.forEach(mostrar)}
+              className="rounded-md text-acento underline underline-offset-2 transition-colors hover:text-texto"
+            >
+              Volver a mostrarlas
+            </button>
+          </p>
+        )}
       </div>
 
       <PanelDeCarga

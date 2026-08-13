@@ -86,6 +86,32 @@ describe('Insignia', () => {
     }
   })
 
+  /*
+    Regresión: `automatico` y `neutro` rellenaban con `bg-fondo`, la misma
+    superficie de los contenedores donde se pintan (cada ficha de
+    `ListadoDeFichas`, cada marcador de la confirmación de un .docx). El relleno
+    desaparecía contra su propio contenedor y la insignia quedaba como texto
+    suelto, justo lo que este componente existe para evitar.
+  */
+  it('tiñe cada tono con su propio color, nunca con una superficie del sistema', () => {
+    const rellenos = [
+      ['validado', 'bg-validado/'],
+      ['pendiente', 'bg-pendiente/'],
+      ['automatico', 'bg-automatico/'],
+      ['neutro', 'bg-texto-tenue/'],
+      ['error', 'bg-error/'],
+    ] as const
+
+    for (const [tono, relleno] of rellenos) {
+      const { unmount } = render(<Insignia tono={tono}>Estado</Insignia>)
+      const clases = screen.getByText('Estado').className
+
+      expect(clases).toContain(relleno)
+      expect(clases).not.toContain('bg-fondo')
+      unmount()
+    }
+  })
+
   it('no recurre a la variante dark de Tailwind', () => {
     render(<Insignia tono="pendiente">Pendiente de revisión</Insignia>)
 

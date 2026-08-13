@@ -28,14 +28,32 @@ import { espacioDe, etiquetasVisibles, useEtiquetas } from '../tags'
   acceso se cuida de no dar.
 */
 
+/*
+  A este detalle se llega desde dos sitios: el dashboard (F2) y el catálogo
+  (F6). Antes el enlace de regreso mandaba siempre a `/conferencias`, así que
+  quien venía del catálogo aterrizaba en otra pantalla y perdía sus filtros.
+
+  El catálogo marca su origen con `origen=catalogo` al enlazar. La marca se
+  quita antes de devolver los parámetros, para no reinyectarla en la vista de
+  destino ni dejarla pegada en la URL del listado.
+*/
 function EnlaceDeRegreso({ busqueda }: { busqueda: string }) {
+  const parametros = new URLSearchParams(busqueda)
+  const vieneDelCatalogo = parametros.get('origen') === 'catalogo'
+
+  parametros.delete('origen')
+  const consulta = parametros.toString()
+
   return (
     <Link
-      to={{ pathname: '/conferencias', search: busqueda }}
+      to={{
+        pathname: vieneDelCatalogo ? '/catalogo' : '/conferencias',
+        search: consulta === '' ? '' : `?${consulta}`,
+      }}
       className="inline-flex items-center gap-1.5 text-sm text-texto-tenue transition-colors hover:text-acento"
     >
       <ArrowLeftIcon size={14} weight="regular" aria-hidden="true" />
-      Volver al listado
+      {vieneDelCatalogo ? 'Volver al catálogo' : 'Volver al listado'}
     </Link>
   )
 }
@@ -189,7 +207,7 @@ export function PantallaDetalleConferencia() {
           </section>
 
           <section className="rounded-md bg-panel p-6 shadow-sm">
-            <ListadoDeFichas fichas={fichas} />
+            <ListadoDeFichas fichas={fichas} ocultaPendientes={ocultaPendientes} />
           </section>
         </>
       ) : null}

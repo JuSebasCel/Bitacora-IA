@@ -20,8 +20,8 @@ type PropiedadesSelectorDeOrden = {
 }
 
 const OPCIONES: readonly { valor: OrdenDeListado; texto: string; textoCorto: string }[] = [
-  { valor: 'fecha-desc', texto: 'Fecha de la charla, más reciente primero', textoCorto: 'Más reciente' },
-  { valor: 'fecha-asc', texto: 'Fecha de la charla, más antigua primero', textoCorto: 'Más antigua' },
+  { valor: 'fecha-desc', texto: 'Fecha de la conferencia, más reciente primero', textoCorto: 'Más reciente' },
+  { valor: 'fecha-asc', texto: 'Fecha de la conferencia, más antigua primero', textoCorto: 'Más antigua' },
   { valor: 'titulo-asc', texto: 'Título, de la A a la Z', textoCorto: 'Título' },
   { valor: 'fichas-desc', texto: 'Número de fichas, de más a menos', textoCorto: 'Más fichas' },
 ]

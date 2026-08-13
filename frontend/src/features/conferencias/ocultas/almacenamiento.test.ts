@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { CLAVE_OCULTAS, idsOcultosDe, ocultarConferencia } from './almacenamiento'
+import {
+  CLAVE_OCULTAS,
+  idsOcultosDe,
+  mostrarConferencia,
+  ocultarConferencia,
+} from './almacenamiento'
 
 beforeEach(() => {
   sessionStorage.clear()
@@ -43,6 +48,39 @@ describe('ocultarConferencia', () => {
 
     expect(idsOcultosDe('usr-zuluaga')).toEqual(['cnf-zul-01'])
     expect(idsOcultosDe('usr-zuluaga')).toEqual(['cnf-zul-01'])
+  })
+})
+
+/*
+  Ocultar sin poder deshacer convertía un clic accidental en el ojo tachado en
+  una pérdida definitiva desde la interfaz. `mostrarConferencia` es la vuelta
+  atrás, y tiene que dejar el espacio exactamente como estaba antes.
+*/
+describe('mostrarConferencia', () => {
+  it('deshace lo ocultado y deja la lista como estaba', () => {
+    ocultarConferencia('usr-zuluaga', 'cnf-zul-01')
+    ocultarConferencia('usr-zuluaga', 'cnf-zul-02')
+
+    mostrarConferencia('usr-zuluaga', 'cnf-zul-01')
+
+    expect(idsOcultosDe('usr-zuluaga')).toEqual(['cnf-zul-02'])
+  })
+
+  it('mostrar algo que nunca se ocultó no altera el resto', () => {
+    ocultarConferencia('usr-zuluaga', 'cnf-zul-01')
+
+    mostrarConferencia('usr-zuluaga', 'cnf-que-nadie-ocultó')
+
+    expect(idsOcultosDe('usr-zuluaga')).toEqual(['cnf-zul-01'])
+  })
+
+  it('mostrar en un espacio no toca el de otra persona', () => {
+    ocultarConferencia('usr-zuluaga', 'cnf-zul-01')
+    ocultarConferencia('usr-alcantara', 'cnf-zul-01')
+
+    mostrarConferencia('usr-zuluaga', 'cnf-zul-01')
+
+    expect(idsOcultosDe('usr-alcantara')).toEqual(['cnf-zul-01'])
   })
 })
 

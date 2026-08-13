@@ -96,7 +96,7 @@ export function MarcoDeAcceso({ idTitulo, titulo, children }: PropsMarcoDeAcceso
           animate="visible"
           className="coordenada relative max-w-xs text-xs leading-relaxed tracking-wide text-marca-tenue"
         >
-          Cada ficha conserva quién lo dijo, en qué charla y en qué minuto exacto.
+          Cada ficha conserva quién lo dijo, en qué conferencia y en qué minuto exacto.
         </motion.p>
       </aside>
     </main>

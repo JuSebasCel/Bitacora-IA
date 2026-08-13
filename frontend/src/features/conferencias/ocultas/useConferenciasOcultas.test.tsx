@@ -36,6 +36,22 @@ describe('useConferenciasOcultas', () => {
     expect(segundaVisita.result.current.idsOcultos).toEqual(['cnf-zul-01'])
   })
 
+  it('vuelve a mostrar una conferencia oculta, sin recargar y sin dejar rastro guardado', () => {
+    const { result } = renderHook(() => useConferenciasOcultas(ZULUAGA))
+
+    act(() => {
+      result.current.ocultar('cnf-zul-01')
+      result.current.ocultar('cnf-zul-02')
+    })
+
+    act(() => {
+      result.current.mostrar('cnf-zul-01')
+    })
+
+    expect(result.current.idsOcultos).toEqual(['cnf-zul-02'])
+    expect(sessionStorage.getItem(CLAVE_OCULTAS)).not.toContain('cnf-zul-01')
+  })
+
   it('cambia de espacio al cambiar de persona', () => {
     const { result, rerender } = renderHook(
       ({ idUsuario }) => useConferenciasOcultas(idUsuario),

@@ -4,8 +4,16 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
-import { CLAVE_MEMORIAS } from '../almacenamiento'
+import { CLAVE_MEMORIAS, guardarMemoria } from '../almacenamiento'
 import { PantallaMemorias } from './PantallaMemorias'
+
+const MEMORIA_DE_SESGOS = {
+  id: 'mem-alc-02',
+  idConferencia: 'cnf-alc-03',
+  idPlantilla: 'pla-cita-simple',
+  nombre: 'Memoria de sesgos algorítmicos',
+  generadaEl: '2026-05-20T10:00:00.000Z',
+}
 
 const ALCANTARA = {
   id: 'usr-alcantara',
@@ -94,5 +102,63 @@ describe('PantallaMemorias', () => {
     )
 
     expect(await screen.findByText(/todavía no hay memorias generadas/i)).toBeInTheDocument()
+  })
+
+  /*
+    La búsqueda del listado (a diferencia de conferencias/F2 y catálogo/F6,
+    F5 no tenía ningún control) empareja por el nombre de la memoria, el de
+    su conferencia de origen o el de su plantilla, que es lo que la tarjeta
+    ya muestra.
+  */
+  it('buscar filtra el listado por nombre de memoria, conferencia o plantilla', async () => {
+    guardarMemoria(MEMORIA_DE_SESGOS)
+    const usuario = userEvent.setup()
+    montar()
+
+    const listado = within(await screen.findByRole('list', { name: 'Memorias' }))
+    expect(listado.getByText('Memoria de sesgos algorítmicos')).toBeInTheDocument()
+
+    await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'sesgos')
+
+    expect(listado.getByText('Memoria de sesgos algorítmicos')).toBeInTheDocument()
+    expect(
+      listado.queryByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura'),
+    ).not.toBeInTheDocument()
+  })
+
+  /*
+    Los dos vacíos no son el mismo: uno se resuelve generando una memoria y
+    el otro quitando un filtro. Decir lo mismo en los dos manda a la persona
+    al lugar equivocado (mismo criterio que F2/F6).
+  */
+  it('distingue el vacío por filtros del vacío por falta de datos, y el botón para quitarlos restablece el listado', async () => {
+    const usuario = userEvent.setup()
+    montar()
+
+    await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'palabra-inexistente')
+
+    expect(await screen.findByText(/ningún resultado con estos filtros/i)).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no hay memorias generadas/i)).not.toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: /quitar filtros/i }))
+
+    expect(
+      await screen.findByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura'),
+    ).toBeInTheDocument()
+  })
+
+  /*
+    `?conferencia=<id>` es el punto de entrada desde el detalle de una
+    conferencia (preselecciona y abre el panel): escribir en la búsqueda no
+    puede perder ese parámetro, o la preselección se rompería al primer
+    caracter escrito.
+  */
+  it('escribir en la búsqueda conserva ?conferencia= si ya estaba en la URL', async () => {
+    const usuario = userEvent.setup()
+    montar('/memorias?conferencia=cnf-alc-01')
+
+    await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'modelos')
+
+    expect(screen.getByLabelText('Conferencia')).toHaveValue('cnf-alc-01')
   })
 })

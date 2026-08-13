@@ -7,6 +7,26 @@ import { Insignia } from '@/shared/ui'
 
 export type PropsFichaDeCatalogo = {
   entrada: FichaDelCatalogo
+  /** Cadena de consulta del catálogo en ese momento, para poder volver a la misma vista filtrada. */
+  busqueda?: string
+}
+
+/*
+  El enlace lleva consigo los filtros del catálogo más un `origen=catalogo`.
+  Sin esa marca, el detalle de la conferencia no tendría cómo distinguir si
+  se llegó desde el dashboard o desde aquí, y su enlace de regreso mandaba
+  siempre a `/conferencias`: quien venía del catálogo perdía sus filtros y
+  terminaba en otra pantalla.
+
+  Los dos listados usan nombres de parámetro distintos (`buscar` significa
+  cosas distintas en cada uno), así que la marca explícita es lo que permite
+  devolver cada quien a su sitio sin mezclar vocabularios de consulta.
+*/
+function enlaceDeRegresoAlCatalogo(busqueda: string): string {
+  const parametros = new URLSearchParams(busqueda)
+  parametros.set('origen', 'catalogo')
+
+  return `?${parametros.toString()}`
 }
 
 /*
@@ -17,54 +37,66 @@ export type PropsFichaDeCatalogo = {
   enlaza a esa conferencia, no a la ficha (no existe todavía ninguna ruta ni
   ancla por ficha individual en la app).
 
-  Mismo lenguaje visual de hover que `FilaDeConferencia.tsx`/
-  `TarjetaDeMemoria.tsx`: barra de acento a la izquierda, sombra que se
-  acentúa, el título de la conferencia pasa a color de acento.
+  **Silueta deliberadamente distinta a la de `FilaDeConferencia`.** Las dos
+  pantallas se veían casi iguales (tarjeta clara, canaleta monoespaciada a la
+  izquierda, apiladas en una columna) pese a mostrar cosas de naturaleza
+  distinta: una conferencia es un registro que se escanea por sus metadatos,
+  una ficha es una cita cuyo contenido ES el texto dicho.
+
+  Por eso aquí el fragmento manda: tipografía mayor, sin canaleta lateral y
+  sin barra de cita (ese borde izquierdo competía con la barra de acento del
+  hover y repetía el gesto de "fila con canaleta"). Los metadatos se reparten
+  en un encabezado compacto arriba y un pie separado por un filete, de modo
+  que la tarjeta se lee como un recorte y no como un renglón de listado.
+
+  Se conserva el hover de la casa (barra de acento, sombra, título a color de
+  acento): lo que debía cambiar era la silueta, no el idioma de interacción.
 */
-export function FichaDeCatalogo({ entrada }: PropsFichaDeCatalogo): ReactElement {
+export function FichaDeCatalogo({ entrada, busqueda = '' }: PropsFichaDeCatalogo): ReactElement {
   const { ficha, conferencia } = entrada
 
   return (
-    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm transition-shadow hover:shadow-md">
+    <article className="group relative flex flex-col gap-3 rounded-md bg-panel p-5 shadow-sm transition-shadow hover:shadow-md">
       <span
         aria-hidden="true"
-        className="absolute top-3 bottom-3 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
+        className="absolute top-4 bottom-4 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[6rem_1fr] sm:gap-5">
-        <span className="coordenada text-xs text-texto-tenue">{formatearTimestamp(ficha.segundoInicio)}</span>
-
-        <div className="flex min-w-0 flex-col gap-2.5">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="text-sm font-medium text-texto">{TIPO_EN_SINGULAR[ficha.tipoDeUnidad]}</span>
-            <Insignia tono={TONO_POR_VALIDACION[ficha.estadoDeValidacion]}>
-              {VALIDACION_EN_SINGULAR[ficha.estadoDeValidacion]}
-            </Insignia>
-            <span className="text-xs text-texto-tenue">{ficha.tema}</span>
-          </div>
-
-          <blockquote className="border-l-2 border-acento/50 pl-3 text-base leading-relaxed text-texto">
-            {ficha.fragmento}
-          </blockquote>
-
-          <p className="text-xs leading-relaxed text-texto-tenue">{ficha.contextoMinimo}</p>
-
-          <p className="text-sm text-texto-tenue">
-            <Link
-              to={`/conferencias/${conferencia.id}`}
-              className="font-medium text-texto transition-colors after:absolute after:inset-0 group-hover:text-acento"
-            >
-              {conferencia.titulo}
-            </Link>
-            {' · '}
-            {conferencia.ponente}
-            {' · '}
-            {conferencia.evento}
-            {' · '}
-            {formatearFecha(conferencia.fechaDelEvento)}
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <Insignia tono={TONO_POR_VALIDACION[ficha.estadoDeValidacion]}>
+          {VALIDACION_EN_SINGULAR[ficha.estadoDeValidacion]}
+        </Insignia>
+        <span className="text-xs font-medium tracking-wide text-texto-tenue uppercase">
+          {TIPO_EN_SINGULAR[ficha.tipoDeUnidad]}
+        </span>
       </div>
-    </div>
+
+      <blockquote className="text-lg leading-snug text-texto">{ficha.fragmento}</blockquote>
+
+      <p className="text-xs leading-relaxed text-texto-tenue">{ficha.contextoMinimo}</p>
+
+      <div className="mt-1 flex flex-col gap-1 border-t border-filete pt-3">
+        <Link
+          to={{ pathname: `/conferencias/${conferencia.id}`, search: enlaceDeRegresoAlCatalogo(busqueda) }}
+          className="text-sm font-medium text-texto transition-colors after:absolute after:inset-0 group-hover:text-acento"
+        >
+          {conferencia.titulo}
+        </Link>
+
+        <p className="text-xs text-texto-tenue">
+          {conferencia.ponente}
+          {' · '}
+          {conferencia.evento}
+          {' · '}
+          {formatearFecha(conferencia.fechaDelEvento)}
+        </p>
+
+        <p className="coordenada text-xs text-texto-tenue">
+          {ficha.tema}
+          {' · '}
+          {formatearTimestamp(ficha.segundoInicio)}
+        </p>
+      </div>
+    </article>
   )
 }

@@ -21,7 +21,7 @@ describe('VistaPreviaDeCarga', () => {
       <VistaPreviaDeCarga datos={DATOS_VACIOS} archivo={null} eventos={EVENTOS} ponentes={PONENTES} />,
     )
 
-    expect(screen.getByText(/título de la charla/i)).toBeInTheDocument()
+    expect(screen.getByText(/título de la conferencia/i)).toBeInTheDocument()
   })
 
   it('muestra el título escrito', () => {
