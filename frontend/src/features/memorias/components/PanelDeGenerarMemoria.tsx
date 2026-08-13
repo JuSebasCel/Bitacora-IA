@@ -12,6 +12,21 @@ import type { ResultadoMemoria } from '../memorias'
 
 const ID_ERROR = 'generar-memoria-error'
 
+/*
+  Sin generación real detrás todavía (la sustitución de datos es
+  prácticamente instantánea en esta fase): esta barra es una animación de
+  duración fija, no un progreso calculado. Mismo criterio que
+  `RETRASO_SIMULADO_MS` de la carga de conferencia (F3) — cuando exista
+  generación real en el backend (B9, ver PRD.md), esta constante y la
+  animación de ancho fijo se sustituyen por el avance real de esa
+  generación.
+*/
+const DURACION_GENERACION_SIMULADA_MS = 900
+
+function esperar(ms: number): Promise<void> {
+  return new Promise((resolver) => setTimeout(resolver, ms))
+}
+
 export type PropsPanelDeGenerarMemoria = {
   abierto: boolean
   alCerrar: () => void
@@ -47,6 +62,8 @@ export function PanelDeGenerarMemoria({
   const [nombre, setNombre] = useState('')
   const [nombreTocado, setNombreTocado] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generando, setGenerando] = useState(false)
+  const [progreso, setProgreso] = useState(0)
 
   useEffect(() => {
     alCerrarRef.current = alCerrar
@@ -71,6 +88,8 @@ export function PanelDeGenerarMemoria({
     setNombre('')
     setNombreTocado(false)
     setError(null)
+    setGenerando(false)
+    setProgreso(0)
 
     const primerCampo = panel?.querySelector<HTMLElement>('select, input')
     ;(primerCampo ?? panel)?.focus()
@@ -119,8 +138,11 @@ export function PanelDeGenerarMemoria({
     setNombre(valor)
   }
 
-  function alEnviar(evento: FormEvent<HTMLFormElement>): void {
+  async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
+    if (generando) {
+      return
+    }
 
     const resultado = generar(idConferencia, idPlantilla, nombre)
 
@@ -129,6 +151,22 @@ export function PanelDeGenerarMemoria({
       return
     }
 
+    setError(null)
+    setGenerando(true)
+    setProgreso(0)
+
+    /*
+      Dos `requestAnimationFrame` seguidos, no uno: con uno solo, el
+      navegador a veces pinta el 0% y el 100% en el mismo frame (la
+      transición de ancho no tiene nada que animar entre medio) y la barra
+      "salta" en vez de llenarse. El segundo frame garantiza que el 0% ya
+      quedó pintado antes de pedir el 100%.
+    */
+    requestAnimationFrame(() => requestAnimationFrame(() => setProgreso(100)))
+
+    await esperar(DURACION_GENERACION_SIMULADA_MS)
+
+    setGenerando(false)
     alGenerar(resultado.memoria)
   }
 
@@ -174,22 +212,34 @@ export function PanelDeGenerarMemoria({
           </button>
         </div>
 
-        <form noValidate onSubmit={alEnviar} className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
-          <Field id="memoria-conferencia" etiqueta="Conferencia">
-            <Select
-              opciones={opcionesDeConferencia}
-              value={idConferencia}
-              onChange={(evento) => elegirConferencia(evento.target.value)}
-            />
-          </Field>
+        <form
+          noValidate
+          onSubmit={(evento) => void alEnviar(evento)}
+          className="flex flex-1 flex-col gap-5 overflow-y-auto p-6"
+        >
+          <p className="text-sm text-texto-tenue">
+            Combina una conferencia ya procesada con una plantilla guardada para generar su memoria.
+          </p>
 
-          <Field id="memoria-plantilla" etiqueta="Plantilla">
-            <Select
-              opciones={opcionesDePlantilla}
-              value={idPlantilla}
-              onChange={(evento) => setIdPlantilla(evento.target.value)}
-            />
-          </Field>
+          <div className="flex flex-col gap-4 rounded-md bg-fondo p-4">
+            <h3 className="text-sm font-medium text-texto">Origen de la memoria</h3>
+
+            <Field id="memoria-conferencia" etiqueta="Conferencia">
+              <Select
+                opciones={opcionesDeConferencia}
+                value={idConferencia}
+                onChange={(evento) => elegirConferencia(evento.target.value)}
+              />
+            </Field>
+
+            <Field id="memoria-plantilla" etiqueta="Plantilla">
+              <Select
+                opciones={opcionesDePlantilla}
+                value={idPlantilla}
+                onChange={(evento) => setIdPlantilla(evento.target.value)}
+              />
+            </Field>
+          </div>
 
           <Field id="memoria-nombre" etiqueta="Nombre">
             <Input value={nombre} onChange={(evento) => elegirNombre(evento.target.value)} />
@@ -197,7 +247,26 @@ export function PanelDeGenerarMemoria({
 
           {error === null ? null : <MensajeDeFormulario id={ID_ERROR}>{error}</MensajeDeFormulario>}
 
-          <Button type="submit" variante="primario" className="mt-1 w-full">
+          {generando ? (
+            <div className="flex flex-col gap-2">
+              <div
+                role="progressbar"
+                aria-label="Generando memoria"
+                aria-valuenow={progreso}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-1 w-full overflow-hidden rounded-full bg-fondo"
+              >
+                <div
+                  className="h-full rounded-full bg-acento transition-[width] ease-linear"
+                  style={{ width: `${progreso}%`, transitionDuration: `${DURACION_GENERACION_SIMULADA_MS}ms` }}
+                />
+              </div>
+              <p className="text-xs text-texto-tenue">Generando la memoria…</p>
+            </div>
+          ) : null}
+
+          <Button type="submit" variante="primario" cargando={generando} className="mt-1 w-full">
             Generar memoria
           </Button>
         </form>
