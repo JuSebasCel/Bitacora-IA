@@ -30,6 +30,7 @@ export type CodigoError =
   | 'CARGA_ARCHIVO_REQUERIDO'
   | 'CARGA_ARCHIVO_NO_SOPORTADO'
   | 'CARGA_ARCHIVO_MUY_GRANDE'
+  | 'CARGA_API_KEY_REQUERIDA'
   | 'CARGA_FALLO_INESPERADO'
   /* Directorio compartido de eventos y ponentes (F3). */
   | 'DIR_EVENTO_NOMBRE_REQUERIDO'
@@ -139,6 +140,7 @@ const MENSAJES: Record<CodigoError, string> = {
   CARGA_ARCHIVO_NO_SOPORTADO:
     'Ese archivo no tiene un formato admitido para la fuente elegida. Revísalo e inténtalo de nuevo.',
   CARGA_ARCHIVO_MUY_GRANDE: 'Ese archivo supera el tamaño máximo admitido. Usa uno más liviano.',
+  CARGA_API_KEY_REQUERIDA: 'Necesitas una API key configurada antes de cargar una conferencia.',
   CARGA_FALLO_INESPERADO: 'No pudimos recibir la conferencia. Vuelve a intentarlo en unos momentos.',
 
   DIR_EVENTO_NOMBRE_REQUERIDO: 'Escribe un nombre para el evento antes de crearlo.',

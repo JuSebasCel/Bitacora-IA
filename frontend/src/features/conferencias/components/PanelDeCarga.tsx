@@ -1,6 +1,8 @@
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/session'
+import { useApiKey } from '@/features/configuracion/useApiKey'
 import { mensajeDeError } from '@/shared/errors'
 import {
   Button,
@@ -90,6 +92,8 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { eventos, ponentes, crearEvento, crearPonente } = useDirectorio()
+  const { clave: apiKey } = useApiKey(idUsuario)
+  const navegar = useNavigate()
 
   const panelRef = useRef<HTMLDivElement>(null)
   const alCerrarRef = useRef(alCerrar)
@@ -311,6 +315,20 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
           </button>
         </div>
 
+        {apiKey === null ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+            <p className="max-w-sm text-sm text-texto">{mensajeDeError('CARGA_API_KEY_REQUERIDA')}</p>
+            <Button
+              variante="primario"
+              onClick={() => {
+                alCerrar()
+                navegar('/configuracion#config-api-key')
+              }}
+            >
+              Ir a Configuración
+            </Button>
+          </div>
+        ) : (
         <form
           noValidate
           onSubmit={(evento) => {
@@ -397,6 +415,7 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
             Cargar conferencia
           </Button>
         </form>
+        )}
       </div>
 
       <DialogoDeCreacion

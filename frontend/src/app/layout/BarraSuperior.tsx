@@ -2,9 +2,11 @@ import { ChatTeardropTextIcon } from '@phosphor-icons/react/dist/csr/ChatTeardro
 import { ListIcon } from '@phosphor-icons/react/dist/csr/List'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import type { RefObject } from 'react'
+import { useLocation } from 'react-router'
 import { useSession } from '@/features/auth/session'
+import { MenuDeCuenta } from './MenuDeCuenta'
 import { NotificacionesDropdown } from './NotificacionesDropdown'
-import { PESO_DE_ICONO, TAMANO_DE_ICONO } from './navegacion'
+import { esSeccionActiva, PESO_DE_ICONO, SECCIONES_DE_NAVEGACION, TAMANO_DE_ICONO } from './navegacion'
 
 type PropiedadesBarraSuperior = {
   cajonAbierto: boolean
@@ -31,7 +33,17 @@ export function BarraSuperior({
   alAbrirChat,
 }: PropiedadesBarraSuperior) {
   const { usuario, cerrarSesion } = useSession()
+  const ubicacion = useLocation()
   const IconoDelCajon = cajonAbierto ? XIcon : ListIcon
+
+  /*
+    Configuración ya no está en `SECCIONES_DE_NAVEGACION` (se administra desde
+    el menú de cuenta, no la barra lateral), pero la etiqueta de sección
+    activa aquí sí la reconoce: es la única ruta protegida fuera del índice.
+  */
+  const tituloDeSeccion =
+    SECCIONES_DE_NAVEGACION.find((seccion) => esSeccionActiva(seccion, ubicacion.pathname))?.etiqueta ??
+    (ubicacion.pathname.startsWith('/configuracion') ? 'Configuración' : undefined)
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-filete bg-panel px-3 md:px-4">
@@ -47,7 +59,20 @@ export function BarraSuperior({
         <IconoDelCajon size={TAMANO_DE_ICONO} weight={PESO_DE_ICONO} aria-hidden="true" />
       </button>
 
-      <p className="text-lg font-semibold tracking-tight text-texto">Bitácora AI</p>
+      <p className="shrink-0 text-lg font-semibold tracking-tight text-texto">Bitácora AI</p>
+
+      {/*
+        Orientación real (qué sección se está viendo), no relleno: la barra
+        lateral ya lo muestra en escritorio ancho, pero deja el centro de la
+        barra superior vacío. Oculto en móvil, donde el espacio es corto y el
+        cajón ya cumple ese papel.
+      */}
+      {tituloDeSeccion === undefined ? null : (
+        <div className="hidden min-w-0 items-center gap-3 md:flex">
+          <span aria-hidden="true" className="h-4 w-px bg-filete" />
+          <p className="truncate text-sm text-texto-tenue">{tituloDeSeccion}</p>
+        </div>
+      )}
 
       <div className="ml-auto flex items-center gap-2 md:gap-3">
         {usuario === null ? null : <NotificacionesDropdown idUsuario={usuario.id} />}
@@ -62,14 +87,11 @@ export function BarraSuperior({
         </button>
 
         {usuario === null ? null : (
-          <p className="hidden max-w-[16rem] truncate text-sm text-texto-tenue sm:block">
-            {usuario.nombre}
-          </p>
+          <>
+            <span aria-hidden="true" className="h-5 w-px bg-filete" />
+            <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} />
+          </>
         )}
-
-        <button type="button" onClick={cerrarSesion} className={CLASES_DE_CONTROL}>
-          Cerrar sesión
-        </button>
       </div>
     </header>
   )

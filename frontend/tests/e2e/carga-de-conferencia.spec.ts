@@ -21,14 +21,31 @@ import { expect, test } from '@playwright/test'
 const CUENTA = {
   correo: 'camila.zuluaga@labanfora.org',
   contrasena: 'Simposio-Andes',
+  idUsuario: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
 }
 
+/*
+  El panel de carga exige una API key configurada (ver `PanelDeCarga.tsx`):
+  esta prueba verifica el recorrido de carga en sí, no ese bloqueo (que tiene
+  su propia prueba, "sin API key configurada..."). `PanelDeCarga` está
+  siempre montado (solo se desliza con `translate-x`, nunca se desmonta), así
+  que `useApiKey` lee `sessionStorage` una sola vez, al montar -- sembrar la
+  clave DESPUÉS de esa lectura no la vería. Por eso va en `addInitScript`,
+  antes de que cargue cualquier script de la página, en vez de un
+  `page.evaluate` posterior al login.
+*/
 test('recorrido completo de la carga de conferencia desde el dashboard', async ({ page }) => {
   const panel = page.getByRole('dialog', { name: 'Cargar conferencia' })
   const selectorDeEvento = panel.getByLabel('Evento', { exact: true })
   const selectorDePonente = panel.getByLabel('Ponente', { exact: true })
 
   await test.step('acceder y abrir el panel de carga desde Conferencias', async () => {
+    await page.addInitScript(
+      ({ clave, idUsuario }) => {
+        sessionStorage.setItem('bitacora-ai.configuracion', JSON.stringify({ [idUsuario]: clave }))
+      },
+      { clave: 'sk-prueba-e2e', idUsuario: CUENTA.idUsuario },
+    )
     await page.goto('/acceso')
     await page.getByLabel('Correo').fill(CUENTA.correo)
     await page.getByLabel('Contraseña').fill(CUENTA.contrasena)
@@ -123,4 +140,24 @@ test('recorrido completo de la carga de conferencia desde el dashboard', async (
     const filaNueva = page.getByRole('listitem').filter({ hasText: 'Charla de prueba end to end' })
     await expect(filaNueva).toBeVisible()
   })
+})
+
+test('sin API key configurada, el panel de carga la exige y lleva a configurarla', async ({ page }) => {
+  await page.goto('/acceso')
+  await page.getByLabel('Correo').fill(CUENTA.correo)
+  await page.getByLabel('Contraseña').fill(CUENTA.contrasena)
+  await page.getByRole('button', { name: 'Acceder' }).click()
+  await expect(page).toHaveURL(/\/conferencias$/)
+
+  await page.getByRole('button', { name: 'Cargar conferencia' }).click()
+
+  const panel = page.getByRole('dialog', { name: 'Cargar conferencia' })
+  await expect(panel).toBeVisible()
+  await expect(panel.getByText(/API key/)).toBeVisible()
+  await expect(panel.getByLabel('Título')).toHaveCount(0)
+
+  await panel.getByRole('button', { name: 'Ir a Configuración' }).click()
+
+  await expect(page).toHaveURL(/\/configuracion#config-api-key$/)
+  await expect(page.getByRole('textbox', { name: 'API key' })).toBeFocused()
 })
