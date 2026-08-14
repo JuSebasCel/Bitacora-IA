@@ -176,3 +176,63 @@ test('el espacio personal (etiquetas) es privado por defecto entre dos cuentas',
   const { error: errorLimpieza } = await propietario.from('etiquetas').delete().eq('id', etiqueta.id)
   assert.equal(errorLimpieza, null)
 })
+
+// ---------------------------------------------------------------------------
+// B2: gestión de API keys vía Supabase Vault. `api_keys` no tiene política de
+// SELECT directa que sirva para leer el secreto (el secreto vive en
+// `vault.secrets`, fuera de esa tabla) -- lo único que ninguna prueba
+// mockeada puede probar es que las funciones RPC de verdad aíslan por cuenta.
+// ---------------------------------------------------------------------------
+
+test('guardar y leer la propia API key hace un viaje completo de ida y vuelta', async () => {
+  const { cliente } = await clienteAutenticadoNuevo('api-key-propia')
+
+  const { error: errorGuardar } = await cliente.rpc('guardar_mi_api_key', { clave: 'sk-prueba-rls-1' })
+  assert.equal(errorGuardar, null, `guardar_mi_api_key no debería fallar: ${errorGuardar?.message}`)
+
+  const { data: leida, error: errorLeer } = await cliente.rpc('leer_mi_api_key')
+  assert.equal(errorLeer, null)
+  assert.equal(leida, 'sk-prueba-rls-1')
+
+  const { error: errorBorrar } = await cliente.rpc('borrar_mi_api_key')
+  assert.equal(errorBorrar, null)
+
+  const { data: trasBorrar, error: errorLeerTrasBorrar } = await cliente.rpc('leer_mi_api_key')
+  assert.equal(errorLeerTrasBorrar, null)
+  assert.equal(trasBorrar, null, 'tras borrar, leer_mi_api_key debería devolver null, no el valor viejo')
+})
+
+test('una cuenta no puede leer la API key de otra', async () => {
+  const { cliente: propietario } = await clienteAutenticadoNuevo('api-key-dueno')
+  const { cliente: otraPersona } = await clienteAutenticadoNuevo('api-key-otra-persona')
+
+  const { error: errorGuardar } = await propietario.rpc('guardar_mi_api_key', { clave: 'sk-prueba-rls-2' })
+  assert.equal(errorGuardar, null)
+
+  const { data: leidaPorOtro, error: errorLeer } = await otraPersona.rpc('leer_mi_api_key')
+  assert.equal(errorLeer, null, 'no debe fallar con error -- debe resolver a null, como cualquier cuenta sin clave propia')
+  assert.equal(leidaPorOtro, null, 'leer_mi_api_key nunca debería devolver la clave de otra cuenta')
+
+  await propietario.rpc('borrar_mi_api_key')
+})
+
+test('reemplazar la API key no deja el secreto anterior huérfano y legible', async () => {
+  const { cliente } = await clienteAutenticadoNuevo('api-key-reemplazo')
+
+  await cliente.rpc('guardar_mi_api_key', { clave: 'sk-prueba-rls-vieja' })
+  const { error: errorReemplazar } = await cliente.rpc('guardar_mi_api_key', { clave: 'sk-prueba-rls-nueva' })
+  assert.equal(errorReemplazar, null)
+
+  const { data: leida, error: errorLeer } = await cliente.rpc('leer_mi_api_key')
+  assert.equal(errorLeer, null)
+  assert.equal(leida, 'sk-prueba-rls-nueva', 'debe devolver la clave nueva, no la vieja')
+
+  await cliente.rpc('borrar_mi_api_key')
+})
+
+test('nadie sin sesión puede llamar a las funciones de API key', async () => {
+  const { data, error } = await clienteAnonimo.rpc('leer_mi_api_key')
+
+  assert.notEqual(error, null, 'sin auth.uid(), la función debería rechazar la llamada, no devolver datos')
+  assert.equal(data, null)
+})

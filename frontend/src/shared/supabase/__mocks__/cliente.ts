@@ -25,4 +25,11 @@ export const supabase = {
       return { data: { subscription: { id: 'mock', callback: () => {}, unsubscribe: vi.fn() } } }
     }),
   },
+  /*
+    Por defecto resuelve "sin API key" (B2): la mayoría de las pruebas que
+    montan el shell no les importa el estado de la API key para lo que están
+    probando. `mockearApiKeyGuardada`/`mockearSinApiKey` (`test/sesionDePrueba.ts`)
+    reconfiguran esta implementación cuando sí importa.
+  */
+  rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
 }

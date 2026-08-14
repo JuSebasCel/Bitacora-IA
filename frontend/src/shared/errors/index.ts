@@ -73,6 +73,7 @@ export type CodigoError =
 
   /* Configuración: API key y compartidos (F8). */
   | 'CONFIG_API_KEY_REQUERIDA'
+  | 'CONFIG_API_KEY_FALLO_INESPERADO'
   | 'CONFIG_CONFERENCIA_REQUERIDA'
   | 'CONFIG_INVITADO_REQUERIDO'
   | 'CONFIG_YA_COMPARTIDA'
@@ -186,6 +187,7 @@ const MENSAJES: Record<CodigoError, string> = {
   CHAT_TITULO_REQUERIDO: 'Escribe un nombre para la conversación.',
 
   CONFIG_API_KEY_REQUERIDA: 'Escribe tu API key antes de guardarla.',
+  CONFIG_API_KEY_FALLO_INESPERADO: 'No pudimos guardar tu API key. Vuelve a intentarlo en unos momentos.',
   CONFIG_CONFERENCIA_REQUERIDA: 'Elige la conferencia que quieres compartir.',
   CONFIG_INVITADO_REQUERIDO: 'Elige con quién quieres compartirla.',
   CONFIG_YA_COMPARTIDA: 'Esa persona ya tiene esta conferencia compartida.',
