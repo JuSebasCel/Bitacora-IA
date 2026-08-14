@@ -250,7 +250,13 @@ describe('SessionProvider y useSession', () => {
     expect(supabase.auth.signUp).toHaveBeenCalledWith({
       email: 'lucia.moreno@labanfora.org',
       password: 'ClaveNueva123*',
-      options: { data: { nombre: 'Lucía Moreno Tejada' } },
+      options: {
+        data: {
+          nombre: 'Lucía Moreno Tejada',
+          full_name: 'Lucía Moreno Tejada',
+          display_name: 'Lucía Moreno Tejada',
+        },
+      },
     })
   })
 

@@ -101,10 +101,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return { ok: false, codigo: 'AUTH_CORREO_INVALIDO' }
       }
 
+      /*
+        `full_name`/`display_name` se agregan solo para que el panel de
+        Supabase Studio muestre el nombre en su columna "Display Name" (arma
+        esa columna a partir de varias claves posibles en `raw_user_meta_data`,
+        sin una única documentada) -- el dominio de la app sigue leyendo
+        únicamente `nombre` en `aUsuarioSesion`.
+      */
+      const nombreNormalizado = nombre.trim()
       const { data, error } = await supabase.auth.signUp({
         email: normalizarCorreo(correo),
         password: contrasena,
-        options: { data: { nombre: nombre.trim() } },
+        options: {
+          data: { nombre: nombreNormalizado, full_name: nombreNormalizado, display_name: nombreNormalizado },
+        },
       })
 
       if (error !== null || data.user === null) {
