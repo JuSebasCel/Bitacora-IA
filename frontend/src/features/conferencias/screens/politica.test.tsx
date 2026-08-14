@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
+
+vi.mock('@/shared/supabase/cliente')
 
 /*
   Reglas de redacción de las pantallas de F2.
@@ -27,15 +29,16 @@ const LENGUAJE_DE_OBRA_EN_CURSO =
 /* Guion largo, escrito como escape para no usarlo literalmente en el código. */
 const GUION_LARGO = '—'
 
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
+
 function montar() {
-  sessionStorage.setItem(
-    CLAVE_SESION,
-    JSON.stringify({
-      id: 'usr-zuluaga',
-      nombre: 'Camila Zuluaga Nieto',
-      correo: 'camila.zuluaga@labanfora.org',
-    }),
-  )
+  mockearSesionAutenticada({
+    id: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
+    nombre: 'Camila Zuluaga Nieto',
+    correo: 'camila.zuluaga@labanfora.org',
+  })
 
   return render(
     <SessionProvider>
@@ -78,4 +81,3 @@ describe('Redacción de la pantalla de conferencias', () => {
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })
 })
-

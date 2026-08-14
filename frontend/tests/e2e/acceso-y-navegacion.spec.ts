@@ -5,8 +5,10 @@ import { expect, test, type Page } from '@playwright/test'
   viviría la persona usándolo. Las pruebas unitarias verifican cada pieza por
   separado; esta verifica que el módulo completo funciona.
 
-  Credenciales tomadas del fixture de la sesión simulada
-  (src/features/auth/session/cuentas.fixture.ts).
+  Cuenta real de Supabase Auth (B1): las cuatro cuentas de ejemplo se crearon
+  una vez vía la Admin API con el mismo UUID que ya usan los fixtures de
+  conferencias/fichas/etiquetas, para no tener que reescribir el resto de la
+  suite -- ver `.agent/plans/b1-infraestructura-base-plan-design.md`.
 */
 const CUENTA = {
   nombre: 'Valentina Alcántara Rueda',

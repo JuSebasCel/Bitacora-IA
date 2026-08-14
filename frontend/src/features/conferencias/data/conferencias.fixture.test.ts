@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { CUENTAS_DE_EJEMPLO } from '@/features/auth/session'
 import { TEMAS_DE_EJEMPLO, nombreDeTema } from '@/features/taxonomia'
 import { CONFERENCIAS_DE_EJEMPLO } from './conferencias.fixture'
 import { FICHAS_DE_EJEMPLO } from './fichas.fixture'
 import { ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO } from './etiquetas.fixture'
+import { PERSONAS_DE_EJEMPLO } from './personas.fixture'
 import type { EstadoDeProcesamiento, EstadoDeValidacion, TipoDeUnidad } from './tipos'
 
 /*
@@ -17,7 +17,7 @@ import type { EstadoDeProcesamiento, EstadoDeValidacion, TipoDeUnidad } from './
   el fixture.
 */
 
-const IDS_DE_CUENTA = new Set(CUENTAS_DE_EJEMPLO.map((cuenta) => cuenta.id))
+const IDS_DE_CUENTA = new Set(PERSONAS_DE_EJEMPLO.map((persona) => persona.id))
 const IDS_DE_CONFERENCIA = new Set(CONFERENCIAS_DE_EJEMPLO.map((conferencia) => conferencia.id))
 
 const ESTADOS_DE_PROCESAMIENTO: readonly EstadoDeProcesamiento[] = [
@@ -95,7 +95,7 @@ describe('fixture de conferencias', () => {
   })
 
   it('deja cada cuenta con al menos una conferencia a la vista', () => {
-    for (const cuenta of CUENTAS_DE_EJEMPLO) {
+    for (const cuenta of PERSONAS_DE_EJEMPLO) {
       const visibles = CONFERENCIAS_DE_EJEMPLO.filter(
         (conferencia) =>
           conferencia.idDueno === cuenta.id ||
@@ -151,10 +151,10 @@ describe('fixture de conferencias', () => {
   */
   it('reparte la visibilidad entre las cuatro cuentas según el contrato del módulo', () => {
     const esperado = [
-      { idUsuario: 'usr-alcantara', propias: 5, compartidas: 1 },
-      { idUsuario: 'usr-berrio', propias: 4, compartidas: 0 },
-      { idUsuario: 'usr-zuluaga', propias: 3, compartidas: 4 },
-      { idUsuario: 'usr-penaloza', propias: 2, compartidas: 1 },
+      { idUsuario: '1ba5af9a-f6a2-4504-ab60-1f018c21290a', propias: 5, compartidas: 1 },
+      { idUsuario: 'fd5f0a48-ca53-425c-819a-a1b005f529bd', propias: 4, compartidas: 0 },
+      { idUsuario: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178', propias: 3, compartidas: 4 },
+      { idUsuario: '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5', propias: 2, compartidas: 1 },
     ] as const
 
     for (const { idUsuario, propias, compartidas } of esperado) {

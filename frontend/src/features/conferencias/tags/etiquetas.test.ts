@@ -10,8 +10,8 @@ import {
   quitarEtiqueta,
 } from './etiquetas'
 
-const ZULUAGA = 'usr-zuluaga'
-const ALCANTARA = 'usr-alcantara'
+const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
+const ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
 
 const ESPACIO_DE_ZULUAGA: EspacioDeEtiquetas = {
   etiquetas: [

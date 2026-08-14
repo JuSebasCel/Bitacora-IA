@@ -19,8 +19,8 @@ import {
   palabrasDe,
 } from './filtros'
 
-const ALCANTARA = 'usr-alcantara'
-const ZULUAGA = 'usr-zuluaga'
+const ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
+const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
 
 function visiblesDe(idUsuario: string): readonly ConferenciaVisible[] {
   return conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, idUsuario)

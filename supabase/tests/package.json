@@ -1,0 +1,12 @@
+{
+  "name": "bitacora-ai-supabase-tests",
+  "private": true,
+  "type": "module",
+  "description": "Suite de integracion contra el proyecto real de Supabase (RLS, flujo de auth). No forma parte de la suite rapida de frontend/ -- se corre aparte, a proposito, porque toca la red real. Ver el plan de B1.",
+  "scripts": {
+    "test": "node --test rls.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3"
+  }
+}

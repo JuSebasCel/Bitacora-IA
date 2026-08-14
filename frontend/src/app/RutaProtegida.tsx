@@ -12,10 +12,19 @@ import { useSession } from '@/features/auth/session'
   con el objeto Location completo (ruta, búsqueda y hash). Así la pantalla de
   acceso puede devolver a la persona exactamente a donde iba en vez de dejarla
   siempre en el listado de conferencias.
+
+  Mientras `cargando` es true (B1: la sesión real se resuelve de forma
+  asíncrona contra Supabase Auth al montar) no se decide nada todavía -- sin
+  esto, alguien con una sesión válida vería un parpadeo hacia /acceso antes de
+  que la promesa resolviera.
 */
-export function RutaProtegida(): ReactElement {
-  const { autenticado } = useSession()
+export function RutaProtegida(): ReactElement | null {
+  const { autenticado, cargando } = useSession()
   const ubicacion = useLocation()
+
+  if (cargando) {
+    return null
+  }
 
   if (!autenticado) {
     return <Navigate to="/acceso" replace state={{ desde: ubicacion }} />

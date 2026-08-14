@@ -16,9 +16,9 @@ import {
   aislamiento no puede depender de lo que la interfaz decida mostrar.
 */
 
-const ALCANTARA = 'usr-alcantara'
-const BERRIO = 'usr-berrio'
-const ZULUAGA = 'usr-zuluaga'
+const ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
+const BERRIO = 'fd5f0a48-ca53-425c-819a-a1b005f529bd'
+const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
 
 function visiblesDe(idUsuario: string) {
   return conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, idUsuario)
@@ -71,7 +71,7 @@ describe('conferenciasVisibles', () => {
     expect(idsVisiblesDe(ALCANTARA)).toHaveLength(6)
     expect(idsVisiblesDe(BERRIO)).toHaveLength(4)
     expect(idsVisiblesDe(ZULUAGA)).toHaveLength(7)
-    expect(idsVisiblesDe('usr-penaloza')).toHaveLength(3)
+    expect(idsVisiblesDe('1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5')).toHaveLength(3)
   })
 
   /*
@@ -207,7 +207,7 @@ describe('fichasVisibles', () => {
   })
 
   it('devuelve una lista vacía para una conferencia sin fichas, sin fallar', () => {
-    const visible = buscarVisible('usr-berrio', 'cnf-ber-03')
+    const visible = buscarVisible('fd5f0a48-ca53-425c-819a-a1b005f529bd', 'cnf-ber-03')
 
     expect(fichasVisibles(FICHAS_DE_EJEMPLO, visible)).toHaveLength(0)
   })

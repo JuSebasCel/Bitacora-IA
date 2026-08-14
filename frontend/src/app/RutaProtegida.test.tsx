@@ -2,10 +2,12 @@ import { render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import type { Location } from 'react-router'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { RutaProtegida } from './RutaProtegida'
+
+vi.mock('@/shared/supabase/cliente')
 
 type EstadoDeRedireccion = { desde?: Location } | null
 
@@ -30,17 +32,6 @@ function AccesoEspia(): ReactElement {
   )
 }
 
-function sembrarSesion(): void {
-  sessionStorage.setItem(
-    CLAVE_SESION,
-    JSON.stringify({
-      id: 'usr-alcantara',
-      nombre: 'Valentina Alcántara Rueda',
-      correo: 'valentina.alcantara@labanfora.org',
-    }),
-  )
-}
-
 function montar(rutaInicial: string) {
   return render(
     <SessionProvider>
@@ -57,6 +48,10 @@ function montar(rutaInicial: string) {
     </SessionProvider>,
   )
 }
+
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
 
 describe('RutaProtegida', () => {
   it('redirige a /acceso cuando no hay sesión abierta', () => {
@@ -87,7 +82,11 @@ describe('RutaProtegida', () => {
   })
 
   it('renderiza el contenido hijo cuando hay sesión abierta', () => {
-    sembrarSesion()
+    mockearSesionAutenticada({
+      id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
+      nombre: 'Valentina Alcántara Rueda',
+      correo: 'valentina.alcantara@labanfora.org',
+    })
 
     montar('/conferencias')
 

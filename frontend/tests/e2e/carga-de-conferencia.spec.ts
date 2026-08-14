@@ -13,7 +13,8 @@ import { expect, test } from '@playwright/test'
   (7 conferencias) es exclusivo de esta spec bajo `fullyParallel`, y la
   conferencia que esta prueba agrega no la ve ninguna otra cuenta.
 
-  Credenciales copiadas de `src/features/auth/session/cuentas.fixture.ts`:
+  Cuenta real de Supabase Auth (B1), con el mismo UUID que ya usan los
+  fixtures de conferencias/fichas de `conferencias.fixture.ts`.
   `tsconfig.e2e.json` no tiene el alias `@/`, así que desde aquí no se puede
   importar nada de `src`.
 */

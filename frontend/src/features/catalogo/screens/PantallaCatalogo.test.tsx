@@ -1,15 +1,17 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { conferenciasVisibles, fichasDelCatalogo } from '@/features/conferencias/query'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
 import { TEMAS_DE_EJEMPLO, nombreDeTema } from '@/features/taxonomia'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaCatalogo } from './PantallaCatalogo'
+
+vi.mock('@/shared/supabase/cliente')
 
 /*
   `useConferenciasVisibles` resuelve su efecto dentro del mismo render en las
@@ -35,7 +37,7 @@ vi.mock('@/features/conferencias/components/useConferenciasVisibles', async (imp
 */
 
 const ALCANTARA = {
-  id: 'usr-alcantara',
+  id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
   nombre: 'Valentina Alcántara Rueda',
   correo: 'valentina.alcantara@labanfora.org',
 }
@@ -60,7 +62,7 @@ function Ubicacion() {
 }
 
 function montar(rutaInicial = '/catalogo', cuenta = ALCANTARA) {
-  sessionStorage.setItem(CLAVE_SESION, JSON.stringify(cuenta))
+  mockearSesionAutenticada(cuenta)
 
   return render(
     <SessionProvider>
@@ -85,6 +87,10 @@ async function resultados(): Promise<HTMLElement[]> {
 }
 
 describe('PantallaCatalogo', () => {
+  afterEach(() => {
+    reiniciarMocksDeSesion()
+  })
+
   it('se anuncia con su encabezado de sección', async () => {
     montar()
 
@@ -167,11 +173,16 @@ describe('PantallaCatalogo', () => {
   })
 
   it('muestra un esqueleto de carga mientras se resuelve lo visible, no el vacío', () => {
-    vi.mocked(useConferenciasVisibles).mockReturnValueOnce({
-      carga: 'cargando',
-      visibles: [],
-      recargar: vi.fn(),
-    })
+    /*
+      Dos veces, no una: el montaje ya no es un solo render. `SessionProvider`
+      (B1) resuelve la sesión real en un efecto, así que hay un primer render
+      con `usuario=null` y un segundo cuando el efecto la resuelve. Si solo se
+      encola un valor, el segundo render cae al hook real (con sus propios
+      `useState`/`useEffect` internos) y React detecta un cambio en el orden
+      de hooks entre renders del mismo componente.
+    */
+    const cargandoTodavia = { carga: 'cargando' as const, visibles: [], recargar: vi.fn() }
+    vi.mocked(useConferenciasVisibles).mockReturnValueOnce(cargandoTodavia).mockReturnValueOnce(cargandoTodavia)
 
     montar()
 

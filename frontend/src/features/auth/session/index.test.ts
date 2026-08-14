@@ -7,9 +7,9 @@ import * as barril from './index'
   deja de reexportar una de las piezas acordadas.
 */
 describe('barril de la sesión', () => {
-  it('reexporta el provider, el hook y el fixture', () => {
+  it('reexporta el provider y el hook', () => {
     expect(typeof barril.SessionProvider).toBe('function')
     expect(typeof barril.useSession).toBe('function')
-    expect(Array.isArray(barril.CUENTAS_DE_EJEMPLO)).toBe(true)
+    expect(typeof barril.esCorreoValido).toBe('function')
   })
 })

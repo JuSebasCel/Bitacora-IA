@@ -10,9 +10,9 @@ import type { Page } from '@playwright/test'
   Alcántara y Berrío ya están tomadas por las specs de F1 y `fullyParallel`
   está activo, así que dos specs no pueden compartir cuenta.
 
-  Las credenciales se copian de `src/features/auth/session/cuentas.fixture.ts`:
-  `tsconfig.e2e.json` no tiene el alias `@/`, así que desde aquí no se puede
-  importar nada de `src`.
+  Cuenta real de Supabase Auth (B1), con el mismo UUID que ya usan los
+  fixtures de conferencias/fichas. `tsconfig.e2e.json` no tiene el alias
+  `@/`, así que desde aquí no se puede importar nada de `src`.
 
   Estado y etiquetas viven detrás de un botón "Filtros" que alterna abierto y
   cerrado: elegir un radio de estado o una casilla de etiqueta no lo cierra

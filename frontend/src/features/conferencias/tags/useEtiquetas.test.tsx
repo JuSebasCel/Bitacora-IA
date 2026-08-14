@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { CLAVE_ETIQUETAS } from './almacenamiento'
 import { useEtiquetas } from './useEtiquetas'
 
-const ZULUAGA = 'usr-zuluaga'
-const PENALOZA = 'usr-penaloza'
+const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
+const PENALOZA = '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5'
 
 function nombresDe(etiquetas: readonly { nombre: string }[]): string[] {
   return etiquetas.map((etiqueta) => etiqueta.nombre)

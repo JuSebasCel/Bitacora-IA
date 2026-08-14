@@ -16,7 +16,7 @@ import type { DatosDeFila, EstadoDelListado } from './ListadoDeConferencias'
   simular fallos ni inyectar dependencias.
 */
 
-const VISIBLES = conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, 'usr-zuluaga')
+const VISIBLES = conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178')
 
 const FILAS: readonly DatosDeFila[] = VISIBLES.map((visible) => ({
   visible,

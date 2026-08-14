@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { CLAVE_MEMORIAS, guardarMemoria } from '../almacenamiento'
 import { PantallaMemorias } from './PantallaMemorias'
+
+vi.mock('@/shared/supabase/cliente')
 
 const MEMORIA_DE_SESGOS = {
   id: 'mem-alc-02',
@@ -16,18 +18,18 @@ const MEMORIA_DE_SESGOS = {
 }
 
 const ALCANTARA = {
-  id: 'usr-alcantara',
+  id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
   nombre: 'Valentina Alcántara Rueda',
   correo: 'valentina.alcantara@labanfora.org',
 }
 
 beforeEach(() => {
-  sessionStorage.clear()
-  sessionStorage.setItem(CLAVE_SESION, JSON.stringify(ALCANTARA))
+  mockearSesionAutenticada(ALCANTARA)
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  reiniciarMocksDeSesion()
 })
 
 function montar(rutaInicial = '/memorias') {

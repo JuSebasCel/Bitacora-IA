@@ -11,9 +11,10 @@ import type { Page } from '@playwright/test'
   almacenamiento aislado, así que no hay colisión entre pruebas ni con otras
   specs que también usan la cuenta de Camila Zuluaga.
 
-  Credenciales copiadas de `src/features/auth/session/cuentas.fixture.ts`:
-  `tsconfig.e2e.json` no tiene el alias `@/`, así que desde aquí no se puede
-  importar nada de `src`. La ruta al `.docx` de ejemplo es relativa a
+  Cuenta real de Supabase Auth (B1), con el mismo UUID que ya usan los
+  fixtures de conferencias/fichas. `tsconfig.e2e.json` no tiene el alias
+  `@/`, así que desde aquí no se puede importar nada de `src`. La ruta al
+  `.docx` de ejemplo es relativa a
   `frontend/` (cwd de Playwright), igual que en `importarDocx.test.ts`.
 */
 const CUENTA = {

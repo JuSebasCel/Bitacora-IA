@@ -1,11 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
 import { mensajeDeError } from '@/shared/errors'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
+
+vi.mock('@/shared/supabase/cliente')
 
 /*
   El dashboard de F2. Se monta con la sesión sembrada directamente en
@@ -18,13 +20,13 @@ import { PantallaConferencias } from './PantallaConferencias'
 */
 
 const ZULUAGA = {
-  id: 'usr-zuluaga',
+  id: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
   nombre: 'Camila Zuluaga Nieto',
   correo: 'camila.zuluaga@labanfora.org',
 }
 
 const BERRIO = {
-  id: 'usr-berrio',
+  id: 'fd5f0a48-ca53-425c-819a-a1b005f529bd',
   nombre: 'Joaquín Berrío Salazar',
   correo: 'joaquin.berrio@labanfora.org',
 }
@@ -37,7 +39,7 @@ function Ubicacion() {
 }
 
 function montar(rutaInicial = '/conferencias', cuenta = ZULUAGA) {
-  sessionStorage.setItem(CLAVE_SESION, JSON.stringify(cuenta))
+  mockearSesionAutenticada(cuenta)
 
   return render(
     <SessionProvider>
@@ -67,6 +69,10 @@ async function filas(): Promise<HTMLElement[]> {
 async function campoDeBusqueda(): Promise<HTMLElement> {
   return screen.findByLabelText(/buscar/i)
 }
+
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
 
 describe('PantallaConferencias', () => {
   it('se anuncia con su encabezado de sección', async () => {

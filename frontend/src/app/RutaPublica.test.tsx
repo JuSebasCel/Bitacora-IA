@@ -1,20 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { RutaPublica } from './RutaPublica'
 
-function sembrarSesion(): void {
-  sessionStorage.setItem(
-    CLAVE_SESION,
-    JSON.stringify({
-      id: 'usr-alcantara',
-      nombre: 'Valentina Alcántara Rueda',
-      correo: 'valentina.alcantara@labanfora.org',
-    }),
-  )
-}
+vi.mock('@/shared/supabase/cliente')
 
 function montar(rutaInicial: string) {
   return render(
@@ -32,6 +23,10 @@ function montar(rutaInicial: string) {
   )
 }
 
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
+
 describe('RutaPublica', () => {
   it('renderiza el formulario de acceso cuando no hay sesión abierta', () => {
     montar('/acceso')
@@ -48,7 +43,11 @@ describe('RutaPublica', () => {
   })
 
   it('aparta de /acceso a quien ya tiene la sesión abierta', () => {
-    sembrarSesion()
+    mockearSesionAutenticada({
+      id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
+      nombre: 'Valentina Alcántara Rueda',
+      correo: 'valentina.alcantara@labanfora.org',
+    })
 
     montar('/acceso')
 
@@ -57,7 +56,11 @@ describe('RutaPublica', () => {
   })
 
   it('aparta de /registro a quien ya tiene la sesión abierta', () => {
-    sembrarSesion()
+    mockearSesionAutenticada({
+      id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
+      nombre: 'Valentina Alcántara Rueda',
+      correo: 'valentina.alcantara@labanfora.org',
+    })
 
     montar('/registro')
 

@@ -21,13 +21,13 @@ function resumenDe(idUsuario: string, idConferencia: string) {
 
 describe('resumirFichas', () => {
   it('cuenta el total de fichas recibidas', () => {
-    const resumen = resumenDe('usr-alcantara', 'cnf-alc-01')
+    const resumen = resumenDe('1ba5af9a-f6a2-4504-ab60-1f018c21290a', 'cnf-alc-01')
 
     expect(resumen.total).toBe(9)
   })
 
   it('reparte el total entre los tres estados de validación', () => {
-    const resumen = resumenDe('usr-alcantara', 'cnf-alc-01')
+    const resumen = resumenDe('1ba5af9a-f6a2-4504-ab60-1f018c21290a', 'cnf-alc-01')
     const { validada, pendiente, automatica } = resumen.porEstado
 
     expect(validada + pendiente + automatica).toBe(resumen.total)
@@ -40,7 +40,7 @@ describe('resumirFichas', () => {
     distribución completa, y un tipo ausente es información, no un hueco.
   */
   it('declara los seis tipos de unidad aunque alguno valga cero', () => {
-    const resumen = resumenDe('usr-penaloza', 'cnf-pen-01')
+    const resumen = resumenDe('1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5', 'cnf-pen-01')
 
     expect(Object.keys(resumen.porTipo)).toHaveLength(6)
     expect(resumen.porTipo['postura']).toBe(0)
@@ -48,7 +48,7 @@ describe('resumirFichas', () => {
   })
 
   it('reparte el total entre los seis tipos de unidad', () => {
-    const resumen = resumenDe('usr-zuluaga', 'cnf-zul-01')
+    const resumen = resumenDe('ad474b7c-4a6e-4092-8c7e-ccf8701d9178', 'cnf-zul-01')
     const suma = Object.values(resumen.porTipo).reduce((total, cuenta) => total + cuenta, 0)
 
     expect(suma).toBe(resumen.total)
@@ -70,8 +70,8 @@ describe('resumirFichas', () => {
     esconde una compartición que decidió no mostrarlas.
   */
   it('cuenta solo lo visible cuando la compartición oculta las pendientes', () => {
-    const resumenDelDueno = resumenDe('usr-alcantara', 'cnf-alc-03')
-    const resumenDelInvitado = resumenDe('usr-zuluaga', 'cnf-alc-03')
+    const resumenDelDueno = resumenDe('1ba5af9a-f6a2-4504-ab60-1f018c21290a', 'cnf-alc-03')
+    const resumenDelInvitado = resumenDe('ad474b7c-4a6e-4092-8c7e-ccf8701d9178', 'cnf-alc-03')
 
     expect(resumenDelDueno.porEstado.pendiente).toBeGreaterThan(0)
     expect(resumenDelInvitado.porEstado.pendiente).toBe(0)
@@ -79,7 +79,7 @@ describe('resumirFichas', () => {
   })
 
   it('no altera la lista de fichas que recibe', () => {
-    const fichas = fichasVisibles(FICHAS_DE_EJEMPLO, visibleDe('usr-alcantara', 'cnf-alc-01'))
+    const fichas = fichasVisibles(FICHAS_DE_EJEMPLO, visibleDe('1ba5af9a-f6a2-4504-ab60-1f018c21290a', 'cnf-alc-01'))
     const copia = [...fichas]
 
     resumirFichas(fichas)

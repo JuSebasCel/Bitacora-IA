@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaCatalogo } from './PantallaCatalogo'
+
+vi.mock('@/shared/supabase/cliente')
 
 /*
   Reglas de redacción de la pantalla de F6. Mismo criterio que
@@ -17,14 +19,17 @@ const LENGUAJE_DE_OBRA_EN_CURSO =
 const GUION_LARGO = '—'
 
 const ALCANTARA = {
-  id: 'usr-alcantara',
+  id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
   nombre: 'Valentina Alcántara Rueda',
   correo: 'valentina.alcantara@labanfora.org',
 }
 
 beforeEach(() => {
-  sessionStorage.clear()
-  sessionStorage.setItem(CLAVE_SESION, JSON.stringify(ALCANTARA))
+  mockearSesionAutenticada(ALCANTARA)
+})
+
+afterEach(() => {
+  reiniciarMocksDeSesion()
 })
 
 function montar() {

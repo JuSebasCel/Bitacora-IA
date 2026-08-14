@@ -1,28 +1,24 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
+import { supabase } from '@/shared/supabase/cliente'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { RutaProtegida } from '../RutaProtegida'
 import { SECCIONES_DE_NAVEGACION } from './navegacion'
 import { ShellLayout } from './ShellLayout'
 
+vi.mock('@/shared/supabase/cliente')
+
 const NOMBRE_DE_PRUEBA = 'Valentina Alcántara Rueda'
 
-function sembrarSesion(): void {
-  sessionStorage.setItem(
-    CLAVE_SESION,
-    JSON.stringify({
-      id: 'usr-alcantara',
-      nombre: NOMBRE_DE_PRUEBA,
-      correo: 'valentina.alcantara@labanfora.org',
-    }),
-  )
-}
-
 function montarShell(rutaInicial = '/conferencias') {
-  sembrarSesion()
+  mockearSesionAutenticada({
+    id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
+    nombre: NOMBRE_DE_PRUEBA,
+    correo: 'valentina.alcantara@labanfora.org',
+  })
 
   return render(
     <SessionProvider>
@@ -67,6 +63,10 @@ function ultimoEnlaceDeNavegacion(): HTMLElement {
 describe('ShellLayout', () => {
   beforeEach(() => {
     document.body.style.overflow = ''
+  })
+
+  afterEach(() => {
+    reiniciarMocksDeSesion()
   })
 
   it('renderiza el contenido de la ruta activa dentro del shell', () => {
@@ -138,7 +138,7 @@ describe('ShellLayout', () => {
 
     expect(screen.getByText('Pantalla de acceso')).toBeInTheDocument()
     expect(screen.queryByText(NOMBRE_DE_PRUEBA)).not.toBeInTheDocument()
-    expect(sessionStorage.getItem(CLAVE_SESION)).toBeNull()
+    expect(supabase.auth.signOut).toHaveBeenCalled()
   })
 
   it('alterna aria-expanded del botón del cajón de navegación', async () => {

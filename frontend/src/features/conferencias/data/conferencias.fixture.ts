@@ -26,7 +26,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'SAIA-2026-01',
     fechaDelEvento: '2026-03-11',
     duracionEnSegundos: 2890,
-    idDueno: 'usr-alcantara',
+    idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
     estado: 'procesada',
     idTemaPrincipal: 'tem-modelos-de-lenguaje',
     resumen:
@@ -34,12 +34,12 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     fuente: 'audio',
     comparticiones: [
       {
-        idInvitado: 'usr-zuluaga',
+        idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
         compartidaEl: '2026-03-19',
         privacidad: { compartirEtiquetas: true, compartirFichasPendientes: true, permitirValidarFichas: true, permitirRecompartir: true },
       },
       {
-        idInvitado: 'usr-penaloza',
+        idInvitado: '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5',
         compartidaEl: '2026-04-02',
         privacidad: { compartirEtiquetas: false, compartirFichasPendientes: true, permitirValidarFichas: true, permitirRecompartir: false },
       },
@@ -53,7 +53,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'SAIA-2026-04',
     fechaDelEvento: '2026-03-12',
     duracionEnSegundos: 2410,
-    idDueno: 'usr-alcantara',
+    idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
     estado: 'procesada',
     idTemaPrincipal: 'tem-calidad-de-datos',
     resumen:
@@ -69,7 +69,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'CCDN-2026-02',
     fechaDelEvento: '2026-05-14',
     duracionEnSegundos: 3180,
-    idDueno: 'usr-alcantara',
+    idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
     estado: 'procesada',
     idTemaPrincipal: 'tem-sesgos-algoritmicos',
     resumen:
@@ -77,7 +77,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     fuente: 'audio',
     comparticiones: [
       {
-        idInvitado: 'usr-zuluaga',
+        idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
         compartidaEl: '2026-05-28',
         privacidad: { compartirEtiquetas: false, compartirFichasPendientes: false, permitirValidarFichas: false, permitirRecompartir: false },
       },
@@ -91,7 +91,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'SAIA-2026-07',
     fechaDelEvento: '2026-03-13',
     duracionEnSegundos: 2650,
-    idDueno: 'usr-alcantara',
+    idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
     estado: 'procesando',
     idTemaPrincipal: 'tem-metodos-de-investigacion',
     resumen:
@@ -107,7 +107,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'JISO-2025-03',
     fechaDelEvento: '2025-10-08',
     duracionEnSegundos: 2075,
-    idDueno: 'usr-alcantara',
+    idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
     estado: 'procesada',
     idTemaPrincipal: 'tem-sensorica-ambiental',
     resumen:
@@ -115,7 +115,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     fuente: 'transcripcion',
     comparticiones: [
       {
-        idInvitado: 'usr-zuluaga',
+        idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
         compartidaEl: '2026-01-22',
         privacidad: { compartirEtiquetas: true, compartirFichasPendientes: false, permitirValidarFichas: false, permitirRecompartir: true },
       },
@@ -129,7 +129,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'SAIA-2026-02',
     fechaDelEvento: '2026-03-11',
     duracionEnSegundos: 2760,
-    idDueno: 'usr-berrio',
+    idDueno: 'fd5f0a48-ca53-425c-819a-a1b005f529bd',
     estado: 'procesada',
     idTemaPrincipal: 'tem-gobernanza-de-datos',
     resumen:
@@ -137,7 +137,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     fuente: 'audio',
     comparticiones: [
       {
-        idInvitado: 'usr-zuluaga',
+        idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
         compartidaEl: '2026-04-06',
         privacidad: { compartirEtiquetas: false, compartirFichasPendientes: true, permitirValidarFichas: false, permitirRecompartir: false },
       },
@@ -151,7 +151,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'CCDN-2026-05',
     fechaDelEvento: '2026-05-15',
     duracionEnSegundos: 2230,
-    idDueno: 'usr-berrio',
+    idDueno: 'fd5f0a48-ca53-425c-819a-a1b005f529bd',
     estado: 'procesada',
     idTemaPrincipal: 'tem-analitica-predictiva',
     resumen:
@@ -167,7 +167,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'JISO-2025-06',
     fechaDelEvento: '2025-10-09',
     duracionEnSegundos: 1980,
-    idDueno: 'usr-berrio',
+    idDueno: 'fd5f0a48-ca53-425c-819a-a1b005f529bd',
     estado: 'en-cola',
     idTemaPrincipal: 'tem-infraestructura-de-investigacion',
     resumen:
@@ -183,7 +183,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'SAIA-2026-09',
     fechaDelEvento: '2026-03-13',
     duracionEnSegundos: 2540,
-    idDueno: 'usr-berrio',
+    idDueno: 'fd5f0a48-ca53-425c-819a-a1b005f529bd',
     estado: 'procesada',
     idTemaPrincipal: 'tem-metodos-de-investigacion',
     resumen:
@@ -199,7 +199,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'CCDN-2026-01',
     fechaDelEvento: '2026-05-14',
     duracionEnSegundos: 3320,
-    idDueno: 'usr-zuluaga',
+    idDueno: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
     estado: 'procesada',
     idTemaPrincipal: 'tem-calidad-de-datos',
     resumen:
@@ -207,7 +207,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     fuente: 'audio',
     comparticiones: [
       {
-        idInvitado: 'usr-alcantara',
+        idInvitado: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
         compartidaEl: '2026-06-01',
         privacidad: { compartirEtiquetas: true, compartirFichasPendientes: true, permitirValidarFichas: true, permitirRecompartir: false },
       },
@@ -221,7 +221,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'SAIA-2026-05',
     fechaDelEvento: '2026-03-12',
     duracionEnSegundos: 2180,
-    idDueno: 'usr-zuluaga',
+    idDueno: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
     estado: 'fallida',
     idTemaPrincipal: 'tem-reproducibilidad',
     resumen:
@@ -237,7 +237,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'JISO-2025-01',
     fechaDelEvento: '2025-10-07',
     duracionEnSegundos: 2620,
-    idDueno: 'usr-zuluaga',
+    idDueno: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
     estado: 'procesada',
     idTemaPrincipal: 'tem-participacion-ciudadana',
     resumen:
@@ -253,7 +253,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'CCDN-2026-08',
     fechaDelEvento: '2026-05-16',
     duracionEnSegundos: 1840,
-    idDueno: 'usr-penaloza',
+    idDueno: '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5',
     estado: 'procesada',
     idTemaPrincipal: 'tem-analitica-predictiva',
     resumen:
@@ -269,7 +269,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     codigoDeEvento: 'JISO-2025-04',
     fechaDelEvento: '2025-10-08',
     duracionEnSegundos: 2295,
-    idDueno: 'usr-penaloza',
+    idDueno: '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5',
     estado: 'procesando',
     idTemaPrincipal: 'tem-etica-y-automatizacion',
     resumen:

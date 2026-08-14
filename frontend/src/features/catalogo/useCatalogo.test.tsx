@@ -6,7 +6,7 @@ import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferenc
 import { conferenciasVisibles, fichasDelCatalogo } from '@/features/conferencias/query'
 import { useCatalogo } from './useCatalogo'
 
-const ALCANTARA = 'usr-alcantara'
+const ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
 
 function totalVisibleDe(idUsuario: string): number {
   return fichasDelCatalogo(FICHAS_DE_EJEMPLO, conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, idUsuario)).length
