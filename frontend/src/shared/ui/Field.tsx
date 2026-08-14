@@ -5,8 +5,10 @@ import { TEXTO_ERROR, unirClases } from './clases'
 export type PropsField = {
   id: string
   etiqueta: string
-  error?: string
+  error?: string | undefined
   ayuda?: string
+  /** Marca el campo como obligatorio: asterisco visual junto a la etiqueta y `aria-required` en el control. */
+  obligatorio?: boolean
   children: ReactNode
 }
 
@@ -14,6 +16,7 @@ type PropsControl = {
   id?: string
   invalido?: boolean
   'aria-describedby'?: string
+  'aria-required'?: boolean
 }
 
 function leerTexto(props: PropsControl, clave: 'id' | 'aria-describedby'): string | undefined {
@@ -44,7 +47,14 @@ function primerControl(children: ReactNode): ReactElement<PropsControl> | undefi
   Con `error` presente el control ademas se marca como invalido, salvo que el
   hijo ya traiga un `invalido` explicito: en ese caso manda el hijo.
 */
-export function Field({ id, etiqueta, error, ayuda, children }: PropsField): ReactElement {
+export function Field({
+  id,
+  etiqueta,
+  error,
+  ayuda,
+  obligatorio = false,
+  children,
+}: PropsField): ReactElement {
   const idControl = leerTexto(primerControl(children)?.props ?? {}, 'id') ?? id
   const idAyuda = `${idControl}-ayuda`
   const idError = `${idControl}-error`
@@ -64,12 +74,26 @@ export function Field({ id, etiqueta, error, ayuda, children }: PropsField): Rea
       id: idControl,
       ...(todas.length > 0 ? { 'aria-describedby': todas.join(' ') } : {}),
       ...(marcarInvalido ? { invalido: true } : {}),
+      ...(obligatorio ? { 'aria-required': true } : {}),
     })
   })
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={idControl} className="text-sm font-medium text-texto">
+      {/*
+        El asterisco es un `::after` generado por CSS, no un hijo del DOM: así
+        el texto accesible de la etiqueta (lo que lee `getByLabelText` y un
+        lector de pantalla) sigue siendo exactamente `etiqueta`, sin el
+        caracter suelto pegado. `aria-required` en el control ya comunica lo
+        mismo de forma explícita.
+      */}
+      <label
+        htmlFor={idControl}
+        className={unirClases(
+          'text-sm font-medium text-texto',
+          obligatorio && "after:ml-0.5 after:text-error after:content-['*']",
+        )}
+      >
         {etiqueta}
       </label>
 

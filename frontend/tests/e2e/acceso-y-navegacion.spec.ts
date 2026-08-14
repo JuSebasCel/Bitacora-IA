@@ -25,10 +25,13 @@ test('acceso, navegación protegida y cierre de sesión', async ({ page }) => {
   const botonAcceder = page.getByRole('button', { name: 'Acceder' })
   const alerta = page.getByRole('alert')
 
-  await test.step('el formulario vacío muestra un error sin filtrar el código', async () => {
+  await test.step('el formulario vacío marca cada campo que falta, sin filtrar el código', async () => {
     await botonAcceder.click()
-    await expect(alerta).toBeVisible()
-    await expect(alerta).not.toContainText('AUTH_')
+    const alertasDeCampo = page.getByRole('alert')
+    await expect(alertasDeCampo).toHaveCount(2)
+    await expect(alertasDeCampo.first()).not.toContainText('AUTH_')
+    await expect(page.getByLabel('Correo')).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByLabel('Contraseña')).toHaveAttribute('aria-invalid', 'true')
   })
 
   await test.step('las credenciales incorrectas muestran el mensaje traducido', async () => {

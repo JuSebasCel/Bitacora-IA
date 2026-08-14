@@ -10,6 +10,9 @@
 export type CodigoError =
   /* Acceso y registro (F1). */
   | 'AUTH_CAMPO_REQUERIDO'
+  | 'AUTH_NOMBRE_REQUERIDO'
+  | 'AUTH_CORREO_REQUERIDO'
+  | 'AUTH_CONTRASENA_REQUERIDA'
   | 'AUTH_CORREO_INVALIDO'
   | 'AUTH_CREDENCIALES_INVALIDAS'
   | 'AUTH_CORREO_YA_REGISTRADO'
@@ -104,6 +107,9 @@ export const LARGO_MINIMO_DE_CONTRASENA = 8
 
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
+  AUTH_NOMBRE_REQUERIDO: 'Escribe tu nombre.',
+  AUTH_CORREO_REQUERIDO: 'Escribe tu correo.',
+  AUTH_CONTRASENA_REQUERIDA: 'Escribe tu contraseña.',
   AUTH_CORREO_INVALIDO: 'Ese correo no tiene un formato válido. Revísalo e inténtalo de nuevo.',
   AUTH_CREDENCIALES_INVALIDAS:
     'El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo.',

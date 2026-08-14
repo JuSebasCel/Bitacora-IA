@@ -60,16 +60,35 @@ describe('PantallaAcceso', () => {
     expect(screen.getByText('Contraseña')).toBeInTheDocument()
   })
 
-  it('al enviar el formulario vacío muestra un error legible, nunca el código crudo', async () => {
+  it('al enviar el formulario vacío marca cada campo que falta, sin un mensaje genérico', async () => {
     const usuario = userEvent.setup()
     montar()
 
     await usuario.click(screen.getByRole('button', { name: 'Acceder' }))
 
-    const alerta = await screen.findByRole('alert')
-    expect(alerta).toBeVisible()
-    expect(alerta).toHaveTextContent(mensajeDeError('AUTH_CAMPO_REQUERIDO'))
-    expect(alerta.textContent ?? '').not.toContain('AUTH_')
+    expect(await screen.findByText(mensajeDeError('AUTH_CORREO_REQUERIDO'))).toBeInTheDocument()
+    expect(screen.getByText(mensajeDeError('AUTH_CONTRASENA_REQUERIDA'))).toBeInTheDocument()
+    expect(screen.getByLabelText('Correo')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('marca solo el campo de correo cuando el formato no es válido', async () => {
+    const usuario = userEvent.setup()
+    montar()
+
+    await usuario.type(screen.getByLabelText('Correo'), 'no-es-un-correo')
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Anfora-2026')
+    await usuario.click(screen.getByRole('button', { name: 'Acceder' }))
+
+    expect(await screen.findByText(mensajeDeError('AUTH_CORREO_INVALIDO'))).toBeInTheDocument()
+    expect(screen.getByLabelText('Correo')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Contraseña')).not.toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('marca los campos obligatorios con un asterisco y una leyenda', () => {
+    montar()
+
+    expect(screen.getByText(/Campo obligatorio/)).toBeInTheDocument()
   })
 
   it('con credenciales incorrectas muestra el mensaje traducido de credenciales inválidas', async () => {
@@ -111,7 +130,11 @@ describe('PantallaAcceso', () => {
   })
 
   it('mientras el envío está pendiente el botón queda deshabilitado', async () => {
+    const usuario = userEvent.setup()
     montar()
+
+    await usuario.type(screen.getByLabelText('Correo'), 'quien@labanfora.org')
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Anfora-2026')
 
     const boton = screen.getByRole('button', { name: 'Acceder' })
     expect(boton).toHaveProperty('type', 'submit')
