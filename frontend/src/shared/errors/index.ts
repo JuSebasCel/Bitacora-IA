@@ -13,6 +13,7 @@ export type CodigoError =
   | 'AUTH_CORREO_INVALIDO'
   | 'AUTH_CREDENCIALES_INVALIDAS'
   | 'AUTH_CORREO_YA_REGISTRADO'
+  | 'AUTH_CONTRASENA_DEBIL'
   | 'AUTH_FALLO_INESPERADO'
   /* Conferencias y etiquetas personales (F2). */
   | 'CONF_NO_ENCONTRADA'
@@ -98,6 +99,9 @@ export const LARGO_MAXIMO_DE_ETIQUETA_DE_MARCADOR = 120
 /** Nombre de una memoria generada: mismo criterio que el nombre de una plantilla. */
 export const LARGO_MAXIMO_DE_MEMORIA = 80
 
+/** Mínimo exigido por Supabase Auth (`supabase/config.toml`, B1): mayúscula, minúscula, número y símbolo. */
+export const LARGO_MINIMO_DE_CONTRASENA = 8
+
 const MENSAJES: Record<CodigoError, string> = {
   AUTH_CAMPO_REQUERIDO: 'Completa todos los campos para continuar.',
   AUTH_CORREO_INVALIDO: 'Ese correo no tiene un formato válido. Revísalo e inténtalo de nuevo.',
@@ -105,6 +109,7 @@ const MENSAJES: Record<CodigoError, string> = {
     'El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo.',
   AUTH_CORREO_YA_REGISTRADO:
     'Ya existe una cuenta con ese correo. Inicia sesión o usa otro correo.',
+  AUTH_CONTRASENA_DEBIL: `La contraseña debe tener al menos ${LARGO_MINIMO_DE_CONTRASENA} caracteres, con mayúscula, minúscula, número y símbolo.`,
   AUTH_FALLO_INESPERADO: 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.',
 
   /*
