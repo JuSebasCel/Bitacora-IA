@@ -44,9 +44,15 @@ function codigoDeErrorDeAcceso(error: AuthError): CodigoError {
 }
 
 function codigoDeErrorDeRegistro(error: AuthError): CodigoError {
-  return error.code === 'user_already_exists' || error.code === 'email_exists'
-    ? 'AUTH_CORREO_YA_REGISTRADO'
-    : 'AUTH_FALLO_INESPERADO'
+  if (error.code === 'user_already_exists' || error.code === 'email_exists') {
+    return 'AUTH_CORREO_YA_REGISTRADO'
+  }
+
+  if (error.code === 'weak_password') {
+    return 'AUTH_CONTRASENA_DEBIL'
+  }
+
+  return 'AUTH_FALLO_INESPERADO'
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {

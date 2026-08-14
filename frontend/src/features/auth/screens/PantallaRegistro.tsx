@@ -84,7 +84,11 @@ export function PantallaRegistro(): ReactElement {
           />
         </Field>
 
-        <Field id="registro-contrasena" etiqueta="Contraseña">
+        <Field
+          id="registro-contrasena"
+          etiqueta="Contraseña"
+          ayuda="Al menos 8 caracteres, con mayúscula, minúscula, número y símbolo."
+        >
           <Input
             type="password"
             name="contrasena"

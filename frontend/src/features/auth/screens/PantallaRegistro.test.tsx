@@ -108,4 +108,25 @@ describe('PantallaRegistro', () => {
     await usuario.click(enlace)
     expect(await screen.findByText('Formulario de acceso')).toBeInTheDocument()
   })
+
+  it('indica los requisitos de la contraseña antes de intentar enviarla', () => {
+    montar()
+
+    expect(screen.getByText(/8 caracteres/)).toBeInTheDocument()
+  })
+
+  it('con una contraseña débil muestra el mensaje traducido', async () => {
+    mockearRegistrarFallido('weak_password')
+    const usuario = userEvent.setup()
+    montar()
+
+    await usuario.type(screen.getByLabelText('Nombre'), 'Alguien Cualquiera')
+    await usuario.type(screen.getByLabelText('Correo'), 'alguien@labanfora.org')
+    await usuario.type(screen.getByLabelText('Contraseña'), 'simple123')
+    await usuario.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    const alerta = await screen.findByRole('alert')
+    expect(alerta).toHaveTextContent(mensajeDeError('AUTH_CONTRASENA_DEBIL'))
+    expect(alerta.textContent ?? '').not.toContain('AUTH_')
+  })
 })

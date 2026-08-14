@@ -254,6 +254,22 @@ describe('SessionProvider y useSession', () => {
     })
   })
 
+  it('traduce una contraseña débil al código ya conocido por la interfaz', async () => {
+    vi.mocked(supabase.auth.signUp).mockResolvedValue({
+      data: { user: null, session: null },
+      error: errorDeAuth('weak_password'),
+    } as never)
+
+    const { result } = await montarSesion()
+
+    await act(async () => {
+      const resultado = await result.current.registrar('Alguien', 'alguien@labanfora.org', 'simple123')
+      expect(resultado).toEqual({ ok: false, codigo: 'AUTH_CONTRASENA_DEBIL' })
+    })
+
+    expect(result.current.autenticado).toBe(false)
+  })
+
   it('rechaza el registro cuando el correo ya existe', async () => {
     vi.mocked(supabase.auth.signUp).mockResolvedValue({
       data: { user: null, session: null },
