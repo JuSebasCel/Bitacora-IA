@@ -98,10 +98,32 @@ export function mockearRegistrarFallido(codigo: string): void {
   } as never)
 }
 
-/** Para `afterEach`: limpia lo que haya configurado cada prueba y vuelve al comportamiento por defecto (sin sesión). */
+/*
+  B2: `leer_mi_api_key`/`guardar_mi_api_key`/`borrar_mi_api_key` son las tres
+  únicas funciones RPC que toca `useApiKey` -- el mock distingue por nombre de
+  función, no por orden de llamada, para no depender de cuántas veces se
+  invoque cada una dentro de una prueba.
+*/
+export function mockearApiKeyGuardada(clave: string): void {
+  vi.mocked(supabase.rpc).mockImplementation((nombreFuncion: string) => {
+    if (nombreFuncion === 'leer_mi_api_key') {
+      return Promise.resolve({ data: clave, error: null }) as never
+    }
+    return Promise.resolve({ data: null, error: null }) as never
+  })
+}
+
+/** Comportamiento por defecto: nadie tiene una API key guardada. */
+export function mockearSinApiKey(): void {
+  vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error: null } as never)
+}
+
+/** Para `afterEach`: limpia lo que haya configurado cada prueba y vuelve al comportamiento por defecto (sin sesión, sin API key). */
 export function reiniciarMocksDeSesion(): void {
   vi.mocked(supabase.auth.signInWithPassword).mockReset()
   vi.mocked(supabase.auth.signUp).mockReset()
   vi.mocked(supabase.auth.signOut).mockReset().mockResolvedValue({ error: null })
+  vi.mocked(supabase.rpc).mockReset()
   mockearSinSesion()
+  mockearSinApiKey()
 }

@@ -92,7 +92,7 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { eventos, ponentes, crearEvento, crearPonente } = useDirectorio()
-  const { clave: apiKey } = useApiKey(idUsuario)
+  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey(idUsuario)
   const navegar = useNavigate()
 
   const panelRef = useRef<HTMLDivElement>(null)
@@ -315,7 +315,7 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
           </button>
         </div>
 
-        {apiKey === null ? (
+        {cargandoApiKey ? null : apiKey === null ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
             <p className="max-w-sm text-sm text-texto">{mensajeDeError('CARGA_API_KEY_REQUERIDA')}</p>
             <Button

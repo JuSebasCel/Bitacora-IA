@@ -1,12 +1,15 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { guardarApiKey } from '@/features/configuracion/almacenamiento'
 import { supabase } from '@/shared/supabase/cliente'
 import { ProveedorDeTema } from '@/shared/tema'
-import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import {
+  mockearApiKeyGuardada,
+  mockearSesionAutenticada,
+  reiniciarMocksDeSesion,
+} from '@/test/sesionDePrueba'
 import { RutaProtegida } from '../RutaProtegida'
 import { SECCIONES_DE_NAVEGACION } from './navegacion'
 import { ShellLayout } from './ShellLayout'
@@ -199,18 +202,24 @@ describe('ShellLayout', () => {
     const usuario = userEvent.setup()
     montarShell()
 
-    expect(botonDeCuenta()).toHaveAccessibleName(/falta configurar la api key/i)
+    /* `useApiKey` resuelve de red (B2): se espera a que la llamada mockeada asiente antes de mirar el resultado. */
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith('leer_mi_api_key'))
+    await waitFor(() => expect(botonDeCuenta()).toHaveAccessibleName(/falta configurar la api key/i))
 
     await usuario.click(botonDeCuenta())
     const enlace = within(panelDeCuenta()).getByRole('link', { name: /Falta tu API key/ })
     expect(enlace).toHaveAttribute('href', '/configuracion#config-api-key')
   })
 
-  it('no avisa cuando ya hay una API key guardada', () => {
-    guardarApiKey(ID_USUARIO_DE_PRUEBA, 'sk-de-prueba')
+  it('no avisa cuando ya hay una API key guardada', async () => {
+    mockearApiKeyGuardada('sk-de-prueba')
+    const usuario = userEvent.setup()
     montarShell()
 
-    expect(botonDeCuenta()).not.toHaveAccessibleName(/falta configurar la api key/i)
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith('leer_mi_api_key'))
+    await usuario.click(botonDeCuenta())
+
+    expect(within(panelDeCuenta()).queryByText(/Falta tu API key/)).not.toBeInTheDocument()
   })
 
   it('cierra la sesión desde el menú de cuenta y deja de mostrar el shell', async () => {

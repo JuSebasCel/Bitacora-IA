@@ -23,12 +23,16 @@ const ID_CAMPO_API_KEY = 'config-api-key'
 */
 
 function SeccionApiKey({ idUsuario }: { idUsuario: string }): ReactElement {
-  const { clave, guardar } = useApiKey(idUsuario)
+  const { clave, cargando, guardar, borrar } = useApiKey(idUsuario)
   const [valor, setValor] = useState('')
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null)
+  const [enviando, setEnviando] = useState(false)
 
-  function alGuardar(): void {
-    const resultado = guardar(valor)
+  async function alGuardar(): Promise<void> {
+    if (enviando) return
+    setEnviando(true)
+
+    const resultado = await guardar(valor)
     setMensaje(
       resultado.ok
         ? { texto: 'API key guardada.', esError: false }
@@ -37,6 +41,20 @@ function SeccionApiKey({ idUsuario }: { idUsuario: string }): ReactElement {
     if (resultado.ok) {
       setValor('')
     }
+    setEnviando(false)
+  }
+
+  async function alQuitar(): Promise<void> {
+    if (enviando) return
+    setEnviando(true)
+
+    const resultado = await borrar()
+    setMensaje(
+      resultado.ok
+        ? { texto: 'API key eliminada.', esError: false }
+        : { texto: resultado.mensaje, esError: true },
+    )
+    setEnviando(false)
   }
 
   return (
@@ -44,8 +62,8 @@ function SeccionApiKey({ idUsuario }: { idUsuario: string }): ReactElement {
       <div>
         <h2 className="text-base font-semibold tracking-tight text-texto">API key</h2>
         <p className="mt-1 text-sm text-texto-tenue">
-          Se usará para las llamadas a OpenAI cuando el backend esté conectado. Por ahora se guarda solo en
-          este navegador, en texto plano — no la reutilices de un servicio con datos sensibles.
+          Se usa para las llamadas a OpenAI que hagas vos: cargar conferencias y consultar el chat. Se
+          guarda cifrada, y solo vos podés leerla o reemplazarla.
         </p>
       </div>
 
@@ -72,7 +90,16 @@ function SeccionApiKey({ idUsuario }: { idUsuario: string }): ReactElement {
         </ol>
       </details>
 
-      {clave !== null ? <p className="text-xs text-texto-tenue">Ya tienes una API key guardada. Escribe una nueva para reemplazarla.</p> : null}
+      {/*
+        El mensaje de "ya tienes una guardada" y el de "API key guardada"
+        dicen básicamente lo mismo justo después de guardar -- se ocultan
+        mutuamente en vez de mostrar los dos a la vez.
+      */}
+      {mensaje !== null ? null : cargando ? (
+        <p className="text-xs text-texto-tenue">Cargando…</p>
+      ) : clave !== null ? (
+        <p className="text-xs text-texto-tenue">Ya tienes una API key guardada. Escribe una nueva para reemplazarla.</p>
+      ) : null}
 
       <Field id={ID_CAMPO_API_KEY} etiqueta="API key">
         <Input
@@ -87,10 +114,28 @@ function SeccionApiKey({ idUsuario }: { idUsuario: string }): ReactElement {
       {mensaje !== null && mensaje.esError ? <MensajeDeFormulario id="config-api-key-error">{mensaje.texto}</MensajeDeFormulario> : null}
       {mensaje !== null && !mensaje.esError ? <p className="text-xs text-validado">{mensaje.texto}</p> : null}
 
-      <div>
-        <Button variante="secundario" onClick={alGuardar}>
+      <div className="flex gap-2">
+        <Button
+          variante="secundario"
+          cargando={enviando}
+          onClick={() => {
+            void alGuardar()
+          }}
+        >
           Guardar
         </Button>
+
+        {cargando || clave === null ? null : (
+          <Button
+            variante="sutil"
+            disabled={enviando}
+            onClick={() => {
+              void alQuitar()
+            }}
+          >
+            Quitar mi API key
+          </Button>
+        )}
       </div>
     </section>
   )
