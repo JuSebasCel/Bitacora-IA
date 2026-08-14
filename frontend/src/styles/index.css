@@ -71,8 +71,45 @@
   --bitacora-papel-texto: oklch(0.22 0.006 265);
 }
 
+/*
+  Tema explícito (`shared/tema/`): `data-theme="dark"` fuerza el tema oscuro
+  sin importar `prefers-color-scheme`, para quien elige un tema desde el menú
+  de cuenta en vez de seguir el del sistema. `:not([data-theme="light"])` en
+  el bloque de abajo evita que un override explícito a claro quede pisado por
+  la preferencia del sistema operativo.
+*/
+:root[data-theme='dark'] {
+  --bitacora-fondo: oklch(0.17 0.004 265);
+  --bitacora-panel: oklch(0.21 0.005 265);
+  --bitacora-filete: oklch(0.28 0.006 265);
+  --bitacora-filete-fuerte: oklch(0.38 0.008 265);
+
+  --bitacora-texto: oklch(0.94 0.002 265);
+  --bitacora-texto-tenue: oklch(0.7 0.008 265);
+
+  --bitacora-acento: oklch(0.72 0.15 262);
+  --bitacora-acento-fuerte: oklch(0.8 0.12 262);
+  --bitacora-acento-tenue: oklch(0.29 0.06 262);
+  --bitacora-acento-contraste: oklch(0.17 0.004 265);
+
+  --bitacora-validado: oklch(0.76 0.14 155);
+  --bitacora-pendiente: oklch(0.79 0.14 70);
+  --bitacora-automatico: oklch(0.7 0.008 265);
+
+  --bitacora-error: oklch(0.75 0.15 25);
+  --bitacora-error-borde: oklch(0.65 0.17 25);
+
+  --bitacora-marca: oklch(0.25 0.07 262);
+  --bitacora-marca-profunda: oklch(0.17 0.05 262);
+  --bitacora-marca-texto: oklch(0.96 0.004 262);
+  --bitacora-marca-tenue: oklch(0.78 0.03 262);
+  --bitacora-marca-pauta: oklch(1 0 0 / 0.07);
+
+  --bitacora-sombra: oklch(0.05 0.01 265 / 0.55);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bitacora-fondo: oklch(0.17 0.004 265);
     --bitacora-panel: oklch(0.21 0.005 265);
     --bitacora-filete: oklch(0.28 0.006 265);

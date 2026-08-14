@@ -42,17 +42,19 @@ test('acceso, navegación protegida y cierre de sesión', async ({ page }) => {
     await expect(alerta).not.toContainText('AUTH_')
   })
 
+  const botonDeCuenta = page.getByRole('button', { name: new RegExp(`Cuenta de ${CUENTA.nombre}`) })
+
   await test.step('las credenciales válidas entran al shell', async () => {
     await page.getByLabel('Contraseña').fill(CUENTA.contrasena)
     await botonAcceder.click()
     await expect(page).toHaveURL(/\/conferencias$/)
-    await expect(page.getByText(CUENTA.nombre)).toBeVisible()
+    await expect(botonDeCuenta).toBeVisible()
   })
 
   const navegacion = page.getByRole('navigation', { name: 'Secciones de Bitácora AI' })
 
-  await test.step('la barra lateral lista las cinco secciones y marca la activa', async () => {
-    await expect(navegacion.getByRole('link')).toHaveCount(5)
+  await test.step('la barra lateral lista las cuatro secciones y marca la activa (Configuración vive en el menú de cuenta)', async () => {
+    await expect(navegacion.getByRole('link')).toHaveCount(4)
 
     await expect(
       navegacion.getByRole('link', { name: 'Conferencias', exact: true }),
@@ -74,10 +76,11 @@ test('acceso, navegación protegida y cierre de sesión', async ({ page }) => {
   await test.step('recargar mantiene la sesión abierta', async () => {
     await page.reload()
     await expect(page).toHaveURL(/\/catalogo$/)
-    await expect(page.getByText(CUENTA.nombre)).toBeVisible()
+    await expect(botonDeCuenta).toBeVisible()
   })
 
   await test.step('cerrar sesión vuelve al acceso y vuelve a proteger las rutas', async () => {
+    await botonDeCuenta.click()
     await page.getByRole('button', { name: 'Cerrar sesión' }).click()
     await expect(page).toHaveURL(/\/acceso$/)
 
@@ -149,4 +152,29 @@ test('un correo mal formado se nombra como tal, no como credenciales inválidas'
   const alerta = page.getByRole('alert')
   await expect(alerta).toContainText('formato')
   await expect(alerta).not.toContainText('AUTH_')
+})
+
+test('el menú de cuenta muestra identidad, cambia el tema y lleva a Configuración', async ({ page }) => {
+  await page.goto('/acceso')
+  await acceder(page)
+  await expect(page).toHaveURL(/\/conferencias$/)
+
+  await page.getByRole('button', { name: new RegExp(`Cuenta de ${CUENTA.nombre}`) }).click()
+
+  await expect(page.getByText(CUENTA.nombre)).toBeVisible()
+  await expect(page.getByText(CUENTA.correo)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Oscuro' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+
+  await page.getByRole('button', { name: new RegExp(`Cuenta de ${CUENTA.nombre}`) }).click()
+  await page.getByRole('button', { name: 'Sistema' }).click()
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme')
+
+  /* El menú sigue abierto: cambiar de tema no lo cierra, solo "Cerrar sesión" y los enlaces lo hacen. */
+  await page.getByRole('link', { name: 'Configuración' }).click()
+  await expect(page).toHaveURL(/\/configuracion$/)
 })

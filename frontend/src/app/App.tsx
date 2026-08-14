@@ -10,6 +10,7 @@ import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/con
 import { PantallaConfiguracion } from '@/features/configuracion/screens'
 import { PantallaDetalleMemoria, PantallaMemorias } from '@/features/memorias/screens'
 import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/plantillas/screens'
+import { ProveedorDeTema } from '@/shared/tema'
 
 /*
   Mapa de rutas de la aplicación.
@@ -28,29 +29,31 @@ import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/planti
 */
 export function App(): ReactElement {
   return (
-    <SessionProvider>
-      <Routes>
-        <Route element={<RutaPublica />}>
-          <Route path="/acceso" element={<PantallaAcceso />} />
-          <Route path="/registro" element={<PantallaRegistro />} />
-        </Route>
-
-        <Route element={<RutaProtegida />}>
-          <Route element={<ShellLayout />}>
-            <Route index element={<Navigate to="/conferencias" replace />} />
-            <Route path="/conferencias" element={<PantallaConferencias />} />
-            <Route path="/conferencias/:idConferencia" element={<PantallaDetalleConferencia />} />
-            <Route path="/catalogo" element={<PantallaCatalogo />} />
-            <Route path="/memorias" element={<PantallaMemorias />} />
-            <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
-            <Route path="/plantillas" element={<PantallaPlantillas />} />
-            <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
-            <Route path="/configuracion" element={<PantallaConfiguracion />} />
+    <ProveedorDeTema>
+      <SessionProvider>
+        <Routes>
+          <Route element={<RutaPublica />}>
+            <Route path="/acceso" element={<PantallaAcceso />} />
+            <Route path="/registro" element={<PantallaRegistro />} />
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/conferencias" replace />} />
-      </Routes>
-    </SessionProvider>
+          <Route element={<RutaProtegida />}>
+            <Route element={<ShellLayout />}>
+              <Route index element={<Navigate to="/conferencias" replace />} />
+              <Route path="/conferencias" element={<PantallaConferencias />} />
+              <Route path="/conferencias/:idConferencia" element={<PantallaDetalleConferencia />} />
+              <Route path="/catalogo" element={<PantallaCatalogo />} />
+              <Route path="/memorias" element={<PantallaMemorias />} />
+              <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
+              <Route path="/plantillas" element={<PantallaPlantillas />} />
+              <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
+              <Route path="/configuracion" element={<PantallaConfiguracion />} />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<Navigate to="/conferencias" replace />} />
+        </Routes>
+      </SessionProvider>
+    </ProveedorDeTema>
   )
 }

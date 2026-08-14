@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
+import { guardarApiKey } from '@/features/configuracion/almacenamiento'
 import { supabase } from '@/shared/supabase/cliente'
+import { ProveedorDeTema } from '@/shared/tema'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { RutaProtegida } from '../RutaProtegida'
 import { SECCIONES_DE_NAVEGACION } from './navegacion'
@@ -12,32 +14,35 @@ import { ShellLayout } from './ShellLayout'
 vi.mock('@/shared/supabase/cliente')
 
 const NOMBRE_DE_PRUEBA = 'Valentina Alcántara Rueda'
+const ID_USUARIO_DE_PRUEBA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
 
 function montarShell(rutaInicial = '/conferencias') {
   mockearSesionAutenticada({
-    id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
+    id: ID_USUARIO_DE_PRUEBA,
     nombre: NOMBRE_DE_PRUEBA,
     correo: 'valentina.alcantara@labanfora.org',
   })
 
   return render(
-    <SessionProvider>
-      <MemoryRouter initialEntries={[rutaInicial]}>
-        <Routes>
-          <Route path="/acceso" element={<p>Pantalla de acceso</p>} />
-          <Route element={<RutaProtegida />}>
-            <Route element={<ShellLayout />}>
-              <Route path="/conferencias" element={<p>Contenido de conferencias</p>} />
-              <Route path="/conferencias/:idConferencia" element={<p>Contenido del detalle</p>} />
-              <Route path="/catalogo" element={<p>Contenido del catálogo</p>} />
-              <Route path="/memorias" element={<p>Contenido de memorias</p>} />
-              <Route path="/plantillas" element={<p>Contenido de plantillas</p>} />
-              <Route path="/configuracion" element={<p>Contenido de configuración</p>} />
+    <ProveedorDeTema>
+      <SessionProvider>
+        <MemoryRouter initialEntries={[rutaInicial]}>
+          <Routes>
+            <Route path="/acceso" element={<p>Pantalla de acceso</p>} />
+            <Route element={<RutaProtegida />}>
+              <Route element={<ShellLayout />}>
+                <Route path="/conferencias" element={<p>Contenido de conferencias</p>} />
+                <Route path="/conferencias/:idConferencia" element={<p>Contenido del detalle</p>} />
+                <Route path="/catalogo" element={<p>Contenido del catálogo</p>} />
+                <Route path="/memorias" element={<p>Contenido de memorias</p>} />
+                <Route path="/plantillas" element={<p>Contenido de plantillas</p>} />
+                <Route path="/configuracion" element={<p>Contenido de configuración</p>} />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
-      </MemoryRouter>
-    </SessionProvider>,
+          </Routes>
+        </MemoryRouter>
+      </SessionProvider>
+    </ProveedorDeTema>,
   )
 }
 
@@ -47,6 +52,22 @@ function barraDeNavegacion(): HTMLElement {
 
 function botonDelCajon(): HTMLElement {
   return screen.getByRole('button', { name: /navegación/i })
+}
+
+function botonDeCuenta(): HTMLElement {
+  return screen.getByRole('button', { name: /cuenta de/i })
+}
+
+/** El panel del menú de cuenta, para no confundir su enlace "Configuración" con el de la barra lateral. */
+function panelDeCuenta(): HTMLElement {
+  const idPanel = botonDeCuenta().getAttribute('aria-controls')
+  const panel = idPanel === null ? null : document.getElementById(idPanel)
+
+  if (panel === null) {
+    throw new Error('el panel de cuenta no está montado')
+  }
+
+  return panel
 }
 
 function ultimoEnlaceDeNavegacion(): HTMLElement {
@@ -76,26 +97,31 @@ describe('ShellLayout', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-  it('lista las cinco secciones de navegación en el orden definido', () => {
+  it('lista las cuatro secciones de navegación en el orden definido, sin Configuración', () => {
     montarShell()
 
     const enlaces = within(barraDeNavegacion()).getAllByRole('link')
 
-    expect(enlaces).toHaveLength(5)
+    expect(enlaces).toHaveLength(4)
     expect(enlaces.map((enlace) => enlace.textContent?.trim())).toEqual([
       'Conferencias',
       'Catálogo',
       'Memorias',
       'Plantillas',
-      'Configuración',
     ])
     expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual([
       '/conferencias',
       '/catalogo',
       '/memorias',
       '/plantillas',
-      '/configuracion',
     ])
+  })
+
+  it('la barra superior nombra la sección activa junto al nombre del producto', () => {
+    montarShell('/catalogo')
+
+    const encabezado = screen.getByRole('banner')
+    expect(within(encabezado).getByText('Catálogo')).toBeInTheDocument()
   })
 
   it('marca con aria-current="page" solo la sección de la ruta actual', () => {
@@ -124,20 +150,77 @@ describe('ShellLayout', () => {
     expect(screen.getByText('Contenido del detalle')).toBeInTheDocument()
   })
 
-  it('muestra el nombre de la persona con sesión abierta', () => {
+  it('el círculo de cuenta muestra las iniciales, no el nombre completo', () => {
     montarShell()
 
-    expect(screen.getByText(NOMBRE_DE_PRUEBA)).toBeInTheDocument()
+    expect(screen.queryByText(NOMBRE_DE_PRUEBA)).not.toBeInTheDocument()
+    expect(botonDeCuenta()).toHaveTextContent('VA')
   })
 
-  it('cierra la sesión y deja de mostrar el shell al pulsar el botón', async () => {
+  it('abre el menú de cuenta y muestra el nombre y el correo', async () => {
     const usuario = userEvent.setup()
     montarShell()
 
-    await usuario.click(screen.getByRole('button', { name: /cerrar sesión/i }))
+    await usuario.click(botonDeCuenta())
+
+    expect(screen.getByText(NOMBRE_DE_PRUEBA)).toBeInTheDocument()
+    expect(screen.getByText('valentina.alcantara@labanfora.org')).toBeInTheDocument()
+  })
+
+  it('el menú de cuenta ofrece un atajo a Configuración', async () => {
+    const usuario = userEvent.setup()
+    montarShell()
+
+    await usuario.click(botonDeCuenta())
+    const enlace = within(panelDeCuenta()).getByRole('link', { name: 'Configuración' })
+
+    expect(enlace).toHaveAttribute('href', '/configuracion')
+
+    await usuario.click(enlace)
+    expect(await screen.findByText('Contenido de configuración')).toBeInTheDocument()
+  })
+
+  it('cambia el tema desde el menú de cuenta', async () => {
+    const usuario = userEvent.setup()
+    montarShell()
+
+    await usuario.click(botonDeCuenta())
+    await usuario.click(screen.getByRole('button', { name: 'Oscuro' }))
+
+    expect(document.documentElement.dataset.theme).toBe('dark')
+
+    /* El menú sigue abierto: cambiar de tema no lo cierra. */
+    await usuario.click(screen.getByRole('button', { name: 'Sistema' }))
+
+    expect(document.documentElement.dataset.theme).toBeUndefined()
+  })
+
+  it('avisa en el círculo y en el menú cuando falta la API key', async () => {
+    const usuario = userEvent.setup()
+    montarShell()
+
+    expect(botonDeCuenta()).toHaveAccessibleName(/falta configurar la api key/i)
+
+    await usuario.click(botonDeCuenta())
+    const enlace = within(panelDeCuenta()).getByRole('link', { name: /Falta tu API key/ })
+    expect(enlace).toHaveAttribute('href', '/configuracion#config-api-key')
+  })
+
+  it('no avisa cuando ya hay una API key guardada', () => {
+    guardarApiKey(ID_USUARIO_DE_PRUEBA, 'sk-de-prueba')
+    montarShell()
+
+    expect(botonDeCuenta()).not.toHaveAccessibleName(/falta configurar la api key/i)
+  })
+
+  it('cierra la sesión desde el menú de cuenta y deja de mostrar el shell', async () => {
+    const usuario = userEvent.setup()
+    montarShell()
+
+    await usuario.click(botonDeCuenta())
+    await usuario.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
 
     expect(screen.getByText('Pantalla de acceso')).toBeInTheDocument()
-    expect(screen.queryByText(NOMBRE_DE_PRUEBA)).not.toBeInTheDocument()
     expect(supabase.auth.signOut).toHaveBeenCalled()
   })
 
@@ -278,11 +361,12 @@ describe('ShellLayout', () => {
 })
 
 describe('SECCIONES_DE_NAVEGACION', () => {
-  it('define cinco secciones con ruta única e icono', () => {
-    expect(SECCIONES_DE_NAVEGACION).toHaveLength(5)
+  it('define cuatro secciones con ruta única e icono, sin Configuración', () => {
+    expect(SECCIONES_DE_NAVEGACION).toHaveLength(4)
+    expect(SECCIONES_DE_NAVEGACION.some((seccion) => seccion.ruta === '/configuracion')).toBe(false)
 
     const rutas = SECCIONES_DE_NAVEGACION.map((seccion) => seccion.ruta)
-    expect(new Set(rutas).size).toBe(5)
+    expect(new Set(rutas).size).toBe(4)
 
     for (const seccion of SECCIONES_DE_NAVEGACION) {
       expect(seccion.etiqueta.trim().length).toBeGreaterThan(0)
