@@ -15,8 +15,8 @@ import {
   temasDisponibles,
 } from './filtros'
 
-const ALCANTARA = 'usr-alcantara'
-const ZULUAGA = 'usr-zuluaga'
+const ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
+const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
 
 function entradasDe(idUsuario: string): readonly FichaDelCatalogo[] {
   return fichasDelCatalogo(FICHAS_DE_EJEMPLO, conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, idUsuario))
@@ -214,13 +214,13 @@ describe('temasDisponibles / eventosDisponibles', () => {
   })
 
   it('no ofrece un tema de una conferencia que esa persona no puede ver', () => {
-    const entradasBerrio = entradasDe('usr-berrio')
+    const entradasBerrio = entradasDe('fd5f0a48-ca53-425c-819a-a1b005f529bd')
     const temasDeBerrio = new Set(
       temasDisponibles(entradasBerrio, TEMAS_DE_EJEMPLO).map((tema) => tema.id),
     )
 
     const idsVisiblesDeBerrio = new Set(
-      conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, 'usr-berrio').map((visible) => visible.conferencia.id),
+      conferenciasVisibles(CONFERENCIAS_DE_EJEMPLO, 'fd5f0a48-ca53-425c-819a-a1b005f529bd').map((visible) => visible.conferencia.id),
     )
     const temasAjenos = FICHAS_DE_EJEMPLO.filter((ficha) => !idsVisiblesDeBerrio.has(ficha.idConferencia)).map(
       (ficha) => ficha.idTema,

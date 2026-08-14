@@ -2,10 +2,13 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
-import { CUENTAS_DE_EJEMPLO, SessionProvider } from '@/features/auth/session'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { SessionProvider } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
+import { mockearRegistrarExitoso, mockearRegistrarFallido, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaRegistro } from './PantallaRegistro'
+
+vi.mock('@/shared/supabase/cliente')
 
 function DestinoConferencias(): ReactElement {
   return <p>Panel de conferencias</p>
@@ -25,13 +28,9 @@ function montar(): void {
   )
 }
 
-function primeraCuenta() {
-  const cuenta = CUENTAS_DE_EJEMPLO[0]
-  if (cuenta === undefined) {
-    throw new Error('El fixture de cuentas de ejemplo no puede estar vacío')
-  }
-  return cuenta
-}
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
 
 describe('PantallaRegistro', () => {
   it('asocia cada campo con su etiqueta', () => {
@@ -66,11 +65,12 @@ describe('PantallaRegistro', () => {
   })
 
   it('con un correo ya registrado muestra el mensaje de correo existente', async () => {
+    mockearRegistrarFallido('user_already_exists')
     const usuario = userEvent.setup()
     montar()
 
     await usuario.type(screen.getByLabelText('Nombre'), 'Otra Persona')
-    await usuario.type(screen.getByLabelText('Correo'), primeraCuenta().correo)
+    await usuario.type(screen.getByLabelText('Correo'), 'valentina.alcantara@labanfora.org')
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Nueva-2026')
     await usuario.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
@@ -81,6 +81,11 @@ describe('PantallaRegistro', () => {
   })
 
   it('con un correo nuevo navega a las conferencias', async () => {
+    mockearRegistrarExitoso({
+      id: 'usr-mariana',
+      nombre: 'Mariana Osorio Cifuentes',
+      correo: 'mariana.osorio@labanfora.org',
+    })
     const usuario = userEvent.setup()
     montar()
 

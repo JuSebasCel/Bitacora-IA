@@ -11,8 +11,8 @@ import type { Page } from '@playwright/test'
   vez (tres conferencias propias y cuatro compartidas), así que el catálogo
   reúne fichas de ambas y no solo de una.
 
-  Credenciales copiadas de `src/features/auth/session/cuentas.fixture.ts`.
-  Los números esperados (46 fichas en total, 5 con el tema "Sesgos
+  Cuenta real de Supabase Auth (B1), con el mismo UUID que ya usan los
+  fixtures de conferencias/fichas. Los números esperados (46 fichas en total, 5 con el tema "Sesgos
   algorítmicos", 12 en "Jornadas de Ingeniería y Sociedad", 9 al combinar ese
   evento con "Validada", 7 de tipo "Cita textual") se calcularon corriendo
   `fichasDelCatalogo`/`filtrarPor*` sobre el fixture real para esta cuenta,

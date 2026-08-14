@@ -1,26 +1,28 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { CLAVE_SESION } from '@/features/auth/session/almacenamiento'
 import { mensajeDeError } from '@/shared/errors'
+import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaDetalleConferencia } from './PantallaDetalleConferencia'
 
+vi.mock('@/shared/supabase/cliente')
+
 const ZULUAGA = {
-  id: 'usr-zuluaga',
+  id: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
   nombre: 'Camila Zuluaga Nieto',
   correo: 'camila.zuluaga@labanfora.org',
 }
 
 const ALCANTARA = {
-  id: 'usr-alcantara',
+  id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
   nombre: 'Valentina Alcántara Rueda',
   correo: 'valentina.alcantara@labanfora.org',
 }
 
 function montar(ruta: string, cuenta = ZULUAGA) {
-  sessionStorage.setItem(CLAVE_SESION, JSON.stringify(cuenta))
+  mockearSesionAutenticada(cuenta)
 
   return render(
     <SessionProvider>
@@ -48,6 +50,10 @@ async function fichas(): Promise<HTMLElement[]> {
 function conteoDe(rotulo: string): HTMLElement | null {
   return screen.getByText(rotulo).closest('div')
 }
+
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
 
 describe('PantallaDetalleConferencia, resumen', () => {
   it('anuncia la conferencia con su título', async () => {
@@ -132,7 +138,7 @@ describe('PantallaDetalleConferencia, generar memoria', () => {
 
   it('en una conferencia sin procesar, no ofrece generar memoria', async () => {
     montar('/conferencias/cnf-pen-02', {
-      id: 'usr-penaloza',
+      id: '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5',
       nombre: 'Rodrigo Peñaloza Marín',
       correo: 'rodrigo.penaloza@labanfora.org',
     })
@@ -220,7 +226,7 @@ describe('PantallaDetalleConferencia, fichas', () => {
 describe('PantallaDetalleConferencia, estados sin fichas', () => {
   it('explica que una conferencia en proceso todavía no tiene fichas, sin tratarlo como error', async () => {
     montar('/conferencias/cnf-pen-02', {
-      id: 'usr-penaloza',
+      id: '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5',
       nombre: 'Rodrigo Peñaloza Marín',
       correo: 'rodrigo.penaloza@labanfora.org',
     })

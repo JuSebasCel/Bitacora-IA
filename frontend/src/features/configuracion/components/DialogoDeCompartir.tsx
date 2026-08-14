@@ -1,7 +1,7 @@
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import type { FormEvent, ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { CUENTAS_DE_EJEMPLO } from '@/features/auth/session'
+import { PERSONAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import type { Conferencia, PrivacidadDeComparticion } from '@/features/conferencias/data'
 import { Button, Field, MensajeDeFormulario, Select } from '@/shared/ui'
 import { useComparticiones } from '../useComparticiones'
@@ -61,8 +61,8 @@ export function DialogoDeCompartir({
     }
   }, [abierto])
 
-  const invitadosPosibles = CUENTAS_DE_EJEMPLO.filter(
-    (cuenta) => cuenta.id !== idUsuario && !conferencia.comparticiones.some((c) => c.idInvitado === cuenta.id),
+  const invitadosPosibles = PERSONAS_DE_EJEMPLO.filter(
+    (persona) => persona.id !== idUsuario && !conferencia.comparticiones.some((c) => c.idInvitado === persona.id),
   )
 
   function alternarOpcion(clave: keyof PrivacidadDeComparticion): void {
@@ -113,7 +113,7 @@ export function DialogoDeCompartir({
                 onChange={(evento) => setIdInvitado(evento.target.value)}
                 opciones={[
                   { valor: '', texto: 'Elige una persona' },
-                  ...invitadosPosibles.map((cuenta) => ({ valor: cuenta.id, texto: cuenta.nombre })),
+                  ...invitadosPosibles.map((persona) => ({ valor: persona.id, texto: persona.nombre })),
                 ]}
               />
             </Field>

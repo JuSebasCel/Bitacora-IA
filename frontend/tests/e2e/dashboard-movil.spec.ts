@@ -7,8 +7,8 @@ import { expect, test } from '@playwright/test'
 
   Rodrigo Peñaloza es la cuenta de esta spec porque las otras tres ya están
   tomadas por las specs de F1 y por el recorrido de escritorio, y
-  `fullyParallel` está activo. Credenciales copiadas de
-  `src/features/auth/session/cuentas.fixture.ts`.
+  `fullyParallel` está activo. Cuenta real de Supabase Auth (B1), con el
+  mismo UUID que ya usan los fixtures de conferencias/fichas.
 */
 const CUENTA = {
   correo: 'rodrigo.penaloza@labanfora.org',

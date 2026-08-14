@@ -43,13 +43,20 @@ Sobre cualquier conferencia que vea, propia o compartida, cada persona puede pon
 
 Requisitos: Node.js 22.22 o superior, que es el piso que declara React Router.
 
+La autenticación corre contra un proyecto real de Supabase (auth, base de datos, storage), así que hace falta apuntar el frontend a uno antes de arrancar:
+
 ```bash
 cd frontend
+cp .env.example .env.local
+# completar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY con los del proyecto
+# (Project Settings → API en supabase.com — la anon key es pública por diseño)
 npm install
 npm run dev
 ```
 
-La aplicación queda en `http://localhost:5173`.
+La aplicación queda en `http://localhost:5173`. Sin esas dos variables, arranca y falla rápido con un mensaje explícito en vez de un error genérico de red.
+
+El esquema (tablas, RLS, buckets de Storage) vive versionado en `supabase/migrations/` y se aplica con la CLI de Supabase (`npx supabase link --project-ref <ref>` seguido de `npx supabase db push`).
 
 ### Comandos disponibles
 

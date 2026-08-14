@@ -22,11 +22,11 @@ import type { EspacioDeEtiquetas } from './tipos'
 */
 
 export const ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO: Readonly<Record<string, EspacioDeEtiquetas>> = {
-  'usr-alcantara': {
+  '1ba5af9a-f6a2-4504-ab60-1f018c21290a': {
     etiquetas: [
-      { id: 'etq-alc-ia', nombre: 'IA', idPropietario: 'usr-alcantara' },
-      { id: 'etq-alc-art1', nombre: 'art1', idPropietario: 'usr-alcantara' },
-      { id: 'etq-alc-mixtos', nombre: 'métodos mixtos', idPropietario: 'usr-alcantara' },
+      { id: 'etq-alc-ia', nombre: 'IA', idPropietario: '1ba5af9a-f6a2-4504-ab60-1f018c21290a' },
+      { id: 'etq-alc-art1', nombre: 'art1', idPropietario: '1ba5af9a-f6a2-4504-ab60-1f018c21290a' },
+      { id: 'etq-alc-mixtos', nombre: 'métodos mixtos', idPropietario: '1ba5af9a-f6a2-4504-ab60-1f018c21290a' },
     ],
     asignaciones: [
       { idEtiqueta: 'etq-alc-ia', idConferencia: 'cnf-alc-01' },
@@ -36,15 +36,15 @@ export const ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO: Readonly<Record<string, EspacioDe
       { idEtiqueta: 'etq-alc-mixtos', idConferencia: 'cnf-alc-05' },
     ],
   },
-  'usr-berrio': {
-    etiquetas: [{ id: 'etq-ber-campo', nombre: 'trabajo de campo', idPropietario: 'usr-berrio' }],
+  'fd5f0a48-ca53-425c-819a-a1b005f529bd': {
+    etiquetas: [{ id: 'etq-ber-campo', nombre: 'trabajo de campo', idPropietario: 'fd5f0a48-ca53-425c-819a-a1b005f529bd' }],
     asignaciones: [{ idEtiqueta: 'etq-ber-campo', idConferencia: 'cnf-ber-04' }],
   },
-  'usr-zuluaga': {
+  'ad474b7c-4a6e-4092-8c7e-ccf8701d9178': {
     etiquetas: [
-      { id: 'etq-zul-ia', nombre: 'IA', idPropietario: 'usr-zuluaga' },
-      { id: 'etq-zul-tesis', nombre: 'tesis', idPropietario: 'usr-zuluaga' },
-      { id: 'etq-zul-revision', nombre: 'revisión 2026', idPropietario: 'usr-zuluaga' },
+      { id: 'etq-zul-ia', nombre: 'IA', idPropietario: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178' },
+      { id: 'etq-zul-tesis', nombre: 'tesis', idPropietario: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178' },
+      { id: 'etq-zul-revision', nombre: 'revisión 2026', idPropietario: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178' },
     ],
     asignaciones: [
       /* Sobre conferencias que le compartieron, no suyas. */
@@ -55,7 +55,7 @@ export const ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO: Readonly<Record<string, EspacioDe
       { idEtiqueta: 'etq-zul-revision', idConferencia: 'cnf-zul-03' },
     ],
   },
-  'usr-penaloza': {
+  '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5': {
     etiquetas: [],
     asignaciones: [],
   },

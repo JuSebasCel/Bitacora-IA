@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { CLAVE_OCULTAS } from './almacenamiento'
 import { useConferenciasOcultas } from './useConferenciasOcultas'
 
-const ZULUAGA = 'usr-zuluaga'
-const PENALOZA = 'usr-penaloza'
+const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
+const PENALOZA = '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5'
 
 describe('useConferenciasOcultas', () => {
   it('arranca sin ninguna conferencia oculta', () => {

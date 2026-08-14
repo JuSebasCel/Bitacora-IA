@@ -2,10 +2,19 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
-import { CUENTAS_DE_EJEMPLO, SessionProvider } from '@/features/auth/session'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { SessionProvider } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
+import { mockearAccederExitoso, mockearAccederFallido, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { PantallaAcceso } from './PantallaAcceso'
+
+vi.mock('@/shared/supabase/cliente')
+
+const CUENTA_DE_PRUEBA = {
+  id: 'usr-prueba',
+  nombre: 'Valentina Alcántara Rueda',
+  correo: 'valentina.alcantara@labanfora.org',
+}
 
 /*
   El destino real de /conferencias lo cablea el integrador del router. Aquí se
@@ -30,13 +39,9 @@ function montar(): void {
   )
 }
 
-function primeraCuenta() {
-  const cuenta = CUENTAS_DE_EJEMPLO[0]
-  if (cuenta === undefined) {
-    throw new Error('El fixture de cuentas de ejemplo no puede estar vacío')
-  }
-  return cuenta
-}
+afterEach(() => {
+  reiniciarMocksDeSesion()
+})
 
 describe('PantallaAcceso', () => {
   it('asocia cada campo con su etiqueta', () => {
@@ -68,10 +73,11 @@ describe('PantallaAcceso', () => {
   })
 
   it('con credenciales incorrectas muestra el mensaje traducido de credenciales inválidas', async () => {
+    mockearAccederFallido('invalid_credentials')
     const usuario = userEvent.setup()
     montar()
 
-    await usuario.type(screen.getByLabelText('Correo'), primeraCuenta().correo)
+    await usuario.type(screen.getByLabelText('Correo'), CUENTA_DE_PRUEBA.correo)
     await usuario.type(screen.getByLabelText('Contraseña'), 'contrasena-que-no-es')
     await usuario.click(screen.getByRole('button', { name: 'Acceder' }))
 
@@ -82,12 +88,12 @@ describe('PantallaAcceso', () => {
   })
 
   it('con credenciales válidas navega a las conferencias y no deja error en pantalla', async () => {
+    mockearAccederExitoso(CUENTA_DE_PRUEBA)
     const usuario = userEvent.setup()
-    const cuenta = primeraCuenta()
     montar()
 
-    await usuario.type(screen.getByLabelText('Correo'), cuenta.correo)
-    await usuario.type(screen.getByLabelText('Contraseña'), cuenta.contrasena)
+    await usuario.type(screen.getByLabelText('Correo'), CUENTA_DE_PRUEBA.correo)
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Anfora-2026')
     await usuario.click(screen.getByRole('button', { name: 'Acceder' }))
 
     expect(await screen.findByText('Panel de conferencias')).toBeInTheDocument()
