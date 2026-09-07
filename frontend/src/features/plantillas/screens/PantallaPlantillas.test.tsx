@@ -15,7 +15,7 @@ vi.mock('docx-preview', () => ({
 }))
 
 const TIPO_MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-const RUTA_DOCX_DE_EJEMPLO = resolve(process.cwd(), '../.agent/examples/tem.docx')
+const RUTA_DOCX_DE_EJEMPLO = resolve(process.cwd(), 'tests/fixtures/tem.docx')
 
 function archivoDocxReal(): File {
   const buffer = readFileSync(RUTA_DOCX_DE_EJEMPLO)

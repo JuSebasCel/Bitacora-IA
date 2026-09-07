@@ -27,6 +27,21 @@ export default defineConfig({
     },
   },
   test: {
+    /*
+      Configuración de Supabase para las pruebas. `cliente.ts` valida sus dos
+      variables al importarse y lanza si falta alguna, así que sin esto
+      cualquier archivo que llegue a `@/shared/supabase/cliente` por una
+      cadena de imports —aunque después lo reemplace con `vi.mock`— falla al
+      cargar el módulo, antes de correr una sola prueba.
+
+      Son valores sintéticos con la forma que espera `createClient`, nunca los
+      de un proyecto real: ninguna prueba de esta suite toca la red. Las que
+      sí hablan con Supabase de verdad viven aparte, en `supabase/tests/`.
+    */
+    env: {
+      VITE_SUPABASE_URL: 'http://localhost:54321',
+      VITE_SUPABASE_ANON_KEY: 'anon-key-de-prueba',
+    },
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

@@ -5,8 +5,14 @@ import { importarDocx, validarDocx } from './importarDocx'
 
 const TIPO_MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-/* El archivo real que motivó todo el diseño del módulo — ver `.agent/plans/`. Ruta relativa a `frontend/`, donde corre Vitest. */
-const RUTA_DOCX_DE_EJEMPLO = resolve(process.cwd(), '../.agent/examples/tem.docx')
+/*
+  Copia versionada del `.docx` real que motivó el diseño del módulo: mismo
+  delimitador `[[ ]]` y mismos cinco marcadores simples. Vive dentro del
+  repositorio, y no en la carpeta local de planeación, porque una suite que
+  depende de un archivo ignorado por git solo pasa en la máquina donde ese
+  archivo existe. Ruta relativa a `frontend/`, donde corre Vitest.
+*/
+const RUTA_DOCX_DE_EJEMPLO = resolve(process.cwd(), 'tests/fixtures/tem.docx')
 
 function archivoDocxReal(): File {
   const buffer = readFileSync(RUTA_DOCX_DE_EJEMPLO)
