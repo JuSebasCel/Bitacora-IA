@@ -15,6 +15,33 @@ import { vi } from 'vitest'
   (`SessionProvider.test.tsx`) reconfiguran esta implementación con su propio
   `mockImplementation` y usan `queueMicrotask` a propósito.
 */
+/*
+  Cadena encadenable que imita el constructor de consultas de PostgREST: cada
+  filtro devuelve la misma cadena, y la cadena es "thenable", así que un
+  `await` sobre ella resuelve la respuesta final -- exactamente como se
+  comporta `PostgrestFilterBuilder`.
+*/
+function cadenaVacia(respuesta: { data: unknown; error: unknown } = { data: null, error: null }) {
+  const cadena: Record<string, unknown> = {
+    then: (resolver: (valor: unknown) => unknown) => Promise.resolve(respuesta).then(resolver),
+  }
+
+  for (const metodo of [
+    'select', 'insert', 'update', 'upsert', 'delete',
+    'eq', 'neq', 'in', 'is', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'contains',
+    'or', 'not', 'filter', 'match', 'order', 'limit', 'range',
+  ]) {
+    cadena[metodo] = vi.fn(() => cadena)
+  }
+
+  cadena['single'] = vi.fn(() => cadena)
+  cadena['maybeSingle'] = vi.fn(() => cadena)
+
+  return cadena
+}
+
+export { cadenaVacia }
+
 export const supabase = {
   auth: {
     signInWithPassword: vi.fn(),
@@ -32,4 +59,21 @@ export const supabase = {
     reconfiguran esta implementación cuando sí importa.
   */
   rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+  /*
+    Serie B: los repositorios de cada dominio llaman `supabase.from(tabla)` y
+    encadenan filtros sobre lo que devuelve. Por defecto cada cadena resuelve
+    "sin filas y sin error" -- una pantalla que no está probando persistencia
+    monta vacía en vez de estallar. `mockearTabla`/`mockearFalloDeTabla`
+    (`test/supabaseDePrueba.ts`) reconfiguran una tabla concreta cuando sí
+    importa.
+  */
+  from: vi.fn(() => cadenaVacia()),
+  storage: {
+    from: vi.fn(() => ({
+      upload: vi.fn().mockResolvedValue({ data: null, error: null }),
+      download: vi.fn().mockResolvedValue({ data: null, error: null }),
+      remove: vi.fn().mockResolvedValue({ data: null, error: null }),
+      createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: null }),
+    })),
+  },
 }

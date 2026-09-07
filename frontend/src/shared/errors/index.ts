@@ -79,6 +79,16 @@ export type CodigoError =
   | 'CONFIG_YA_COMPARTIDA'
   | 'CONFIG_SIN_PERMISO_PARA_COMPARTIR'
 
+  /*
+    Persistencia (serie B). Son los tres desenlaces de una operación contra
+    Supabase que la interfaz sabe distinguir; cualquier otro fallo de
+    Postgres cae al mensaje genérico, que no filtra detalle técnico.
+  */
+  | 'DATOS_SIN_CONEXION'
+  | 'DATOS_SIN_PERMISO'
+  | 'DATOS_CONFLICTO'
+  | 'DATOS_FALLO_INESPERADO'
+
 /** Tope de longitud del nombre de una etiqueta: más largo rompe la fila densa del listado. */
 export const LARGO_MAXIMO_DE_ETIQUETA = 24
 
@@ -192,6 +202,11 @@ const MENSAJES: Record<CodigoError, string> = {
   CONFIG_INVITADO_REQUERIDO: 'Elige con quién quieres compartirla.',
   CONFIG_YA_COMPARTIDA: 'Esa persona ya tiene esta conferencia compartida.',
   CONFIG_SIN_PERMISO_PARA_COMPARTIR: 'Quien te compartió esta conferencia no permitió que la vuelvas a compartir.',
+
+  DATOS_SIN_CONEXION: 'No pudimos conectarnos. Revisa tu conexión y vuelve a intentarlo.',
+  DATOS_SIN_PERMISO: 'No tienes permiso para hacer eso. Puede que quien la compartió haya cambiado los permisos.',
+  DATOS_CONFLICTO: 'Eso ya existe. Revisa la lista antes de volver a crearlo.',
+  DATOS_FALLO_INESPERADO: 'No pudimos guardar el cambio. Vuelve a intentarlo en unos momentos.',
 }
 
 const MENSAJE_GENERICO = 'No pudimos completar la acción. Vuelve a intentarlo en unos momentos.'

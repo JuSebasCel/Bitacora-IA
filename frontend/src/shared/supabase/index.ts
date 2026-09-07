@@ -1,3 +1,5 @@
 export { supabase } from './cliente'
 export { leerConfiguracionSupabase } from './configuracion'
 export type { ConfiguracionSupabase } from './configuracion'
+export { codigoDeErrorDeSupabase, resultadoDe, resultadoDeLista } from './consultas'
+export type { ResultadoDeConsulta } from './consultas'
