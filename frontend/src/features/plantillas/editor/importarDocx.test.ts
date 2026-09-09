@@ -60,14 +60,15 @@ describe('importarDocx', () => {
     expect(resultado).toEqual({ ok: false, codigo: 'PLANT_DOCX_FALLO_IMPORTACION' })
   })
 
-  it('con el .docx real de ejemplo, detecta los cinco marcadores y conserva el archivo intacto como data URL', async () => {
+  it('con el .docx real de ejemplo, detecta los cinco marcadores sin devolver los bytes', async () => {
     const resultado = await importarDocx(archivoDocxReal())
 
     expect(resultado.ok).toBe(true)
     if (resultado.ok) {
       expect(resultado.marcadores).toHaveLength(5)
       expect(resultado.marcadores.every((marcador) => marcador.tipo === 'simple')).toBe(true)
-      expect(resultado.archivoOriginal.startsWith('data:')).toBe(true)
+      /* Desde B6 el archivo se sube tal cual al bucket: importar solo lee sus marcas. */
+      expect(Object.keys(resultado)).toEqual(['ok', 'marcadores'])
     }
   })
 })

@@ -12,9 +12,23 @@ vi.mock('docx-preview', () => ({
   renderAsync: renderAsyncMock,
 }))
 
+/*
+  La tarjeta de una plantilla importada descarga su `.docx` del bucket para
+  pintar la miniatura. Se sustituye el repositorio entero, que es el límite del
+  dominio contra Supabase: así la prueba habla de plantillas y no de cadenas de
+  PostgREST. Aquí la descarga nunca resuelve porque lo que se prueba es el
+  texto y los enlaces de la tarjeta, no la miniatura.
+*/
+vi.mock('../repositorio', () => ({
+  descargarDocxDePlantilla: vi.fn(() => new Promise(() => {})),
+}))
+
+/* Una plantilla importada nace con su id ya decidido: la ruta de su .docx en el bucket lo contiene. */
+const ID_DE_PRUEBA = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const RUTA_DE_PRUEBA = `${ID_DE_PRUEBA}/original.docx`
+
 afterEach(() => {
   renderAsyncMock.mockReset()
-  vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
@@ -57,11 +71,7 @@ describe('TarjetaDePlantilla — origen blanco', () => {
 
 describe('TarjetaDePlantilla — origen docx', () => {
   it('muestra el nombre, el conteo de marcadores, y enlaza al editor', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    )
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Plantilla importada', [
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Plantilla importada', [
       {
         tipo: 'simple',
         id: 'mar-1',
@@ -80,11 +90,7 @@ describe('TarjetaDePlantilla — origen docx', () => {
   })
 
   it('pluraliza el conteo de marcadores cuando hay más de uno', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    )
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Plantilla importada', [
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Plantilla importada', [
       {
         tipo: 'condicional',
         id: 'sec-1',

@@ -50,6 +50,16 @@ export type CodigoError =
   | 'PLANT_DOCX_FALLO_IMPORTACION'
   | 'PLANT_DOCX_FALLO_GENERACION'
   | 'PLANT_ETIQUETA_REQUERIDA'
+  /*
+    B6: el `.docx` importado ya no viaja como data URL dentro del registro de
+    la plantilla, vive en el bucket `plantillas-docx`. Subirlo y recuperarlo
+    son dos operaciones de red distintas y fallan por motivos distintos, así
+    que llevan códigos propios en vez de caer al `DATOS_*` genérico: quien
+    sube quiere reintentar el envío, quien abre una plantilla ya guardada
+    quiere saber que el registro está bien y lo que falló fue el archivo.
+  */
+  | 'PLANT_DOCX_FALLO_SUBIDA'
+  | 'PLANT_DOCX_FALLO_DESCARGA'
   /* Generador de memoria (F5). */
   | 'MEM_CONFERENCIA_REQUERIDA'
   | 'MEM_PLANTILLA_REQUERIDA'
@@ -175,6 +185,10 @@ const MENSAJES: Record<CodigoError, string> = {
   PLANT_DOCX_FALLO_GENERACION:
     'No pudimos generar la vista previa. Revisa que las marcas [[SI:...]]/[[FIN SI]] y [[REPETIR:...]]/[[FIN REPETIR]] estén completas y bien escritas en el documento.',
   PLANT_ETIQUETA_REQUERIDA: 'Escribe una descripción para el campo personalizado antes de agregarlo.',
+  PLANT_DOCX_FALLO_SUBIDA:
+    'No pudimos guardar el archivo de la plantilla. Revisa tu conexión y vuelve a subirlo.',
+  PLANT_DOCX_FALLO_DESCARGA:
+    'No pudimos recuperar el archivo original de esta plantilla. Vuelve a intentarlo en unos momentos.',
 
   MEM_CONFERENCIA_REQUERIDA: 'Elige la conferencia de la que quieres generar la memoria.',
   MEM_PLANTILLA_REQUERIDA: 'Elige la plantilla que quieres usar para la memoria.',

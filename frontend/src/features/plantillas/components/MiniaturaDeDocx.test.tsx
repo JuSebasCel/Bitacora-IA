@@ -10,43 +10,37 @@ vi.mock('docx-preview', () => ({
 
 afterEach(() => {
   renderAsyncMock.mockReset()
-  vi.unstubAllGlobals()
 })
 
+/*
+  Desde B6 la miniatura recibe los bytes ya resueltos (los descarga la tarjeta
+  con `useDocxDePlantilla`), así que estas pruebas no simulan red de ninguna
+  clase: solo los tres estados visibles del componente.
+*/
 describe('MiniaturaDeDocx', () => {
-  it('muestra el ícono de respaldo mientras carga', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    )
-
-    const { container } = render(<MiniaturaDeDocx archivoOriginal="data:;base64,AA==" />)
+  it('sin archivo todavía, muestra el ícono de respaldo', () => {
+    const { container } = render(<MiniaturaDeDocx archivo={null} />)
 
     expect(container.querySelector('svg')).toBeInTheDocument()
+    expect(renderAsyncMock).not.toHaveBeenCalled()
   })
 
   it('al renderizar con éxito, oculta el ícono de respaldo', async () => {
-    const blob = new Blob(['x'])
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve({ blob: () => Promise.resolve(blob) }) as unknown as Promise<Response>),
-    )
+    const archivo = new Blob(['x'])
     renderAsyncMock.mockResolvedValue(undefined)
 
-    const { container } = render(<MiniaturaDeDocx archivoOriginal="data:;base64,AA==" />)
+    const { container } = render(<MiniaturaDeDocx archivo={archivo} />)
 
     await waitFor(() => expect(container.querySelector('svg')).not.toBeInTheDocument())
-    expect(renderAsyncMock).toHaveBeenCalledWith(blob, expect.anything(), undefined, { inWrapper: true })
+    expect(renderAsyncMock).toHaveBeenCalledWith(archivo, expect.anything(), undefined, { inWrapper: true })
   })
 
-  it('si el archivo no se puede leer, el ícono de respaldo se queda visible', async () => {
-    const fetchMock = vi.fn(() => Promise.reject(new Error('fallo de red')))
-    vi.stubGlobal('fetch', fetchMock)
+  it('si el documento no se puede renderizar, el ícono de respaldo se queda visible', async () => {
+    renderAsyncMock.mockRejectedValue(new Error('documento ilegible'))
 
-    const { container } = render(<MiniaturaDeDocx archivoOriginal="data:;base64,AA==" />)
+    const { container } = render(<MiniaturaDeDocx archivo={new Blob(['x'])} />)
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-    await Promise.resolve()
+    await waitFor(() => expect(renderAsyncMock).toHaveBeenCalled())
     expect(container.querySelector('svg')).toBeInTheDocument()
   })
 })

@@ -93,8 +93,18 @@ export type PlantillaDesdeDocx = {
   readonly id: string
   readonly nombre: string
   readonly origen: 'docx'
-  /** Data URL en base64 del `.docx` tal cual se subió: nunca se reescribe en el almacenamiento. */
-  readonly archivoOriginal: string
+  /**
+   * Ruta del `.docx` dentro del bucket `plantillas-docx`, nunca sus bytes.
+   *
+   * Hasta B6 este campo era el archivo entero como data URL en base64. Un
+   * `.docx` de los 10 MB que admite `validarDocx` ocupaba ahí cerca de 14 MB
+   * de texto, dentro de un `sessionStorage` con una cuota típica de 5 MB:
+   * bastaba una plantilla real para que el guardado empezara a fallar en
+   * silencio. Ahora el archivo se sube al bucket y el registro guarda solo su
+   * ruta (`plantillas.ruta_archivo_original`); los bytes se descargan cuando
+   * de verdad hacen falta (miniatura, confirmación, generación de memoria).
+   */
+  readonly rutaArchivoOriginal: string
   readonly marcadores: readonly MarcadorDeDocx[]
   readonly actualizadaEl: string
 }

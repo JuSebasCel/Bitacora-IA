@@ -1,26 +1,39 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearPlantillaDesdeDocx } from '../plantillas'
 import type { MarcadorDeDocx } from '../data'
 import { ConfirmacionDePlantillaDocx } from './ConfirmacionDePlantillaDocx'
 
 const renderAsyncMock = vi.hoisted(() => vi.fn())
+const descargarMock = vi.hoisted(() => vi.fn())
 
 vi.mock('docx-preview', () => ({
   renderAsync: renderAsyncMock,
 }))
 
-afterEach(() => {
-  renderAsyncMock.mockReset()
-  vi.unstubAllGlobals()
+/*
+  Se sustituye el repositorio y no el cliente de Supabase: la pantalla depende
+  de "dame el .docx de esta plantilla", no de cómo se resuelve esa frase.
+*/
+vi.mock('../repositorio', () => ({
+  descargarDocxDePlantilla: descargarMock,
+}))
+
+const ID_DE_PRUEBA = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const RUTA_DE_PRUEBA = `${ID_DE_PRUEBA}/original.docx`
+
+beforeEach(() => {
+  conDescargaQueNuncaResuelve()
 })
 
-function conFetchQueNuncaResuelve() {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => new Promise(() => {})),
-  )
+afterEach(() => {
+  renderAsyncMock.mockReset()
+  descargarMock.mockReset()
+})
+
+function conDescargaQueNuncaResuelve() {
+  descargarMock.mockImplementation(() => new Promise(() => {}))
 }
 
 const MARCADOR_SIMPLE: MarcadorDeDocx = {
@@ -41,8 +54,7 @@ const MARCADOR_CONDICIONAL: MarcadorDeDocx = {
 
 describe('ConfirmacionDePlantillaDocx', () => {
   it('sin marcadores detectados, avisa que no se encontró ninguna marca', () => {
-    conFetchQueNuncaResuelve()
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
 
     render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
 
@@ -50,8 +62,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
   })
 
   it('muestra el contexto de un marcador simple con el marcador resaltado, sin corchetes', () => {
-    conFetchQueNuncaResuelve()
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [MARCADOR_SIMPLE])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE])
 
     render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
 
@@ -61,8 +72,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
   })
 
   it('muestra la insignia correcta para una sección condicional', () => {
-    conFetchQueNuncaResuelve()
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [MARCADOR_CONDICIONAL])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_CONDICIONAL])
 
     render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
 
@@ -71,9 +81,8 @@ describe('ConfirmacionDePlantillaDocx', () => {
   })
 
   it('escribir en el campo Nombre llama a alRenombrar con el valor tecleado', async () => {
-    conFetchQueNuncaResuelve()
     const usuario = userEvent.setup()
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
     const alRenombrar = vi.fn()
 
     render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={alRenombrar} />)
@@ -83,8 +92,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
   })
 
   it('no hay ningún control para mapear campo u origen — solo lectura', () => {
-    conFetchQueNuncaResuelve()
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [MARCADOR_SIMPLE, MARCADOR_CONDICIONAL])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE, MARCADOR_CONDICIONAL])
 
     render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
 
@@ -92,19 +100,32 @@ describe('ConfirmacionDePlantillaDocx', () => {
     expect(screen.queryByRole('button', { name: /generar vista previa/i })).not.toBeInTheDocument()
   })
 
-  it('una vez que el archivo original se lee, aparece el enlace de descarga', async () => {
+  it('una vez que el archivo original baja del bucket, aparece el enlace de descarga', async () => {
     const blob = new Blob(['contenido'])
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve({ blob: () => Promise.resolve(blob) }) as unknown as Promise<Response>),
-    )
+    descargarMock.mockResolvedValue({ ok: true, datos: blob })
     renderAsyncMock.mockResolvedValue(undefined)
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
 
     render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByText('Descargar plantilla')).toBeInTheDocument())
     const enlace = screen.getByText('Descargar plantilla').closest('a')
     expect(enlace).toHaveAttribute('download', 'Prueba.docx')
+  })
+
+  /*
+    Que el archivo no baje no invalida la plantilla: sus marcadores viven en la
+    fila y se siguen viendo. Lo que no puede pasar es quedarse callado, con la
+    vista previa vacía insinuando que el documento se perdió.
+  */
+  it('si el archivo original no se puede descargar, lo dice con nombre propio y conserva los marcadores', async () => {
+    descargarMock.mockResolvedValue({ ok: false, codigo: 'PLANT_DOCX_FALLO_DESCARGA' })
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE])
+
+    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
+
+    expect(await screen.findByText(/no pudimos recuperar el archivo original/i)).toBeInTheDocument()
+    expect(screen.getByText('Nombre grupo')).toBeInTheDocument()
+    expect(screen.queryByText('Descargar plantilla')).not.toBeInTheDocument()
   })
 })

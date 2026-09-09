@@ -19,13 +19,32 @@ export type ResultadoPlantilla =
   | { readonly ok: true; readonly plantilla: Plantilla }
   | { readonly ok: false; readonly codigo: CodigoError }
 
-function idAleatorio(prefijo: string): string {
+/*
+  El id de una plantilla lo genera el cliente, no el `gen_random_uuid()` de la
+  columna. Dos razones, y la primera es dura: la ruta del `.docx` en el bucket
+  se arma con el id (`{id}/original.docx`) y el archivo tiene que estar subido
+  *antes* del `insert`, porque `ruta_archivo_original` es `not null`. Esperar
+  el id de la base obligaría a insertar la fila, subir, y volver a
+  actualizarla, con una ventana en la que el registro apunta a un archivo que
+  todavía no existe. La segunda es que estas funciones son totales: devuelven
+  una `Plantilla` completa y utilizable, sin una variante "todavía sin id" que
+  cada consumidor tendría que contemplar solo porque la fila no ha vuelto.
+
+  Es un UUID de verdad (no el `pla-...` de antes) porque la columna es `uuid`:
+  un id con prefijo lo rechazaría Postgres. El respaldo sin `crypto.randomUUID`
+  arma la misma forma a mano, para entornos donde ese API no existe.
+*/
+export function idNuevo(): string {
   const uuid = globalThis.crypto?.randomUUID?.()
   if (uuid !== undefined) {
-    return `${prefijo}-${uuid}`
+    return uuid
   }
 
-  return `${prefijo}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (caracter) => {
+    const azar = Math.floor(Math.random() * 16)
+    const valor = caracter === 'x' ? azar : (azar & 0x3) | 0x8
+    return valor.toString(16)
+  })
 }
 
 const DOCUMENTO_EN_BLANCO: JSONContent = {
@@ -33,31 +52,47 @@ const DOCUMENTO_EN_BLANCO: JSONContent = {
   content: [{ type: 'paragraph' }],
 }
 
+/*
+  Colores con los que nace una plantilla en blanco. Salieron de dentro de
+  `crearPlantillaEnBlanco` cuando `repositorio.ts` necesitó los mismos valores
+  para reconstruir una fila cuyas columnas de color llegaran nulas: las dos
+  columnas son opcionales en el esquema (una plantilla `docx` no las usa), así
+  que el mapeo tiene que decidir con qué se rellenan.
+*/
+export const COLOR_PRINCIPAL_POR_DEFECTO = '#2f5fdb'
+export const COLOR_SECUNDARIO_POR_DEFECTO = '#5b6472'
+
 /** Nombre con el que nace una plantilla en blanco — usado también para detectar un abandono sin tocar nada. */
 export const NOMBRE_DE_PLANTILLA_SIN_TOCAR = 'Plantilla sin nombre'
 
 export function crearPlantillaEnBlanco(): PlantillaEnBlanco {
   return {
-    id: idAleatorio('pla'),
+    id: idNuevo(),
     nombre: NOMBRE_DE_PLANTILLA_SIN_TOCAR,
     origen: 'blanco',
-    colorPrincipal: '#2f5fdb',
-    colorSecundario: '#5b6472',
+    colorPrincipal: COLOR_PRINCIPAL_POR_DEFECTO,
+    colorSecundario: COLOR_SECUNDARIO_POR_DEFECTO,
     contenido: DOCUMENTO_EN_BLANCO,
     actualizadaEl: new Date().toISOString(),
   }
 }
 
+/*
+  El id se pide por parámetro, y no se genera aquí: la ruta del `.docx` dentro
+  del bucket ya lo contiene, así que para cuando esta función corre el archivo
+  lleva subido bajo ese mismo id (ver `repositorio.ts`).
+*/
 export function crearPlantillaDesdeDocx(
-  archivoOriginal: string,
+  id: string,
+  rutaArchivoOriginal: string,
   nombre: string,
   marcadores: readonly MarcadorDeDocx[],
 ): PlantillaDesdeDocx {
   return {
-    id: idAleatorio('pla'),
+    id,
     nombre,
     origen: 'docx',
-    archivoOriginal,
+    rutaArchivoOriginal,
     marcadores,
     actualizadaEl: new Date().toISOString(),
   }

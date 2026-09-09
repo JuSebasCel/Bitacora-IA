@@ -25,6 +25,10 @@ function archivo(nombre: string, tipo: string, tamanoEnBytes: number): File {
   return new File([new Uint8Array(tamanoEnBytes)], nombre, { type: tipo })
 }
 
+/* Una plantilla importada nace con su id ya decidido: la ruta de su .docx en el bucket lo contiene. */
+const ID_DE_PRUEBA = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const RUTA_DE_PRUEBA = `${ID_DE_PRUEBA}/original.docx`
+
 describe('crearPlantillaEnBlanco', () => {
   it('nace con origen blanco, nombre por defecto y un documento sin contenido', () => {
     const plantilla = crearPlantillaEnBlanco()
@@ -44,13 +48,12 @@ describe('crearPlantillaEnBlanco', () => {
 
 describe('crearPlantillaDesdeDocx', () => {
   it('nace con origen docx, el archivo y los marcadores tal cual se pasaron', () => {
-    const plantilla = crearPlantillaDesdeDocx('data:application/octet-stream;base64,AA==', 'Mi plantilla', [
-      MARCADOR,
-    ])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Mi plantilla', [MARCADOR])
 
     expect(plantilla.origen).toBe('docx')
+    expect(plantilla.id).toBe(ID_DE_PRUEBA)
     expect(plantilla.nombre).toBe('Mi plantilla')
-    expect(plantilla.archivoOriginal).toBe('data:application/octet-stream;base64,AA==')
+    expect(plantilla.rutaArchivoOriginal).toBe(RUTA_DE_PRUEBA)
     expect(plantilla.marcadores).toEqual([MARCADOR])
   })
 })
@@ -94,7 +97,7 @@ describe('cambiarColores', () => {
   })
 
   it('no hace nada sobre una plantilla docx', () => {
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
 
     const resultado = cambiarColores(plantilla, '#111111', '#222222')
 
@@ -116,7 +119,7 @@ describe('actualizarContenido', () => {
   })
 
   it('no hace nada sobre una plantilla docx', () => {
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
 
     const resultado = actualizarContenido(plantilla, { type: 'doc', content: [] })
 
@@ -126,7 +129,7 @@ describe('actualizarContenido', () => {
 
 describe('actualizarMarcadoresDeDocx', () => {
   it('reemplaza los marcadores de una plantilla docx', () => {
-    const plantilla = crearPlantillaDesdeDocx('data:;base64,AA==', 'Prueba', [])
+    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
 
     const resultado = actualizarMarcadoresDeDocx(plantilla, [MARCADOR])
 
@@ -217,7 +220,7 @@ describe('esPlantillaEnBlancoAbandonada', () => {
   })
 
   it('una plantilla docx nunca se considera una plantilla en blanco abandonada', () => {
-    expect(esPlantillaEnBlancoAbandonada(crearPlantillaDesdeDocx('data:;base64,AA==', NOMBRE_DE_PLANTILLA_SIN_TOCAR, []))).toBe(
+    expect(esPlantillaEnBlancoAbandonada(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, NOMBRE_DE_PLANTILLA_SIN_TOCAR, []))).toBe(
       false,
     )
   })

@@ -4,7 +4,7 @@ import type { ChangeEvent, DragEvent, ReactElement } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
-import { Field, Input, PanelDeError } from '@/shared/ui'
+import { Esqueleto, Field, Input, PanelDeError } from '@/shared/ui'
 import { BarraDeHerramientas, EditorDeDocumento, FORMATO_MIME_MARCADOR, PaletaDeMarcadores } from '../components'
 import type { OrigenDeMarcador, PlantillaEnBlanco } from '../data'
 import { EXTENSIONES_DE_PLANTILLA } from '../editor/extensionesDePlantilla'
@@ -81,7 +81,7 @@ function EditorDePlantillaInterno({ plantilla, mutadores }: PropsEditorInterno):
     const documentoVacio = editor?.isEmpty ?? true
 
     if (sinTocarElNombre && documentoVacio) {
-      eliminar(plantilla.id)
+      void eliminar(plantilla.id)
     }
 
     void navigate('/plantillas')
@@ -168,6 +168,29 @@ export function PantallaEditorDePlantilla(): ReactElement {
   const { idPlantilla = '' } = useParams()
   const mutadores = usePlantillas()
   const plantilla = mutadores.plantillas.find((candidata) => candidata.id === idPlantilla)
+
+  /*
+    Mientras la lectura no resuelve, "no encontramos esa plantilla" es
+    literalmente falso: todavía no se buscó. Sin este caso, entrar al editor
+    (o recargar sobre su URL) mostraba el error de plantilla inexistente
+    durante el primer instante de cada visita.
+  */
+  if (mutadores.cargando) {
+    return (
+      <div className="flex flex-col gap-5 border-t border-filete-fuerte pt-5">
+        <Esqueleto filas={4} etiqueta="Cargando la plantilla" />
+      </div>
+    )
+  }
+
+  if (mutadores.codigoDeError !== null) {
+    return (
+      <div className="flex flex-col gap-5 border-t border-filete-fuerte pt-5">
+        <PanelDeError mensaje={mensajeDeError(mutadores.codigoDeError)} />
+        <EnlaceDeRegreso />
+      </div>
+    )
+  }
 
   if (plantilla === undefined) {
     return (

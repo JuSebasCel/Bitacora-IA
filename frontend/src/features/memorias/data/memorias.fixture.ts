@@ -1,10 +1,10 @@
 import type { Memoria } from './tipos'
 
 /**
- * Semilla del listado de memorias: para que la pantalla no arranque vacía.
- * Referencia una conferencia y una plantilla reales del resto de los
- * fixtures (`cnf-alc-01`, `pla-memoria-estandar`) — se borra cuando entre
- * B1 y las memorias vivan en Supabase.
+ * Material de prueba, ya no semilla de la aplicación: desde B6 el listado sale
+ * de la tabla `memorias` de Supabase (`repositorio.ts`). Se conserva porque
+ * las pruebas de filtrado y de listado necesitan una memoria bien formada que
+ * referencie una conferencia del fixture de conferencias (`cnf-alc-01`).
  */
 export const MEMORIAS_DE_EJEMPLO: readonly Memoria[] = [
   {

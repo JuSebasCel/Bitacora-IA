@@ -1,15 +1,18 @@
 import type { Plantilla } from './tipos'
 
 /*
-  Semilla del listado de plantillas: para que la pantalla no arranque vacía.
-  Se borra cuando entre B1 y las plantillas vivan en Supabase.
+  Material de prueba, ya no semilla de la aplicación: desde B6 el listado sale
+  de la tabla `plantillas` de Supabase (`repositorio.ts`) y nadie en la app lee
+  este archivo. Se conserva porque describe dos plantillas en blanco completas
+  y bien formadas, que es justo lo que necesitan las pruebas del repositorio y
+  del hook para no volver a escribirlas a mano en cada archivo.
 
   `contenido` es un documento TipTap real: los nodos `marcador` y
   `seccionMarcador` son los definidos en `editor/extensiones/`.
 */
 export const PLANTILLAS_DE_EJEMPLO: readonly Plantilla[] = [
   {
-    id: 'pla-memoria-estandar',
+    id: '3f4b2f8e-1c7a-4f6d-9a21-0d1c5b8e7a01',
     nombre: 'Memoria estándar',
     origen: 'blanco',
     colorPrincipal: '#2f5fdb',
@@ -77,7 +80,7 @@ export const PLANTILLAS_DE_EJEMPLO: readonly Plantilla[] = [
     },
   },
   {
-    id: 'pla-cita-simple',
+    id: '3f4b2f8e-1c7a-4f6d-9a21-0d1c5b8e7a02',
     nombre: 'Cita simple',
     origen: 'blanco',
     colorPrincipal: '#9a2e4f',

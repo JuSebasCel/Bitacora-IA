@@ -18,7 +18,7 @@ export type PropsPanelDeGenerarMemoria = {
   /** Preselecciona una conferencia — punto de entrada desde el detalle de una conferencia específica. */
   idConferenciaPreseleccionada?: string
   /** Se pasa desde la pantalla que ya tiene montado `useMemorias()`, para que el listado se actualice sin un segundo estado desincronizado. */
-  generar: (idConferencia: string, idPlantilla: string, nombre: string) => ResultadoMemoria
+  generar: (idConferencia: string, idPlantilla: string, nombre: string) => Promise<ResultadoMemoria>
   alGenerar: (memoria: Memoria) => void
 }
 
@@ -28,12 +28,13 @@ export type PropsPanelDeGenerarMemoria = {
   devuelto a quien lo abrió). Sin diálogos de creación al vuelo: la
   conferencia y la plantilla ya existen, solo se eligen.
 
-  Al enviar, se cierra de inmediato — igual que `PanelDeCarga.tsx` — sin
-  ninguna espera propia: la memoria ya quedó guardada (`generar` es
-  síncrono) y la sensación de "generando" vive en su tarjeta del listado
-  (`TarjetaDeMemoria.tsx`), no aquí. Mismo criterio que una conferencia
-  recién cargada: el panel de carga tampoco espera a que "termine de
-  procesar", solo confirma que quedó guardada.
+  Al enviar, el panel espera a que la memoria quede guardada de verdad y
+  recién entonces se cierra (desde B6 `generar` escribe en Supabase). Cerrarlo
+  antes, como hacía cuando el guardado era instantáneo, dejaría a la persona
+  mirando un listado sin su memoria cuando el insert falla, y sin ningún lugar
+  donde contarle por qué: el error se muestra dentro del formulario que lo
+  provocó. Lo que sigue sin esperarse es la "generación" del documento en sí,
+  que vive en la tarjeta del listado (`TarjetaDeMemoria.tsx`).
 */
 export function PanelDeGenerarMemoria({
   abierto,
@@ -53,6 +54,7 @@ export function PanelDeGenerarMemoria({
   const [idPlantilla, setIdPlantilla] = useState('')
   const [nombre, setNombre] = useState('')
   const [nombreTocado, setNombreTocado] = useState(false)
+  const [generando, setGenerando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export function PanelDeGenerarMemoria({
     setIdPlantilla('')
     setNombre('')
     setNombreTocado(false)
+    setGenerando(false)
     setError(null)
 
     const primerCampo = panel?.querySelector<HTMLElement>('select, input')
@@ -126,10 +129,12 @@ export function PanelDeGenerarMemoria({
     setNombre(valor)
   }
 
-  function alEnviar(evento: FormEvent<HTMLFormElement>): void {
+  async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
 
-    const resultado = generar(idConferencia, idPlantilla, nombre)
+    setGenerando(true)
+    const resultado = await generar(idConferencia, idPlantilla, nombre)
+    setGenerando(false)
 
     if (!resultado.ok) {
       setError(mensajeDeError(resultado.codigo))
@@ -182,7 +187,7 @@ export function PanelDeGenerarMemoria({
           </button>
         </div>
 
-        <form noValidate onSubmit={alEnviar} className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
+        <form noValidate onSubmit={(evento) => void alEnviar(evento)} className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
           <p className="text-sm text-texto-tenue">
             Combina una conferencia ya procesada con una plantilla guardada para generar su memoria.
           </p>
@@ -217,7 +222,7 @@ export function PanelDeGenerarMemoria({
 
           {error === null ? null : <MensajeDeFormulario id={ID_ERROR}>{error}</MensajeDeFormulario>}
 
-          <Button type="submit" variante="primario" className="mt-1 w-full">
+          <Button type="submit" variante="primario" className="mt-1 w-full" cargando={generando}>
             Generar memoria
           </Button>
         </form>

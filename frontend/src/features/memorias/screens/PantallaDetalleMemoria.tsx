@@ -6,11 +6,12 @@ import { useConferenciasVisibles } from '@/features/conferencias/components/useC
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasVisibles } from '@/features/conferencias/query'
 import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
+import { useDocxDePlantilla } from '@/features/plantillas/useDocxDePlantilla'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
 import { leerTaxonomia } from '@/features/taxonomia'
 import type { CodigoError } from '@/shared/errors'
 import { mensajeDeError } from '@/shared/errors'
-import { PanelDeError } from '@/shared/ui'
+import { Esqueleto, PanelDeError } from '@/shared/ui'
 import { VistaPreviaDeMemoria } from '../components'
 import type { ResultadoDeMemoria } from '../generarMemoria'
 import { generarMemoria } from '../generarMemoria'
@@ -22,6 +23,12 @@ import { useMemorias } from '../useMemorias'
   que aquí se resuelve esa conferencia y esa plantilla de nuevo y se vuelve a
   correr `generarMemoria` — si cualquiera de las dos ya no existe, se avisa en
   vez de mostrar un documento a medias.
+
+  Desde B6 hay un tercer ingrediente que llega por red: si la plantilla es una
+  importada, sus bytes viven en el bucket `plantillas-docx` y se descargan aquí
+  (`useDocxDePlantilla`) antes de generar. Por eso la pantalla distingue con
+  cuidado "todavía no llegó" de "no existe": mientras cualquiera de las tres
+  lecturas sigue en curso, decir "no encontramos esa memoria" sería mentir.
 */
 
 function EnlaceDeRegreso(): ReactElement {
@@ -36,13 +43,16 @@ export function PantallaDetalleMemoria(): ReactElement {
   const { idMemoria = '' } = useParams()
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { memorias } = useMemorias()
-  const { visibles } = useConferenciasVisibles(idUsuario)
-  const { plantillas } = usePlantillas()
+  const { memorias, cargando: cargandoMemorias } = useMemorias()
+  const { visibles, carga } = useConferenciasVisibles(idUsuario)
+  const { plantillas, cargando: cargandoPlantillas } = usePlantillas()
 
   const memoria = memorias.find((candidata) => candidata.id === idMemoria)
   const conferenciaVisible = visibles.find((visible) => visible.conferencia.id === memoria?.idConferencia)
   const plantilla = plantillas.find((candidata) => candidata.id === memoria?.idPlantilla)
+
+  const rutaDelDocx = plantilla?.origen === 'docx' ? plantilla.rutaArchivoOriginal : null
+  const { archivo, codigoDeError: errorDelDocx } = useDocxDePlantilla(rutaDelDocx)
 
   /*
     El campo fijo `tema_principal` sale del id que guarda la conferencia, así
@@ -55,8 +65,10 @@ export function PantallaDetalleMemoria(): ReactElement {
   const [resultado, setResultado] = useState<ResultadoDeMemoria | null>(null)
   const [error, setError] = useState<CodigoError | null>(null)
 
+  const cargandoOrigen = cargandoMemorias || cargandoPlantillas || carga === 'cargando'
+
   useEffect(() => {
-    if (memoria === undefined) {
+    if (cargandoOrigen || memoria === undefined) {
       return
     }
 
@@ -70,13 +82,24 @@ export function PantallaDetalleMemoria(): ReactElement {
       return
     }
 
+    /* Plantilla importada cuyo archivo todavía no llegó: se espera, sin borrar lo que ya se veía. */
+    if (rutaDelDocx !== null && archivo === null) {
+      if (errorDelDocx !== null) {
+        setError(errorDelDocx)
+      }
+      return
+    }
+
     let cancelado = false
     setError(null)
     setResultado(null)
 
     const fichas = fichasVisibles(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), conferenciaVisible)
 
-    generarMemoria(plantilla, conferenciaVisible.conferencia, fichas, temas)
+    const bytes = archivo === null ? Promise.resolve(null) : archivo.arrayBuffer()
+
+    bytes
+      .then((datos) => generarMemoria(plantilla, conferenciaVisible.conferencia, fichas, temas, datos))
       .then((valor) => {
         if (!cancelado) {
           setResultado(valor)
@@ -91,7 +114,15 @@ export function PantallaDetalleMemoria(): ReactElement {
     return () => {
       cancelado = true
     }
-  }, [memoria, conferenciaVisible, plantilla, temas])
+  }, [cargandoOrigen, memoria, conferenciaVisible, plantilla, rutaDelDocx, archivo, errorDelDocx, temas])
+
+  if (cargandoOrigen) {
+    return (
+      <div className="flex flex-col gap-5 border-t border-filete-fuerte pt-5">
+        <Esqueleto filas={4} etiqueta="Cargando la memoria" />
+      </div>
+    )
+  }
 
   if (memoria === undefined) {
     return (
