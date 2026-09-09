@@ -75,6 +75,24 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
 
   const alcanceActivo = chat.conversacionActiva?.alcance ?? { tipo: 'todas' as const }
 
+  /*
+    El índice de conversaciones no interpreta resultados: cada acción reporta su
+    propio fallo por `chat.error`, que se dibuja una sola vez arriba del hilo.
+    Estos envoltorios existen solo para descartar la promesa de forma explícita
+    —`void`— en vez de dejar una promesa colgando en un manejador de evento.
+  */
+  function crearConversacion(): void {
+    void chat.crear()
+  }
+
+  function renombrarConversacion(idConversacion: string, titulo: string): void {
+    void chat.renombrar(idConversacion, titulo)
+  }
+
+  function eliminarConversacion(idConversacion: string): void {
+    void chat.eliminar(idConversacion)
+  }
+
   return (
     <>
       <div
@@ -111,10 +129,11 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
             <ListaDeConversaciones
               conversaciones={chat.conversaciones}
               idActiva={chat.conversacionActiva?.id ?? null}
+              cargando={chat.cargando}
               alSeleccionar={chat.seleccionar}
-              alCrear={() => chat.crear()}
-              alRenombrar={chat.renombrar}
-              alEliminar={chat.eliminar}
+              alCrear={crearConversacion}
+              alRenombrar={renombrarConversacion}
+              alEliminar={eliminarConversacion}
             />
           </div>
 
@@ -122,16 +141,25 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
             <ListaDeConversaciones
               conversaciones={chat.conversaciones}
               idActiva={chat.conversacionActiva?.id ?? null}
+              cargando={chat.cargando}
               alSeleccionar={chat.seleccionar}
-              alCrear={() => chat.crear()}
-              alRenombrar={chat.renombrar}
-              alEliminar={chat.eliminar}
+              alCrear={crearConversacion}
+              alRenombrar={renombrarConversacion}
+              alEliminar={eliminarConversacion}
             />
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col">
+            {chat.error === null ? null : (
+              <p role="alert" className="border-b border-filete bg-error/12 px-3 py-2 text-sm text-error">
+                {chat.error}
+              </p>
+            )}
+
             <div className="flex-1 overflow-y-auto p-3">
-              {chat.conversacionActiva === null && chat.mensajes.length === 0 ? (
+              {chat.cargandoMensajes ? (
+                <p className="text-sm text-texto-tenue">Cargando la conversación…</p>
+              ) : chat.conversacionActiva === null && chat.mensajes.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
                   <p className="text-sm text-texto">Escribe una pregunta o crea una conversación nueva.</p>
                   <p className="text-xs text-texto-tenue">
@@ -149,9 +177,9 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
                         inicioGeneracionMs={chat.generacion?.idMensaje === mensaje.id ? chat.generacion.inicioMs : null}
                         entradas={entradas}
                         temas={temas}
-                        alElegirAclaracion={(alcance) => chat.elegirAclaracion(mensaje.id, alcance)}
-                        alEditar={chat.editarYReenviar}
-                        alEtiquetar={chat.etiquetarCitadas}
+                        alElegirAclaracion={(alcance) => void chat.elegirAclaracion(mensaje.id, alcance)}
+                        alEditar={(idMensaje, contenido) => void chat.editarYReenviar(idMensaje, contenido)}
+                        alEtiquetar={(idMensaje, nombre) => void chat.etiquetarCitadas(idMensaje, nombre)}
                         alTerminarGeneracion={chat.finalizarGeneracion}
                       />
                     </li>
@@ -160,13 +188,19 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
               )}
             </div>
 
-            <SelectorDeAlcance alcance={alcanceActivo} alCambiar={chat.cambiarAlcance} />
+            <SelectorDeAlcance alcance={alcanceActivo} alCambiar={(alcance) => void chat.cambiarAlcance(alcance)} />
+            {/*
+              "Generando" cubre dos momentos que la persona vive como uno solo:
+              la pregunta viajando hacia quien responde (`respondiendo`) y el
+              texto revelándose ya recibido (`generacion`). Con la generación
+              simulada el primero dura un instante; con el backend real es una
+              llamada de red, y el botón tiene que ofrecer "Detener" desde el
+              principio, no solo cuando ya hay texto que cortar.
+            */}
             <CompositorDeMensaje
-              generando={chat.generacion !== null}
-              alEnviar={(texto) => {
-                chat.enviar(texto)
-              }}
-              alDetener={chat.detener}
+              generando={chat.respondiendo || chat.generacion !== null}
+              alEnviar={(texto) => void chat.enviar(texto)}
+              alDetener={() => void chat.detener()}
             />
           </div>
         </div>

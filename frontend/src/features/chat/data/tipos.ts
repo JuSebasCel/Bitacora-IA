@@ -1,12 +1,17 @@
 /*
-  Tipos del chat trazable (F7).
+  Tipos del chat trazable (F7, persistido de verdad en B7).
 
-  Sin conexión real a OpenAI todavía (F7 se queda simulado, igual que el
-  resto de la fase frontend): la recuperación de fichas es real, sobre el
-  mismo catálogo de F6, y lo que se simula es la redacción de la respuesta.
-  Por eso `PasoDeRazonamiento` no es una narración inventada, es el reporte
-  de lo que un filtro de verdad descartó y por qué — el chat no puede
-  "pensar" nada que el pipeline no haya calculado de verdad.
+  La redacción de la respuesta sigue simulada —la real la construye el agente
+  conversacional del backend, y entra por `fronteraDeGeneracion.ts` sin tocar
+  estos tipos—, pero la recuperación de fichas es real sobre el catálogo de F6.
+  Por eso `PasoDeRazonamiento` no es una narración inventada, es el reporte de
+  lo que un filtro de verdad descartó y por qué: el chat no puede "pensar" nada
+  que el pipeline no haya calculado de verdad.
+
+  Estos tipos son la forma del dominio, no la de la tabla. La traducción entre
+  ambas vive completa en `mapeo.ts`, para que la unión discriminada de
+  `Mensaje` no se filtre hacia la interfaz como un puñado de columnas
+  opcionales.
 */
 
 export type AlcanceDeConsulta =
@@ -70,12 +75,18 @@ export type MensajeDeAclaracion = CamposComunesDeMensaje & {
 
 export type Mensaje = MensajeDeUsuario | MensajeDeRespuesta | MensajeDeAclaracion
 
-export type EspacioDeChat = {
-  readonly conversaciones: readonly Conversacion[]
-  readonly mensajes: readonly Mensaje[]
-}
+/*
+  Un mensaje todavía sin identidad: lo que el dominio compone antes de que
+  Postgres le asigne `id` y `creado_el`. Se deriva de `Mensaje` en vez de
+  redeclararse para que agregar un miembro a la unión (un tercer tipo de
+  mensaje del asistente, por ejemplo) obligue a manejarlo también aquí; una
+  copia a mano se olvidaría en silencio.
 
-export const ESPACIO_DE_CHAT_VACIO: EspacioDeChat = {
-  conversaciones: [],
-  mensajes: [],
-}
+  El `T extends unknown` no es decorativo: sin esa cláusula condicional
+  `Omit` colapsa la unión en un solo objeto con todos los campos opcionales
+  —justo la forma aplanada que el `check` de la tabla prohíbe—, en vez de
+  aplicarse miembro por miembro.
+*/
+type SinIdentidad<T> = T extends unknown ? Omit<T, 'id' | 'idConversacion' | 'creadoEl'> : never
+
+export type MensajeNuevo = SinIdentidad<Mensaje>

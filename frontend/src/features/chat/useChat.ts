@@ -1,24 +1,50 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
-import type { FichaDelCatalogo } from '@/features/conferencias/query'
 import { useEtiquetas } from '@/features/conferencias/tags'
 import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { leerTaxonomia } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
-import { espacioDeChatDe, guardarEspacioDeChat } from './almacenamiento'
-import { extraerCantidadSolicitada } from './cantidad'
-import type { AlcanceDeConsulta, Conversacion, EspacioDeChat, Mensaje } from './data/tipos'
+import type { CodigoError } from '@/shared/errors'
+import type { AlcanceDeConsulta, Conversacion, Mensaje, MensajeDeRespuesta, MensajeDeUsuario } from './data/tipos'
 import { comandoDeEtiquetaEn, idsDeConferenciasCitadas } from './etiquetar'
-import { evaluarPregunta } from './generarRespuesta'
+import { construirGenerador, mensajeNuevoDeEvaluacion } from './fronteraDeGeneracion'
+import { ordenarPorActividad } from './mapeo'
 import { generacionCompleta, textoVisibleDe } from './progreso'
+import {
+  agregarMensaje,
+  cambiarAlcanceDeConversacion,
+  crearConversacion,
+  eliminarConversacion,
+  eliminarMensajesPosterioresA,
+  listarConversaciones,
+  listarMensajes,
+  reemplazarContenidoDeMensaje,
+  renombrarConversacion,
+} from './repositorio'
 
 /*
-  Estado del chat de quien tiene la sesión abierta: conversaciones, mensajes,
-  y la conversación activa. Envoltorio fino sobre `generarRespuesta.ts`
-  (la recuperación) y `almacenamiento.ts` (la persistencia) — las reglas
-  viven ahí, probadas sin React; este hook solo las conecta.
+  Estado del chat de quien tiene la sesión abierta. Envoltorio fino sobre tres
+  piezas que se prueban sin React: el repositorio (persistencia real en
+  Postgres, B7), la frontera de generación (de dónde sale una respuesta) y
+  `mapeo.ts`/`progreso.ts` (las reglas puras). Este hook solo las conecta y
+  guarda el estado que la interfaz necesita mirar.
+
+  Todas las acciones son asíncronas porque ahora todas cruzan la red. Enviar un
+  mensaje lo GUARDA: si la persona cierra el panel a mitad de una respuesta, lo
+  que ya se escribió sigue ahí al volver, que es lo que `sessionStorage` nunca
+  dio entre dispositivos ni entre sesiones.
+
+  Desapareció con la migración el enredo que obligaba a `enviar` a construir la
+  conversación nueva "inline": cuando la persistencia era un blob en
+  `sessionStorage`, dos escrituras dentro de la misma función partían del mismo
+  snapshot capturado en el render y la segunda pisaba a la primera. Ahora cada
+  escritura es una fila independiente, el id lo asigna Postgres y la respuesta
+  vuelve con la fila ya guardada, así que `enviar` puede sencillamente esperar a
+  que la conversación exista antes de escribir el mensaje. El estado local se
+  actualiza siempre con la forma funcional (`anteriores => ...`) por el mismo
+  motivo de fondo: entre el `await` y la respuesta pudo cambiar cualquier cosa.
 */
 
 export type ResultadoDeAccion = { readonly ok: true } | { readonly ok: false; readonly mensaje: string }
@@ -31,82 +57,227 @@ export type ValorDeChat = {
   readonly conversacionActiva: Conversacion | null
   readonly mensajes: readonly Mensaje[]
   readonly generacion: EstadoDeGeneracion | null
-  readonly crear: () => Conversacion
+  /** El índice de conversaciones todavía viaja: sin esto la lista parpadea "no hay ninguna" antes de existir. */
+  readonly cargando: boolean
+  /** El hilo de la conversación elegida todavía viaja. Distinto del anterior: la lista ya está y el hilo no. */
+  readonly cargandoMensajes: boolean
+  /** Hay una pregunta esperando respuesta. Es el hueco que abre la frontera de generación: con el backend real, entre preguntar y recibir hay red de por medio. */
+  readonly respondiendo: boolean
+  /** Último fallo, ya traducido a un mensaje del catálogo. Nunca detalle técnico. */
+  readonly error: string | null
+  readonly crear: () => Promise<ResultadoDeAccion>
   readonly seleccionar: (idConversacion: string) => void
-  readonly renombrar: (idConversacion: string, titulo: string) => ResultadoDeAccion
-  readonly eliminar: (idConversacion: string) => void
-  readonly cambiarAlcance: (alcance: AlcanceDeConsulta) => void
-  readonly enviar: (texto: string) => ResultadoDeAccion
-  readonly elegirAclaracion: (idMensaje: string, alcance: AlcanceDeConsulta) => void
-  readonly editarYReenviar: (idMensaje: string, contenidoNuevo: string) => ResultadoDeAccion
-  readonly detener: () => void
+  readonly renombrar: (idConversacion: string, titulo: string) => Promise<ResultadoDeAccion>
+  readonly eliminar: (idConversacion: string) => Promise<ResultadoDeAccion>
+  readonly cambiarAlcance: (alcance: AlcanceDeConsulta) => Promise<ResultadoDeAccion>
+  readonly enviar: (texto: string) => Promise<ResultadoDeAccion>
+  readonly elegirAclaracion: (idMensaje: string, alcance: AlcanceDeConsulta) => Promise<ResultadoDeAccion>
+  readonly editarYReenviar: (idMensaje: string, contenidoNuevo: string) => Promise<ResultadoDeAccion>
+  readonly detener: () => Promise<ResultadoDeAccion>
   readonly finalizarGeneracion: () => void
-  readonly etiquetarCitadas: (idMensaje: string, nombreEtiqueta: string) => ResultadoDeAccion
-}
-
-function idAleatorio(prefijo: string): string {
-  const uuid = globalThis.crypto?.randomUUID?.()
-  if (uuid !== undefined) {
-    return `${prefijo}-${uuid}`
-  }
-
-  return `${prefijo}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  readonly etiquetarCitadas: (idMensaje: string, nombreEtiqueta: string) => Promise<ResultadoDeAccion>
 }
 
 const ALCANCE_POR_DEFECTO: AlcanceDeConsulta = { tipo: 'todas' }
+const TITULO_POR_DEFECTO = 'Conversación nueva'
+
+/*
+  La última respuesta del hilo, que es sobre la que actúa el comando de
+  etiquetar escrito en texto libre. Se filtra además por conversación aunque
+  `mensajes` sea siempre el hilo activo: cuando `enviar` acaba de crear la
+  conversación, el arreglo que ve todavía es el del hilo anterior —React no
+  aplica el `setMensajes([])` a mitad de la misma función— y sin el filtro se
+  etiquetarían las fichas de una conversación distinta.
+*/
+function ultimaRespuestaDe(mensajes: readonly Mensaje[], idConversacion: string): MensajeDeRespuesta | null {
+  const respuestas = mensajes.filter(
+    (mensaje): mensaje is MensajeDeRespuesta =>
+      mensaje.rol === 'asistente' && mensaje.tipo === 'respuesta' && mensaje.idConversacion === idConversacion,
+  )
+
+  return respuestas.at(-1) ?? null
+}
 
 export function useChat(idUsuario: string): ValorDeChat {
   const { visibles } = useConferenciasVisibles(idUsuario)
   const etiquetas = useEtiquetas(idUsuario)
 
-  const [estado, setEstado] = useState<{ idUsuario: string; espacio: EspacioDeChat }>(() => ({
-    idUsuario,
-    espacio: espacioDeChatDe(idUsuario),
-  }))
+  const [conversaciones, setConversaciones] = useState<readonly Conversacion[]>([])
+  const [mensajes, setMensajes] = useState<readonly Mensaje[]>([])
   const [idActiva, setIdActiva] = useState<string | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [cargandoMensajes, setCargandoMensajes] = useState(false)
+  const [respondiendo, setRespondiendo] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [generacion, setGeneracion] = useState<EstadoDeGeneracion | null>(null)
 
-  if (estado.idUsuario !== idUsuario) {
-    setEstado({ idUsuario, espacio: espacioDeChatDe(idUsuario) })
+  /*
+    Qué hilo está ya en `mensajes`. Es una ref y no estado porque nadie lo
+    dibuja: solo decide si el efecto de carga tiene algo que traer. Guardarlo en
+    estado provocaría un render extra por conversación abierta sin cambiar un
+    píxel.
+  */
+  const hiloCargado = useRef<string | null>(null)
+
+  /*
+    El catálogo sobre el que responde la simulación. Se memoriza para que el
+    generador no cambie de identidad en cada render; cuando la generación pase
+    al backend esto desaparece del hook, porque el agente real lee las fichas
+    del lado del servidor (ver `fronteraDeGeneracion.ts`).
+  */
+  const todasLasEntradas = useMemo(
+    () => fichasDelCatalogo(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), visibles),
+    [visibles],
+  )
+  const temas = useMemo(() => leerTaxonomia().temas, [])
+  const generar = useMemo(
+    () => construirGenerador({ entradas: todasLasEntradas, temas }),
+    [todasLasEntradas, temas],
+  )
+
+  const registrarFallo = useCallback((codigo: CodigoError): ResultadoDeAccion => {
+    const mensaje = mensajeDeError(codigo)
+    setError(mensaje)
+
+    return { ok: false, mensaje }
+  }, [])
+
+  /*
+    Todo camino feliz limpia el error anterior: un aviso de "no pudimos
+    conectarnos" que sobrevive a la siguiente operación exitosa es peor que no
+    haberlo mostrado, porque describe un mundo que ya cambió.
+  */
+  const exito = useCallback((): ResultadoDeAccion => {
+    setError(null)
+
+    return { ok: true }
+  }, [])
+
+  useEffect(() => {
+    let cancelado = false
+
+    setConversaciones([])
+    setMensajes([])
     setIdActiva(null)
     setGeneracion(null)
-  }
+    hiloCargado.current = null
 
-  const espacio = estado.idUsuario === idUsuario ? estado.espacio : espacioDeChatDe(idUsuario)
-
-  const guardar = useCallback(
-    (espacioNuevo: EspacioDeChat) => {
-      guardarEspacioDeChat(idUsuario, espacioNuevo)
-      setEstado({ idUsuario, espacio: espacioNuevo })
-    },
-    [idUsuario],
-  )
-
-  const todasLasEntradas: readonly FichaDelCatalogo[] = fichasDelCatalogo(
-    fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()),
-    visibles,
-  )
-  const temas = leerTaxonomia().temas
-
-  const conversacionActiva = espacio.conversaciones.find((conversacion) => conversacion.id === idActiva) ?? null
-  const mensajes = conversacionActiva === null ? [] : espacio.mensajes.filter((mensaje) => mensaje.idConversacion === conversacionActiva.id)
-
-  const crear = useCallback((): Conversacion => {
-    const ahora = new Date().toISOString()
-    const nueva: Conversacion = {
-      id: idAleatorio('conv'),
-      idUsuario,
-      titulo: 'Conversación nueva',
-      alcance: ALCANCE_POR_DEFECTO,
-      creadaEl: ahora,
-      actualizadaEl: ahora,
+    /*
+      El panel se monta con el shell, antes de que la sesión resuelva, y
+      entonces el id llega vacío. Consultar con un id vacío solo puede devolver
+      cero filas: se ahorra el viaje y se deja el estado en "ya cargó, no hay
+      nada", que es la verdad para quien todavía no tiene sesión.
+    */
+    if (idUsuario.trim().length === 0) {
+      setCargando(false)
+      return
     }
 
-    guardar({ ...espacio, conversaciones: [...espacio.conversaciones, nueva] })
-    setIdActiva(nueva.id)
+    setCargando(true)
 
-    return nueva
-  }, [espacio, guardar, idUsuario])
+    void listarConversaciones(idUsuario).then((resultado) => {
+      if (cancelado) {
+        return
+      }
+
+      if (resultado.ok) {
+        setConversaciones(resultado.datos)
+        setError(null)
+      } else {
+        setError(mensajeDeError(resultado.codigo))
+      }
+
+      setCargando(false)
+    })
+
+    return () => {
+      cancelado = true
+    }
+  }, [idUsuario])
+
+  useEffect(() => {
+    /*
+      Un hilo ya cargado no se vuelve a pedir: volver a una conversación que se
+      acaba de mirar no debería costar un viaje, y en el caso de la conversación
+      recién creada la consulta llegaría tarde y pisaría el primer mensaje.
+    */
+    if (idActiva === null || hiloCargado.current === idActiva) {
+      return
+    }
+
+    let cancelado = false
+    setCargandoMensajes(true)
+
+    void listarMensajes(idActiva).then((resultado) => {
+      if (cancelado) {
+        return
+      }
+
+      if (resultado.ok) {
+        hiloCargado.current = idActiva
+        setMensajes(resultado.datos)
+        setError(null)
+      } else {
+        setError(mensajeDeError(resultado.codigo))
+      }
+
+      setCargandoMensajes(false)
+    })
+
+    return () => {
+      cancelado = true
+    }
+  }, [idActiva])
+
+  const conversacionActiva = conversaciones.find((conversacion) => conversacion.id === idActiva) ?? null
+
+  /*
+    Un mensaje recién guardado entra al hilo y adelanta su conversación en el
+    índice. La marca de tiempo que se copia es la del mensaje, no `Date.now()`:
+    es exactamente la que el disparador de la tabla escribe en
+    `actualizada_el`, así que la lista local queda ordenada igual que quedaría
+    tras recargar.
+  */
+  const registrarMensaje = useCallback((mensaje: Mensaje): void => {
+    /*
+      Si la persona cambió de conversación mientras la respuesta viajaba, el
+      mensaje ya quedó guardado y aparecerá al volver a ese hilo; lo que no se
+      hace es meterlo en el hilo que está leyendo ahora.
+    */
+    if (hiloCargado.current === mensaje.idConversacion) {
+      setMensajes((anteriores) => [...anteriores, mensaje])
+    }
+
+    setConversaciones((anteriores) =>
+      ordenarPorActividad(
+        anteriores.map((conversacion) =>
+          conversacion.id === mensaje.idConversacion
+            ? { ...conversacion, actualizadaEl: mensaje.creadoEl }
+            : conversacion,
+        ),
+      ),
+    )
+  }, [])
+
+  const adoptarConversacionNueva = useCallback((conversacion: Conversacion): void => {
+    setConversaciones((anteriores) => ordenarPorActividad([conversacion, ...anteriores]))
+    hiloCargado.current = conversacion.id
+    setMensajes([])
+    setIdActiva(conversacion.id)
+    setGeneracion(null)
+  }, [])
+
+  const crear = useCallback(async (): Promise<ResultadoDeAccion> => {
+    const creada = await crearConversacion(idUsuario, TITULO_POR_DEFECTO, ALCANCE_POR_DEFECTO)
+
+    if (!creada.ok) {
+      return registrarFallo(creada.codigo)
+    }
+
+    adoptarConversacionNueva(creada.datos)
+
+    return exito()
+  }, [adoptarConversacionNueva, exito, idUsuario, registrarFallo])
 
   const seleccionar = useCallback((idConversacion: string): void => {
     setIdActiva(idConversacion)
@@ -114,287 +285,331 @@ export function useChat(idUsuario: string): ValorDeChat {
   }, [])
 
   const renombrar = useCallback(
-    (idConversacion: string, titulo: string): ResultadoDeAccion => {
+    async (idConversacion: string, titulo: string): Promise<ResultadoDeAccion> => {
       const limpio = titulo.trim()
 
       if (limpio.length === 0) {
-        return { ok: false, mensaje: mensajeDeError('CHAT_TITULO_REQUERIDO') }
+        return registrarFallo('CHAT_TITULO_REQUERIDO')
       }
 
-      if (!espacio.conversaciones.some((conversacion) => conversacion.id === idConversacion)) {
-        return { ok: false, mensaje: mensajeDeError('CHAT_CONVERSACION_NO_ENCONTRADA') }
+      /*
+        La lista local contiene exactamente lo que la política de acceso deja
+        ver. Si el id no está ahí, la consulta no puede terminar de otra forma
+        que en error: se responde con el nombre propio del caso en vez de gastar
+        el viaje y traducir después un fallo genérico.
+      */
+      if (!conversaciones.some((conversacion) => conversacion.id === idConversacion)) {
+        return registrarFallo('CHAT_CONVERSACION_NO_ENCONTRADA')
       }
 
-      guardar({
-        ...espacio,
-        conversaciones: espacio.conversaciones.map((conversacion) =>
-          conversacion.id === idConversacion ? { ...conversacion, titulo: limpio } : conversacion,
-        ),
-      })
+      const renombrada = await renombrarConversacion(idConversacion, limpio)
 
-      return { ok: true }
+      if (!renombrada.ok) {
+        return registrarFallo(renombrada.codigo)
+      }
+
+      setConversaciones((anteriores) =>
+        anteriores.map((conversacion) => (conversacion.id === idConversacion ? renombrada.datos : conversacion)),
+      )
+
+      return exito()
     },
-    [espacio, guardar],
+    [conversaciones, exito, registrarFallo],
   )
 
-  /*
-    Eliminar se lleva también los mensajes de esa conversación: un mensaje
-    sin conversación no tiene dónde vivir, y dejarlo huérfano en
-    `sessionStorage` no lo mostraría en ningún lado, solo ocuparía espacio.
-    Si era la conversación activa, se limpia `idActiva` para no dejar la
-    pantalla apuntando a algo que ya no existe.
-  */
   const eliminar = useCallback(
-    (idConversacion: string): void => {
-      guardar({
-        conversaciones: espacio.conversaciones.filter((conversacion) => conversacion.id !== idConversacion),
-        mensajes: espacio.mensajes.filter((mensaje) => mensaje.idConversacion !== idConversacion),
-      })
+    async (idConversacion: string): Promise<ResultadoDeAccion> => {
+      const eliminada = await eliminarConversacion(idConversacion)
 
+      if (!eliminada.ok) {
+        return registrarFallo(eliminada.codigo)
+      }
+
+      setConversaciones((anteriores) => anteriores.filter((conversacion) => conversacion.id !== idConversacion))
+
+      /* Los mensajes los arrastra el `on delete cascade`; aquí solo hay que dejar de apuntar a lo que ya no existe. */
       if (idActiva === idConversacion) {
+        hiloCargado.current = null
         setIdActiva(null)
+        setMensajes([])
         setGeneracion(null)
       }
+
+      return exito()
     },
-    [espacio, guardar, idActiva],
+    [exito, idActiva, registrarFallo],
   )
 
   const cambiarAlcance = useCallback(
-    (alcance: AlcanceDeConsulta): void => {
+    async (alcance: AlcanceDeConsulta): Promise<ResultadoDeAccion> => {
       if (conversacionActiva === null) {
-        return
+        return registrarFallo('CHAT_CONVERSACION_NO_ENCONTRADA')
       }
 
-      guardar({
-        ...espacio,
-        conversaciones: espacio.conversaciones.map((conversacion) =>
-          conversacion.id === conversacionActiva.id ? { ...conversacion, alcance } : conversacion,
+      const actualizada = await cambiarAlcanceDeConversacion(conversacionActiva.id, alcance)
+
+      if (!actualizada.ok) {
+        return registrarFallo(actualizada.codigo)
+      }
+
+      setConversaciones((anteriores) =>
+        anteriores.map((conversacion) =>
+          conversacion.id === actualizada.datos.id ? actualizada.datos : conversacion,
         ),
-      })
+      )
+
+      return exito()
     },
-    [conversacionActiva, espacio, guardar],
+    [conversacionActiva, exito, registrarFallo],
   )
 
   /*
-    Un mismo camino para "enviar una pregunta nueva" y "responder tras
-    aclarar": las dos terminan corriendo `evaluarPregunta` sobre un alcance y
-    agregando el resultado a la conversación, la única diferencia es de dónde
-    sale la pregunta y el alcance.
+    Un mismo camino para "enviar una pregunta nueva" y "responder tras aclarar":
+    las dos piden una respuesta sobre un alcance y la guardan en la
+    conversación; lo único que cambia es de dónde salen la pregunta y el
+    alcance.
   */
   const responderSobre = useCallback(
-    (idConversacion: string, pregunta: string, alcance: AlcanceDeConsulta, espacioBase: EspacioDeChat): void => {
-      const cantidad = extraerCantidadSolicitada(pregunta)
-      const resultado = evaluarPregunta(pregunta, alcance, todasLasEntradas, temas, cantidad)
-      const ahora = new Date().toISOString()
+    async (conversacion: Conversacion, pregunta: string): Promise<ResultadoDeAccion> => {
+      setRespondiendo(true)
 
-      const mensajeAsistente: Mensaje =
-        resultado.tipo === 'respuesta'
-          ? {
-              id: idAleatorio('msg'),
-              idConversacion,
-              rol: 'asistente',
-              tipo: 'respuesta',
-              contenido: resultado.contenido,
-              creadoEl: ahora,
-              idsFichasCitadas: resultado.idsFichasCitadas,
-              pasosDeRazonamiento: resultado.pasosDeRazonamiento,
-            }
-          : {
-              id: idAleatorio('msg'),
-              idConversacion,
-              rol: 'asistente',
-              tipo: 'aclaracion',
-              pregunta: resultado.pregunta,
-              opciones: resultado.opciones,
-              creadoEl: ahora,
-            }
-
-      guardar({
-        ...espacioBase,
-        mensajes: [...espacioBase.mensajes, mensajeAsistente],
-        conversaciones: espacioBase.conversaciones.map((conversacion) =>
-          conversacion.id === idConversacion ? { ...conversacion, actualizadaEl: ahora } : conversacion,
-        ),
+      const generado = await generar({
+        idConversacion: conversacion.id,
+        pregunta,
+        alcance: conversacion.alcance,
       })
 
-      if (mensajeAsistente.rol === 'asistente' && mensajeAsistente.tipo === 'respuesta') {
-        setGeneracion({ idMensaje: mensajeAsistente.id, inicioMs: Date.now() })
+      setRespondiendo(false)
+
+      if (!generado.ok) {
+        return registrarFallo(generado.codigo)
       }
+
+      const guardado = await agregarMensaje(conversacion.id, mensajeNuevoDeEvaluacion(generado.datos))
+
+      if (!guardado.ok) {
+        return registrarFallo(guardado.codigo)
+      }
+
+      registrarMensaje(guardado.datos)
+
+      /*
+        El revelado letra por letra solo tiene sentido sobre el hilo que se está
+        mirando: si la persona ya se fue a otra conversación, la respuesta queda
+        guardada completa y se lee de una vez cuando vuelva.
+      */
+      if (
+        guardado.datos.rol === 'asistente' &&
+        guardado.datos.tipo === 'respuesta' &&
+        hiloCargado.current === conversacion.id
+      ) {
+        setGeneracion({ idMensaje: guardado.datos.id, inicioMs: Date.now() })
+      }
+
+      return exito()
     },
-    [guardar, temas, todasLasEntradas],
+    [exito, generar, registrarFallo, registrarMensaje],
   )
 
   /*
     Punto único donde una etiqueta se crea y se asigna a las conferencias de
     origen de unas fichas citadas — lo usan tanto el botón explícito
-    (`etiquetarCitadas`) como el reconocimiento de patrón en texto libre
-    dentro de `enviar`, para no duplicar la regla en dos sitios.
+    (`etiquetarCitadas`) como el reconocimiento de patrón en texto libre dentro
+    de `enviar`, para no duplicar la regla en dos sitios.
   */
   const etiquetarPorIds = useCallback(
     (idsFichasCitadas: readonly string[], nombreEtiqueta: string): ResultadoDeAccion => {
       if (idsFichasCitadas.length === 0) {
-        return { ok: false, mensaje: mensajeDeError('CHAT_ETIQUETA_SIN_FICHAS_CITADAS') }
+        return registrarFallo('CHAT_ETIQUETA_SIN_FICHAS_CITADAS')
       }
 
       const resultadoCrear = etiquetas.crear(nombreEtiqueta)
       if (!resultadoCrear.ok) {
-        return { ok: false, mensaje: mensajeDeError(resultadoCrear.codigo) }
+        return registrarFallo(resultadoCrear.codigo)
       }
 
       for (const idConferencia of idsDeConferenciasCitadas(idsFichasCitadas, todasLasEntradas)) {
         etiquetas.asignar(resultadoCrear.etiqueta.id, idConferencia)
       }
 
-      return { ok: true }
+      return exito()
     },
-    [etiquetas, todasLasEntradas],
+    [etiquetas, exito, registrarFallo, todasLasEntradas],
   )
 
-  /*
-    `crear` guarda por su cuenta (para que el botón "Nueva conversación" la
-    deje lista de un clic). `enviar` NO la llama: si lo hiciera, el `guardar`
-    de `crear` y el `guardar` que agrega el mensaje del usuario partirían del
-    mismo `espacio` capturado al render (React no aplica el primer `guardar`
-    a mitad de la misma función), y el segundo pisaría al primero, borrando
-    la conversación que se acababa de crear. Por eso, cuando hace falta una
-    conversación nueva, `enviar` la arma inline y la mete en el MISMO
-    `guardar` que agrega el mensaje — un solo escritor, un solo snapshot.
-    Mismo bug, mismo arreglo, que ya tuvieron `useCatalogo`/`useMemorias` esta
-    sesión con `setSearchParams`.
-  */
   const enviar = useCallback(
-    (texto: string): ResultadoDeAccion => {
+    async (texto: string): Promise<ResultadoDeAccion> => {
       const limpio = texto.trim()
 
       if (limpio.length === 0) {
-        return { ok: false, mensaje: mensajeDeError('CHAT_MENSAJE_VACIO') }
+        return registrarFallo('CHAT_MENSAJE_VACIO')
       }
 
-      const ahora = new Date().toISOString()
+      /*
+        Escribir sin haber creado una conversación crea una: es el camino normal
+        de la primera pregunta, y obligar a un clic previo en "Nueva
+        conversación" sería un trámite que no aporta ninguna decisión.
+      */
       let conversacion = conversacionActiva
-      let espacioBase = espacio
 
       if (conversacion === null) {
-        conversacion = {
-          id: idAleatorio('conv'),
-          idUsuario,
-          titulo: 'Conversación nueva',
-          alcance: ALCANCE_POR_DEFECTO,
-          creadaEl: ahora,
-          actualizadaEl: ahora,
+        const creada = await crearConversacion(idUsuario, TITULO_POR_DEFECTO, ALCANCE_POR_DEFECTO)
+
+        if (!creada.ok) {
+          return registrarFallo(creada.codigo)
         }
-        espacioBase = { ...espacio, conversaciones: [...espacio.conversaciones, conversacion] }
-        setIdActiva(conversacion.id)
+
+        conversacion = creada.datos
+        adoptarConversacionNueva(conversacion)
       }
 
-      const mensajeUsuario: Mensaje = {
-        id: idAleatorio('msg'),
-        idConversacion: conversacion.id,
-        rol: 'usuario',
-        contenido: limpio,
-        creadoEl: ahora,
+      const guardado = await agregarMensaje(conversacion.id, { rol: 'usuario', contenido: limpio })
+
+      if (!guardado.ok) {
+        return registrarFallo(guardado.codigo)
       }
 
-      const espacioConMensaje: EspacioDeChat = { ...espacioBase, mensajes: [...espacioBase.mensajes, mensajeUsuario] }
-      guardar(espacioConMensaje)
+      registrarMensaje(guardado.datos)
 
       const nombreEtiqueta = comandoDeEtiquetaEn(limpio)
       if (nombreEtiqueta !== null) {
-        const anterior = [...espacioBase.mensajes]
-          .reverse()
-          .find(
-            (mensaje): mensaje is Extract<Mensaje, { tipo: 'respuesta' }> =>
-              mensaje.rol === 'asistente' && mensaje.tipo === 'respuesta' && mensaje.idConversacion === conversacion!.id,
-          )
+        const anterior = ultimaRespuestaDe(mensajes, conversacion.id)
 
-        if (anterior !== undefined) {
+        if (anterior !== null) {
           etiquetarPorIds(anterior.idsFichasCitadas, nombreEtiqueta)
         }
       }
 
-      responderSobre(conversacion.id, limpio, conversacion.alcance, espacioConMensaje)
-
-      return { ok: true }
+      return responderSobre(conversacion, limpio)
     },
-    [conversacionActiva, espacio, etiquetarPorIds, guardar, idUsuario, responderSobre],
+    [
+      adoptarConversacionNueva,
+      conversacionActiva,
+      etiquetarPorIds,
+      idUsuario,
+      mensajes,
+      registrarFallo,
+      registrarMensaje,
+      responderSobre,
+    ],
   )
 
-  /*
-    Mismo criterio que `enviar`: el cambio de alcance se arma inline en vez
-    de delegarlo a `cambiarAlcance` (que hace su propio `guardar`), para que
-    la conversación con el alcance nuevo y la respuesta que sigue viajen en
-    el mismo `espacio` y ninguna de las dos escrituras pise a la otra.
-  */
   const elegirAclaracion = useCallback(
-    (idMensaje: string, alcance: AlcanceDeConsulta): void => {
-      const mensaje = espacio.mensajes.find((candidato) => candidato.id === idMensaje)
+    async (idMensaje: string, alcance: AlcanceDeConsulta): Promise<ResultadoDeAccion> => {
+      const mensaje = mensajes.find((candidato) => candidato.id === idMensaje)
+
       if (mensaje === undefined || conversacionActiva === null) {
-        return
+        return registrarFallo('CHAT_MENSAJE_NO_ENCONTRADO')
       }
 
-      const preguntaOriginal = [...espacio.mensajes]
-        .filter((candidato) => candidato.idConversacion === conversacionActiva.id && candidato.rol === 'usuario')
+      const preguntaOriginal = mensajes
+        .filter((candidato): candidato is MensajeDeUsuario => candidato.rol === 'usuario')
         .at(-1)
 
-      if (preguntaOriginal === undefined || preguntaOriginal.rol !== 'usuario') {
-        return
+      if (preguntaOriginal === undefined) {
+        return registrarFallo('CHAT_MENSAJE_NO_ENCONTRADO')
       }
 
-      const espacioConAlcanceNuevo: EspacioDeChat = {
-        ...espacio,
-        conversaciones: espacio.conversaciones.map((candidata) =>
-          candidata.id === conversacionActiva.id ? { ...candidata, alcance } : candidata,
+      /*
+        Elegir una opción de aclaración cambia el alcance de la conversación, no
+        solo el de esta respuesta: la persona acotó, y lo que siga preguntando
+        debería quedarse acotado hasta que diga otra cosa.
+      */
+      const actualizada = await cambiarAlcanceDeConversacion(conversacionActiva.id, alcance)
+
+      if (!actualizada.ok) {
+        return registrarFallo(actualizada.codigo)
+      }
+
+      setConversaciones((anteriores) =>
+        anteriores.map((conversacion) =>
+          conversacion.id === actualizada.datos.id ? actualizada.datos : conversacion,
         ),
-      }
+      )
 
-      responderSobre(conversacionActiva.id, preguntaOriginal.contenido, alcance, espacioConAlcanceNuevo)
+      return responderSobre(actualizada.datos, preguntaOriginal.contenido)
     },
-    [conversacionActiva, espacio, responderSobre],
+    [conversacionActiva, mensajes, registrarFallo, responderSobre],
   )
 
   const editarYReenviar = useCallback(
-    (idMensaje: string, contenidoNuevo: string): ResultadoDeAccion => {
+    async (idMensaje: string, contenidoNuevo: string): Promise<ResultadoDeAccion> => {
       const limpio = contenidoNuevo.trim()
+
       if (limpio.length === 0) {
-        return { ok: false, mensaje: mensajeDeError('CHAT_MENSAJE_VACIO') }
+        return registrarFallo('CHAT_MENSAJE_VACIO')
       }
 
-      const original = espacio.mensajes.find((mensaje) => mensaje.id === idMensaje)
+      const original = mensajes.find((mensaje) => mensaje.id === idMensaje)
+
       if (original === undefined || original.rol !== 'usuario' || conversacionActiva === null) {
-        return { ok: false, mensaje: mensajeDeError('CHAT_MENSAJE_NO_ENCONTRADO') }
+        return registrarFallo('CHAT_MENSAJE_NO_ENCONTRADO')
       }
 
-      /* Se corta desde el mensaje editado en adelante: la conversación no puede quedar con dos respuestas a la misma pregunta. */
-      const mensajesAntes = espacio.mensajes.filter(
-        (mensaje) => mensaje.idConversacion !== conversacionActiva.id || mensaje.creadoEl < original.creadoEl,
-      )
-      const mensajeEditado: Mensaje = { ...original, contenido: limpio }
-      const espacioTruncado: EspacioDeChat = { ...espacio, mensajes: [...mensajesAntes, mensajeEditado] }
+      /*
+        Primero se borra lo que venía después y solo entonces se reescribe la
+        pregunta. Al revés, un fallo entre las dos escrituras dejaría la
+        pregunta nueva encima de la respuesta vieja, que es una mentira de
+        trazabilidad: parecería que esa respuesta responde a ese texto. En este
+        orden, un fallo a mitad deja la conversación cortada pero coherente, y
+        volver a pulsar "Reenviar" la termina.
+      */
+      const borrado = await eliminarMensajesPosterioresA(conversacionActiva.id, original.creadoEl)
 
-      guardar(espacioTruncado)
-      responderSobre(conversacionActiva.id, limpio, conversacionActiva.alcance, espacioTruncado)
+      if (!borrado.ok) {
+        return registrarFallo(borrado.codigo)
+      }
 
-      return { ok: true }
+      const actualizado = await reemplazarContenidoDeMensaje(idMensaje, limpio)
+
+      if (!actualizado.ok) {
+        return registrarFallo(actualizado.codigo)
+      }
+
+      setGeneracion(null)
+      setMensajes((anteriores) => [
+        ...anteriores.filter((mensaje) => mensaje.creadoEl < original.creadoEl),
+        actualizado.datos,
+      ])
+
+      return responderSobre(conversacionActiva, limpio)
     },
-    [conversacionActiva, espacio, guardar, responderSobre],
+    [conversacionActiva, mensajes, registrarFallo, responderSobre],
   )
 
-  const detener = useCallback((): void => {
+  const detener = useCallback(async (): Promise<ResultadoDeAccion> => {
     if (generacion === null) {
-      return
+      return exito()
     }
 
-    const mensaje = espacio.mensajes.find((candidato) => candidato.id === generacion.idMensaje)
-    if (mensaje !== undefined && mensaje.rol === 'asistente' && mensaje.tipo === 'respuesta') {
-      const truncado = textoVisibleDe(mensaje.contenido, generacion.inicioMs, Date.now())
-      guardar({
-        ...espacio,
-        mensajes: espacio.mensajes.map((candidato) => (candidato.id === mensaje.id ? { ...mensaje, contenido: truncado } : candidato)),
-      })
-    }
-
+    const enCurso = generacion
     setGeneracion(null)
-  }, [espacio, generacion, guardar])
+
+    const mensaje = mensajes.find((candidato) => candidato.id === enCurso.idMensaje)
+
+    if (mensaje === undefined || mensaje.rol !== 'asistente' || mensaje.tipo !== 'respuesta') {
+      return exito()
+    }
+
+    /*
+      Detener recorta el texto y lo guarda recortado: lo que la persona ve es lo
+      que quedó dicho. Las citas no se tocan —siguen siendo las fichas que esa
+      respuesta usó de verdad—, porque cortar la redacción no cambia de dónde
+      salió la información.
+    */
+    const truncado = textoVisibleDe(mensaje.contenido, enCurso.inicioMs, Date.now())
+    const guardado = await reemplazarContenidoDeMensaje(mensaje.id, truncado)
+
+    if (!guardado.ok) {
+      return registrarFallo(guardado.codigo)
+    }
+
+    setMensajes((anteriores) =>
+      anteriores.map((candidato) => (candidato.id === guardado.datos.id ? guardado.datos : candidato)),
+    )
+
+    return exito()
+  }, [exito, generacion, mensajes, registrarFallo])
 
   const finalizarGeneracion = useCallback((): void => {
     setGeneracion((actual) => {
@@ -402,32 +617,44 @@ export function useChat(idUsuario: string): ValorDeChat {
         return null
       }
 
-      const mensaje = espacio.mensajes.find((candidato) => candidato.id === actual.idMensaje)
+      const mensaje = mensajes.find((candidato) => candidato.id === actual.idMensaje)
+
       if (mensaje === undefined || mensaje.rol !== 'asistente' || mensaje.tipo !== 'respuesta') {
         return null
       }
 
       return generacionCompleta(mensaje.contenido, actual.inicioMs, Date.now()) ? null : actual
     })
-  }, [espacio.mensajes])
+  }, [mensajes])
 
+  /*
+    Es la única acción que hoy no toca la red: las etiquetas personales siguen
+    en `sessionStorage` hasta que su propio dominio migre. Devuelve una promesa
+    igual que las demás para que esa migración sea un cambio dentro de esta
+    función y no un cambio de firma que se propague a cada botón que la llama.
+  */
   const etiquetarCitadas = useCallback(
-    (idMensaje: string, nombreEtiqueta: string): ResultadoDeAccion => {
-      const mensaje = espacio.mensajes.find((candidato) => candidato.id === idMensaje)
+    async (idMensaje: string, nombreEtiqueta: string): Promise<ResultadoDeAccion> => {
+      const mensaje = mensajes.find((candidato) => candidato.id === idMensaje)
+
       if (mensaje === undefined || mensaje.rol !== 'asistente' || mensaje.tipo !== 'respuesta') {
-        return { ok: false, mensaje: mensajeDeError('CHAT_MENSAJE_NO_ENCONTRADO') }
+        return registrarFallo('CHAT_MENSAJE_NO_ENCONTRADO')
       }
 
       return etiquetarPorIds(mensaje.idsFichasCitadas, nombreEtiqueta)
     },
-    [espacio.mensajes, etiquetarPorIds],
+    [etiquetarPorIds, mensajes, registrarFallo],
   )
 
   return {
-    conversaciones: espacio.conversaciones,
+    conversaciones,
     conversacionActiva,
     mensajes,
     generacion,
+    cargando,
+    cargandoMensajes,
+    respondiendo,
+    error,
     crear,
     seleccionar,
     renombrar,

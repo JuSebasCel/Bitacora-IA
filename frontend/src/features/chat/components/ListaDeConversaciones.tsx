@@ -10,6 +10,8 @@ import type { Conversacion } from '../data/tipos'
 export type PropsListaDeConversaciones = {
   conversaciones: readonly Conversacion[]
   idActiva: string | null
+  /** El índice todavía viaja. Sin distinguirlo de "no hay ninguna", la lista afirma que está vacía antes de saberlo. */
+  cargando: boolean
   alSeleccionar: (id: string) => void
   alCrear: () => void
   alRenombrar: (id: string, titulo: string) => void
@@ -30,6 +32,7 @@ export type PropsListaDeConversaciones = {
 export function ListaDeConversaciones({
   conversaciones,
   idActiva,
+  cargando,
   alSeleccionar,
   alCrear,
   alRenombrar,
@@ -67,7 +70,9 @@ export function ListaDeConversaciones({
         Nueva conversación
       </Button>
 
-      {conversaciones.length === 0 ? (
+      {cargando ? (
+        <p className="text-xs text-texto-tenue">Cargando tus conversaciones…</p>
+      ) : conversaciones.length === 0 ? (
         <p className="text-xs text-texto-tenue">Todavía no hay conversaciones. Crea una para empezar.</p>
       ) : (
         <ul className="flex flex-col gap-0.5">
