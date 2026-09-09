@@ -1,0 +1,20 @@
+[project]
+name = "bitacora-backend"
+version = "0.1.0"
+description = "Backend de orquestación de IA de Bitácora AI: transcripción, chunking, análisis de discurso y agente conversacional."
+requires-python = ">=3.11"
+
+# Las dependencias se declaran en requirements.txt y no aquí: el README de la
+# raíz documenta `pip install -r requirements.txt` y tener las dos listas
+# obliga a recordar actualizar las dos. Este archivo existe por la
+# configuración de herramientas, que no cabe en un requirements.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# `-q` porque la suite es larga en cantidad y corta en interés: lo que importa
+# es qué falló, no la lista de lo que pasó.
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

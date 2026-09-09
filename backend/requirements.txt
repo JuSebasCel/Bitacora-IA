@@ -1,0 +1,18 @@
+# Dependencias del backend de orquestación de IA.
+#
+# Se fijan por rango menor (~=) y no por versión exacta: el grupo no tiene un
+# pipeline que renueve dependencias, así que un pin exacto envejece en
+# silencio; un rango menor deja entrar parches sin admitir cambios de API.
+
+fastapi~=0.115
+uvicorn[standard]~=0.32
+pydantic~=2.9
+supabase~=2.10
+openai~=1.60
+python-dotenv~=1.0
+
+# Prueba. La suite corre sin red ni credenciales (OpenAI y Supabase van
+# mockeados), así que no se separa en un requirements-dev: en un proyecto de
+# este tamaño el segundo archivo solo se desactualiza.
+pytest~=8.3
+httpx~=0.27
