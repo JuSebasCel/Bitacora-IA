@@ -24,3 +24,6 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+
+# Worktrees de agentes (efímeros)
+.claude/worktrees/
