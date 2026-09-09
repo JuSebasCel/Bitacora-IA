@@ -2,9 +2,41 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
+import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import type { Memoria } from '../data'
 import { PantallaDetalleMemoria } from './PantallaDetalleMemoria'
 import { PantallaMemorias } from './PantallaMemorias'
+
+/* Mismo criterio que el resto de pruebas de pantalla: se sustituyen los repositorios, no Supabase. */
+const repositorioDeMemorias = vi.hoisted(() => ({
+  listarMemorias: vi.fn(),
+  crearMemoria: vi.fn(),
+  eliminarMemoria: vi.fn(),
+}))
+
+const repositorioDePlantillas = vi.hoisted(() => ({
+  listarPlantillas: vi.fn(),
+  crearPlantilla: vi.fn(),
+  actualizarPlantilla: vi.fn(),
+  eliminarPlantilla: vi.fn(),
+  subirDocxDePlantilla: vi.fn(),
+  descargarDocxDePlantilla: vi.fn(),
+  eliminarDocxDePlantilla: vi.fn(),
+}))
+
+vi.mock('../repositorio', () => repositorioDeMemorias)
+vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
+
+const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
+
+const MEMORIA: Memoria = {
+  id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
+  idConferencia: 'cnf-alc-01',
+  idPlantilla: PLANTILLA.id,
+  nombre: 'Memoria de la charla de apertura',
+  generadaEl: '2026-04-15T10:00:00.000Z',
+}
 
 vi.mock('@/shared/supabase/cliente')
 
@@ -27,9 +59,13 @@ const ALCANTARA = {
 
 beforeEach(() => {
   mockearSesionAutenticada(ALCANTARA)
+  repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [MEMORIA] })
+  repositorioDePlantillas.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA] })
+  repositorioDePlantillas.descargarDocxDePlantilla.mockImplementation(() => new Promise(() => {}))
 })
 
 afterEach(() => {
+  vi.resetAllMocks()
   reiniciarMocksDeSesion()
 })
 
@@ -48,7 +84,7 @@ function montarListado() {
 function montarDetalle() {
   return render(
     <SessionProvider>
-      <MemoryRouter initialEntries={['/memorias/mem-alc-01']}>
+      <MemoryRouter initialEntries={[`/memorias/${MEMORIA.id}`]}>
         <Routes>
           <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
         </Routes>
@@ -73,22 +109,25 @@ describe('Redacción de la pantalla de memorias', () => {
     expect(descripcion.length).toBeGreaterThan(30)
   })
 
-  it('no usa lenguaje de obra en curso', () => {
+  it('no usa lenguaje de obra en curso', async () => {
     montarListado()
+    await screen.findByRole('list', { name: 'Memorias' })
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })
 
-  it('no usa el guion largo en ningún texto visible', () => {
+  it('no usa el guion largo en ningún texto visible', async () => {
     montarListado()
+    await screen.findByRole('list', { name: 'Memorias' })
 
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })
 })
 
 describe('Redacción de la pantalla de detalle de una memoria', () => {
-  it('no usa lenguaje de obra en curso', () => {
+  it('no usa lenguaje de obra en curso', async () => {
     montarDetalle()
+    await screen.findByText(MEMORIA.nombre)
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })

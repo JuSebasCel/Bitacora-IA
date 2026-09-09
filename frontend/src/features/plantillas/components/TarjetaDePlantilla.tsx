@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
 import type { Plantilla, PlantillaDesdeDocx, PlantillaEnBlanco } from '../data'
 import { EXTENSIONES_DE_PLANTILLA } from '../editor/extensionesDePlantilla'
+import { useDocxDePlantilla } from '../useDocxDePlantilla'
 import { EditorDeDocumento } from './EditorDeDocumento'
 import { MiniaturaDeDocx } from './MiniaturaDeDocx'
 
@@ -108,6 +109,15 @@ function TarjetaDePlantillaEnBlanco({
   documento real (`MiniaturaDeDocx`, mismo `docx-preview` de la pantalla de
   confirmación, recortado y escalado) — para poder reconocer la plantilla
   antes de entrar a ella, no solo por el nombre.
+
+  Desde B6 esa miniatura cuesta una descarga del bucket por tarjeta, donde
+  antes eran bytes que ya estaban en `sessionStorage`. Se conserva igual: un
+  `.docx` de trabajo real pesa decenas o pocos cientos de kilobytes (el tope
+  de 10 MB de `validarDocx` es un freno contra abusos, no el caso normal), la
+  respuesta la cachea el navegador, y sin miniatura el listado de plantillas
+  importadas vuelve a ser una fila de nombres indistinguibles. Si algún día
+  duele, la salida es una imagen de portada guardada al importar, no renderizar
+  el documento a medias.
 */
 function TarjetaDePlantillaDocx({
   plantilla,
@@ -116,11 +126,13 @@ function TarjetaDePlantillaDocx({
   plantilla: PlantillaDesdeDocx
   alEliminar: () => void
 }): ReactElement {
+  const { archivo } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
+
   return (
     <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm">
       <Link to={`/plantillas/${plantilla.id}`} className="flex flex-col gap-3">
         <div className="h-48 overflow-hidden rounded-sm bg-fondo">
-          <MiniaturaDeDocx archivoOriginal={plantilla.archivoOriginal} />
+          <MiniaturaDeDocx archivo={archivo} />
         </div>
 
         <div className="flex flex-col gap-0.5">

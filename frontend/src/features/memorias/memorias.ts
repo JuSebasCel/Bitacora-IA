@@ -13,13 +13,25 @@ export type ResultadoMemoria =
   | { readonly ok: true; readonly memoria: Memoria }
   | { readonly ok: false; readonly codigo: CodigoError }
 
-function idAleatorio(prefijo: string): string {
+/*
+  El id lo genera el cliente porque la columna es `uuid` y el prefijo `mem-`
+  de antes ya no cabe ahí (B6). Es el gemelo del `idNuevo` de
+  `plantillas/plantillas.ts`, copiado y no compartido: darle casa en `shared/`
+  haría que dos dominios dependieran uno del otro por ocho líneas, y el día
+  que uno de los dos necesite otra forma de id, separarlos costaría más que
+  esta repetición.
+*/
+function idNuevo(): string {
   const uuid = globalThis.crypto?.randomUUID?.()
   if (uuid !== undefined) {
-    return `${prefijo}-${uuid}`
+    return uuid
   }
 
-  return `${prefijo}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (caracter) => {
+    const azar = Math.floor(Math.random() * 16)
+    const valor = caracter === 'x' ? azar : (azar & 0x3) | 0x8
+    return valor.toString(16)
+  })
 }
 
 export function crearMemoria(idConferencia: string, idPlantilla: string, nombre: string): ResultadoMemoria {
@@ -44,7 +56,7 @@ export function crearMemoria(idConferencia: string, idPlantilla: string, nombre:
   return {
     ok: true,
     memoria: {
-      id: idAleatorio('mem'),
+      id: idNuevo(),
       idConferencia,
       idPlantilla,
       nombre: nombreLimpio,

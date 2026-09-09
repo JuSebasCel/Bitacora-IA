@@ -1,8 +1,25 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { crearPlantillaEnBlanco } from '../plantillas'
 import { PantallaEditorDePlantilla } from './PantallaEditorDePlantilla'
 import { PantallaPlantillas } from './PantallaPlantillas'
+
+/* Mismo criterio que el resto de pruebas de pantalla: se sustituye el repositorio, no Supabase. */
+const repositorio = vi.hoisted(() => ({
+  listarPlantillas: vi.fn(),
+  crearPlantilla: vi.fn(),
+  actualizarPlantilla: vi.fn(),
+  eliminarPlantilla: vi.fn(),
+  subirDocxDePlantilla: vi.fn(),
+  descargarDocxDePlantilla: vi.fn(),
+  eliminarDocxDePlantilla: vi.fn(),
+}))
+
+vi.mock('../repositorio', () => repositorio)
+
+/* Con nombre propio: una plantilla en blanco sin tocar la podaría el propio listado al cargar. */
+const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
 
 /*
   Reglas de redacción de las pantallas de F4. Mismo criterio que
@@ -17,7 +34,13 @@ const LENGUAJE_DE_OBRA_EN_CURSO =
 const GUION_LARGO = '—'
 
 beforeEach(() => {
-  sessionStorage.clear()
+  repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA] })
+  repositorio.actualizarPlantilla.mockResolvedValue({ ok: true, datos: PLANTILLA })
+  repositorio.eliminarPlantilla.mockResolvedValue({ ok: true, datos: null })
+})
+
+afterEach(() => {
+  vi.resetAllMocks()
 })
 
 function montarListado() {
@@ -33,7 +56,7 @@ function montarListado() {
 
 function montarEditor() {
   return render(
-    <MemoryRouter initialEntries={['/plantillas/pla-memoria-estandar']}>
+    <MemoryRouter initialEntries={[`/plantillas/${PLANTILLA.id}`]}>
       <Routes>
         <Route path="/plantillas" element={<p>Listado</p>} />
         <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
@@ -49,6 +72,13 @@ describe('Redacción de la pantalla de plantillas', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Plantillas' })).toBeInTheDocument()
   })
 
+  it('mientras carga, el esqueleto se anuncia con un texto que dice qué se está esperando', () => {
+    repositorio.listarPlantillas.mockReturnValue(new Promise(() => {}))
+    montarListado()
+
+    expect(screen.getByLabelText('Cargando las plantillas')).toBeInTheDocument()
+  })
+
   it('describe con una línea qué trabajo se hace en la sección', () => {
     montarListado()
 
@@ -58,28 +88,32 @@ describe('Redacción de la pantalla de plantillas', () => {
     expect(descripcion.length).toBeGreaterThan(30)
   })
 
-  it('no usa lenguaje de obra en curso', () => {
+  it('no usa lenguaje de obra en curso', async () => {
     montarListado()
+    await screen.findByText(PLANTILLA.nombre)
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })
 
-  it('no usa el guion largo en ningún texto visible', () => {
+  it('no usa el guion largo en ningún texto visible', async () => {
     montarListado()
+    await screen.findByText(PLANTILLA.nombre)
 
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })
 })
 
 describe('Redacción de la pantalla del editor de plantillas', () => {
-  it('no usa lenguaje de obra en curso', () => {
+  it('no usa lenguaje de obra en curso', async () => {
     montarEditor()
+    await screen.findByLabelText('Nombre')
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })
 
-  it('no usa el guion largo en ningún texto visible', () => {
+  it('no usa el guion largo en ningún texto visible', async () => {
     montarEditor()
+    await screen.findByLabelText('Nombre')
 
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })

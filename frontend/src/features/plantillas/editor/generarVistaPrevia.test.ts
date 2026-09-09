@@ -14,13 +14,28 @@ function archivoDocxReal(): File {
   return new File([buffer], 'tem.docx', { type: TIPO_MIME_DOCX })
 }
 
+/*
+  Los mismos bytes que en producción bajan del bucket `plantillas-docx`. Aquí
+  se leen del `.docx` versionado en `tests/fixtures/`: lo que se prueba es la
+  sustitución, que no cambia según de dónde vengan los bytes.
+*/
+function bytesDocxReal(): ArrayBuffer {
+  /*
+    Se copia a un `Uint8Array` del entorno de la prueba en vez de devolver el
+    `ArrayBuffer` interno del `Buffer` de Node: bajo jsdom son realms
+    distintos, y JSZip decide qué recibió con `instanceof`, así que el buffer
+    de Node le llega como un tipo que no reconoce.
+  */
+  return new Uint8Array(readFileSync(RUTA_DOCX_DE_EJEMPLO)).buffer
+}
+
 describe('generarVistaPrevia', () => {
   it('con el .docx real de ejemplo y sus marcadores detectados, produce un .docx válido con el tipo MIME correcto', async () => {
     const importado = await importarDocx(archivoDocxReal())
     expect(importado.ok).toBe(true)
     if (!importado.ok) return
 
-    const blob = await generarVistaPrevia(importado.archivoOriginal, importado.marcadores)
+    const blob = await generarVistaPrevia(bytesDocxReal(), importado.marcadores)
 
     expect(blob.type).toBe(TIPO_MIME_DOCX)
     expect(blob.size).toBeGreaterThan(0)
@@ -31,13 +46,13 @@ describe('generarVistaPrevia', () => {
     expect(importado.ok).toBe(true)
     if (!importado.ok) return
 
-    const blob = await generarVistaPrevia(importado.archivoOriginal, [])
+    const blob = await generarVistaPrevia(bytesDocxReal(), [])
 
     expect(blob.size).toBeGreaterThan(0)
   })
 
-  it('con un data URL que no es un .docx válido, la promesa se rechaza', async () => {
-    await expect(generarVistaPrevia('data:application/octet-stream;base64,AA==', [])).rejects.toThrow()
+  it('con bytes que no son un .docx válido, la promesa se rechaza', async () => {
+    await expect(generarVistaPrevia(new Uint8Array([0, 1, 2]).buffer, [])).rejects.toThrow()
   })
 
   it('acepta datos reales y los usa para los marcadores de campo fijo, sin alterar los personalizados', async () => {
@@ -60,8 +75,8 @@ describe('generarVistaPrevia', () => {
       nombre_ponente: { parrafo: 'Rodrigo Peñaloza', lista: ['Rodrigo Peñaloza'] },
     }
 
-    const sinDatos = await generarVistaPrevia(importado.archivoOriginal, importado.marcadores)
-    const conDatos = await generarVistaPrevia(importado.archivoOriginal, importado.marcadores, datosReales)
+    const sinDatos = await generarVistaPrevia(bytesDocxReal(), importado.marcadores)
+    const conDatos = await generarVistaPrevia(bytesDocxReal(), importado.marcadores, datosReales)
 
     const [xmlSinDatos, xmlConDatos] = await Promise.all([
       JSZip.loadAsync(await sinDatos.arrayBuffer()).then((zip) => zip.file('word/document.xml')?.async('string')),

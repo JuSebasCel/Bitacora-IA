@@ -4,7 +4,8 @@ import type { ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 export type PropsMiniaturaDeDocx = {
-  archivoOriginal: string
+  /** Bytes del `.docx` original, o `null` mientras se descargan del bucket o si la descarga falló. */
+  archivo: Blob | null
 }
 
 /*
@@ -15,8 +16,13 @@ export type PropsMiniaturaDeDocx = {
   en `TarjetaDePlantilla.tsx`), aplicado aquí al documento real en vez de a
   un documento editable. Mientras carga, o si el renderizado falla, se ve un
   ícono de respaldo en vez de dejar la tarjeta en blanco.
+
+  Recibe los bytes ya resueltos en vez de ir a buscarlos: desde B6 el archivo
+  se descarga del bucket (`useDocxDePlantilla`), y quien monta la tarjeta es
+  quien sabe si esa descarga vale la pena. Así este componente sigue siendo
+  puramente visual y su prueba no necesita simular red de ninguna clase.
 */
-export function MiniaturaDeDocx({ archivoOriginal }: PropsMiniaturaDeDocx): ReactElement {
+export function MiniaturaDeDocx({ archivo }: PropsMiniaturaDeDocx): ReactElement {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const [listo, setListo] = useState(false)
 
@@ -31,9 +37,11 @@ export function MiniaturaDeDocx({ archivoOriginal }: PropsMiniaturaDeDocx): Reac
 
     contenedor.innerHTML = ''
 
-    fetch(archivoOriginal)
-      .then((respuesta) => respuesta.blob())
-      .then((blob) => renderAsync(blob, contenedor, undefined, { inWrapper: true }))
+    if (archivo === null) {
+      return
+    }
+
+    renderAsync(archivo, contenedor, undefined, { inWrapper: true })
       .then(() => {
         if (!cancelado) {
           setListo(true)
@@ -46,7 +54,7 @@ export function MiniaturaDeDocx({ archivoOriginal }: PropsMiniaturaDeDocx): Reac
     return () => {
       cancelado = true
     }
-  }, [archivoOriginal])
+  }, [archivo])
 
   return (
     <div className="relative h-full w-full">

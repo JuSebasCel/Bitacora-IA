@@ -3,16 +3,52 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
+import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
-import { CLAVE_MEMORIAS, guardarMemoria } from '../almacenamiento'
+import type { Memoria } from '../data'
 import { PantallaMemorias } from './PantallaMemorias'
 
 vi.mock('@/shared/supabase/cliente')
 
-const MEMORIA_DE_SESGOS = {
-  id: 'mem-alc-02',
+/*
+  Dos repositorios sustituidos, porque la pantalla combina dos dominios: sus
+  memorias, y las plantillas con las que se generan. Las conferencias siguen
+  llegando de `useConferenciasVisibles` (fixture todavía, hasta que se migre
+  ese dominio), así que los ids de conferencia son los suyos.
+*/
+const repositorioDeMemorias = vi.hoisted(() => ({
+  listarMemorias: vi.fn(),
+  crearMemoria: vi.fn(),
+  eliminarMemoria: vi.fn(),
+}))
+
+const repositorioDePlantillas = vi.hoisted(() => ({
+  listarPlantillas: vi.fn(),
+  crearPlantilla: vi.fn(),
+  actualizarPlantilla: vi.fn(),
+  eliminarPlantilla: vi.fn(),
+  subirDocxDePlantilla: vi.fn(),
+  descargarDocxDePlantilla: vi.fn(),
+  eliminarDocxDePlantilla: vi.fn(),
+}))
+
+vi.mock('../repositorio', () => repositorioDeMemorias)
+vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
+
+const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
+
+const MEMORIA_ALCANTARA: Memoria = {
+  id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
+  idConferencia: 'cnf-alc-01',
+  idPlantilla: PLANTILLA.id,
+  nombre: 'Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura',
+  generadaEl: '2026-04-15T10:00:00.000Z',
+}
+
+const MEMORIA_DE_SESGOS: Memoria = {
+  id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d71',
   idConferencia: 'cnf-alc-03',
-  idPlantilla: 'pla-cita-simple',
+  idPlantilla: PLANTILLA.id,
   nombre: 'Memoria de sesgos algorítmicos',
   generadaEl: '2026-05-20T10:00:00.000Z',
 }
@@ -25,10 +61,17 @@ const ALCANTARA = {
 
 beforeEach(() => {
   mockearSesionAutenticada(ALCANTARA)
+  repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [MEMORIA_ALCANTARA] })
+  repositorioDeMemorias.crearMemoria.mockImplementation((memoria: Memoria) =>
+    Promise.resolve({ ok: true, datos: memoria }),
+  )
+  repositorioDeMemorias.eliminarMemoria.mockResolvedValue({ ok: true, datos: null })
+  repositorioDePlantillas.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA] })
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.resetAllMocks()
   reiniciarMocksDeSesion()
 })
 
@@ -45,63 +88,72 @@ function montar(rutaInicial = '/memorias') {
 }
 
 describe('PantallaMemorias', () => {
-  it('lista la semilla, con el nombre de la conferencia y la plantilla de origen', () => {
+  it('lista lo guardado, con el nombre de la conferencia y la plantilla de origen', async () => {
     montar()
-    const listado = within(screen.getByRole('list', { name: 'Memorias' }))
+    const listado = within(await screen.findByRole('list', { name: 'Memorias' }))
 
-    expect(
-      listado.getByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura'),
-    ).toBeInTheDocument()
+    expect(listado.getByText(MEMORIA_ALCANTARA.nombre)).toBeInTheDocument()
     expect(listado.getByText('Modelos de lenguaje aplicados a la revisión sistemática de literatura')).toBeInTheDocument()
     expect(listado.getByText('Memoria estándar')).toBeInTheDocument()
+  })
+
+  /*
+    Se espera también a las conferencias: la tarjeta muestra el nombre de la
+    conferencia de origen, y pintarla antes diría "Conferencia no disponible"
+    sobre memorias que están perfectamente bien.
+  */
+  it('mientras la lectura no resuelve, muestra el esqueleto y no el estado vacío', () => {
+    repositorioDeMemorias.listarMemorias.mockReturnValue(new Promise(() => {}))
+
+    montar()
+
+    expect(screen.getByLabelText('Cargando las memorias')).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no hay memorias generadas/i)).not.toBeInTheDocument()
+  })
+
+  it('si la lectura falla, lo dice en vez de invitar a generar la primera memoria', async () => {
+    repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: false, codigo: 'DATOS_SIN_CONEXION' })
+
+    montar()
+
+    expect(await screen.findByText(/no pudimos conectarnos/i)).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no hay memorias generadas/i)).not.toBeInTheDocument()
   })
 
   it('«Generar memoria» abre el panel', async () => {
     const usuario = userEvent.setup()
     montar()
+    await screen.findByRole('list', { name: 'Memorias' })
 
     await usuario.click(screen.getByRole('button', { name: 'Generar memoria' }))
 
     expect(screen.getByRole('dialog', { name: 'Generar memoria' })).toBeInTheDocument()
   })
 
-  it('con ?conferencia= en la URL, el panel se abre solo y preselecciona esa conferencia', () => {
+  it('con ?conferencia= en la URL, el panel se abre solo y preselecciona esa conferencia', async () => {
     montar('/memorias?conferencia=cnf-alc-01')
 
     const dialogo = screen.getByRole('dialog', { name: 'Generar memoria' })
     expect(dialogo).toBeInTheDocument()
-    expect(screen.getByLabelText('Conferencia')).toHaveValue('cnf-alc-01')
+    await waitFor(() => expect(screen.getByLabelText('Conferencia')).toHaveValue('cnf-alc-01'))
   })
 
-  it('eliminar quita la memoria de la lista y de sessionStorage', async () => {
+  it('eliminar quita la memoria de la lista y la borra en el repositorio', async () => {
     const usuario = userEvent.setup()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     montar()
+    await screen.findByRole('list', { name: 'Memorias' })
 
-    await usuario.click(
-      screen.getByRole('button', {
-        name: /eliminar «memoria de modelos de lenguaje aplicados a la revisión sistemática de literatura»/i,
-      }),
-    )
+    await usuario.click(screen.getByRole('button', { name: new RegExp(`eliminar «${MEMORIA_ALCANTARA.nombre}»`, 'i') }))
 
-    await waitFor(() =>
-      expect(
-        screen.queryByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura'),
-      ).not.toBeInTheDocument(),
-    )
-    expect(sessionStorage.getItem(CLAVE_MEMORIAS)).not.toContain('mem-alc-01')
+    await waitFor(() => expect(screen.queryByText(MEMORIA_ALCANTARA.nombre)).not.toBeInTheDocument())
+    expect(repositorioDeMemorias.eliminarMemoria).toHaveBeenCalledWith(MEMORIA_ALCANTARA.id)
   })
 
   it('sin ninguna memoria, muestra el estado vacío', async () => {
-    const usuario = userEvent.setup()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    montar()
+    repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [] })
 
-    await usuario.click(
-      screen.getByRole('button', {
-        name: /eliminar «memoria de modelos de lenguaje aplicados a la revisión sistemática de literatura»/i,
-      }),
-    )
+    montar()
 
     expect(await screen.findByText(/todavía no hay memorias generadas/i)).toBeInTheDocument()
   })
@@ -113,7 +165,7 @@ describe('PantallaMemorias', () => {
     ya muestra.
   */
   it('buscar filtra el listado por nombre de memoria, conferencia o plantilla', async () => {
-    guardarMemoria(MEMORIA_DE_SESGOS)
+    repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [MEMORIA_DE_SESGOS, MEMORIA_ALCANTARA] })
     const usuario = userEvent.setup()
     montar()
 
@@ -123,9 +175,7 @@ describe('PantallaMemorias', () => {
     await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'sesgos')
 
     expect(listado.getByText('Memoria de sesgos algorítmicos')).toBeInTheDocument()
-    expect(
-      listado.queryByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura'),
-    ).not.toBeInTheDocument()
+    expect(listado.queryByText(MEMORIA_ALCANTARA.nombre)).not.toBeInTheDocument()
   })
 
   /*
@@ -136,6 +186,7 @@ describe('PantallaMemorias', () => {
   it('distingue el vacío por filtros del vacío por falta de datos, y el botón para quitarlos restablece el listado', async () => {
     const usuario = userEvent.setup()
     montar()
+    await screen.findByRole('list', { name: 'Memorias' })
 
     await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'palabra-inexistente')
 
@@ -144,9 +195,7 @@ describe('PantallaMemorias', () => {
 
     await usuario.click(screen.getByRole('button', { name: /quitar filtros/i }))
 
-    expect(
-      await screen.findByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(MEMORIA_ALCANTARA.nombre)).toBeInTheDocument()
   })
 
   /*
@@ -158,6 +207,7 @@ describe('PantallaMemorias', () => {
   it('escribir en la búsqueda conserva ?conferencia= si ya estaba en la URL', async () => {
     const usuario = userEvent.setup()
     montar('/memorias?conferencia=cnf-alc-01')
+    await screen.findByRole('list', { name: 'Memorias' })
 
     await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'modelos')
 

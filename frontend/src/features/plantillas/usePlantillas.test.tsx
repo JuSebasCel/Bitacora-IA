@@ -1,184 +1,309 @@
-import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { CLAVE_PLANTILLAS } from './almacenamiento'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Plantilla } from './data'
+import { crearPlantillaEnBlanco } from './plantillas'
 import type { ResultadoPlantilla } from './plantillas'
-import { usePlantillas } from './usePlantillas'
+import { ESPERA_DE_GUARDADO_MS, usePlantillas } from './usePlantillas'
 
-describe('usePlantillas', () => {
-  it('arranca con la semilla del fixture', () => {
+/*
+  El hook se prueba contra el repositorio sustituido, que es el límite del
+  dominio: lo que importa aquí es qué se guarda y cuándo, no qué consulta se
+  arma (eso lo cubre `repositorio.test.ts` contra el cliente simulado).
+*/
+const repositorio = vi.hoisted(() => ({
+  listarPlantillas: vi.fn(),
+  crearPlantilla: vi.fn(),
+  actualizarPlantilla: vi.fn(),
+  eliminarPlantilla: vi.fn(),
+  subirDocxDePlantilla: vi.fn(),
+  descargarDocxDePlantilla: vi.fn(),
+  eliminarDocxDePlantilla: vi.fn(),
+}))
+
+vi.mock('./repositorio', () => repositorio)
+
+const PLANTILLA_GUARDADA: Plantilla = {
+  ...crearPlantillaEnBlanco(),
+  nombre: 'Memoria estándar',
+}
+
+const ARCHIVO_DOCX = new File([new Uint8Array(8)], 'tem.docx', {
+  type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+})
+
+beforeEach(() => {
+  repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA_GUARDADA] })
+  repositorio.crearPlantilla.mockImplementation((plantilla: Plantilla) =>
+    Promise.resolve({ ok: true, datos: plantilla }),
+  )
+  repositorio.actualizarPlantilla.mockImplementation((plantilla: Plantilla) =>
+    Promise.resolve({ ok: true, datos: plantilla }),
+  )
+  repositorio.eliminarPlantilla.mockResolvedValue({ ok: true, datos: null })
+  repositorio.subirDocxDePlantilla.mockImplementation((id: string) =>
+    Promise.resolve({ ok: true, datos: `${id}/original.docx` }),
+  )
+  repositorio.eliminarDocxDePlantilla.mockResolvedValue({ ok: true, datos: null })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.resetAllMocks()
+})
+
+/** Monta el hook y espera a que la lectura inicial termine, que es el estado desde el que se opera. */
+async function montarCargado(opciones?: { podarAbandonadas: boolean }) {
+  const { result } = renderHook(() => usePlantillas(opciones ?? {}))
+  await waitFor(() => expect(result.current.cargando).toBe(false))
+  return result
+}
+
+describe('usePlantillas, carga inicial', () => {
+  it('arranca cargando y sin plantillas, para no afirmar que no hay ninguna antes de saberlo', () => {
+    repositorio.listarPlantillas.mockReturnValue(new Promise(() => {}))
+
     const { result } = renderHook(() => usePlantillas())
 
-    expect(result.current.plantillas.some((plantilla) => plantilla.nombre === 'Memoria estándar')).toBe(true)
+    expect(result.current.cargando).toBe(true)
+    expect(result.current.plantillas).toEqual([])
   })
 
-  it('crear agrega una plantilla en blanco y la deja disponible sin recargar', () => {
-    const { result } = renderHook(() => usePlantillas())
-    const antes = result.current.plantillas.length
+  it('trae el listado del repositorio', async () => {
+    const result = await montarCargado()
 
-    let nueva: Plantilla | undefined
-    act(() => {
-      nueva = result.current.crear()
-    })
-
-    expect(result.current.plantillas).toHaveLength(antes + 1)
-    expect(result.current.plantillas.some((plantilla) => plantilla.id === nueva?.id)).toBe(true)
+    expect(result.current.plantillas).toEqual([PLANTILLA_GUARDADA])
+    expect(result.current.codigoDeError).toBeNull()
   })
 
-  it('crear persiste de inmediato', () => {
-    const { result } = renderHook(() => usePlantillas())
+  it('si la lectura falla, expone el código en vez de quedarse en un vacío mudo', async () => {
+    repositorio.listarPlantillas.mockResolvedValue({ ok: false, codigo: 'DATOS_SIN_CONEXION' })
 
-    act(() => {
-      result.current.crear()
+    const result = await montarCargado()
+
+    expect(result.current.codigoDeError).toBe('DATOS_SIN_CONEXION')
+    expect(result.current.plantillas).toEqual([])
+  })
+})
+
+describe('usePlantillas, crear', () => {
+  it('crea una plantilla en blanco, la persiste y la deja disponible sin recargar', async () => {
+    const result = await montarCargado()
+
+    let creada: ResultadoPlantilla | undefined
+    await act(async () => {
+      creada = await result.current.crear()
     })
 
-    expect(sessionStorage.getItem(CLAVE_PLANTILLAS)).toContain('Plantilla sin nombre')
+    expect(creada?.ok).toBe(true)
+    expect(repositorio.crearPlantilla).toHaveBeenCalledOnce()
+    expect(result.current.plantillas).toHaveLength(2)
   })
 
-  it('crearDesdeDocx agrega una plantilla origen docx con sus marcadores', () => {
-    const { result } = renderHook(() => usePlantillas())
+  it('si el insert falla, no deja la plantilla en el listado', async () => {
+    repositorio.crearPlantilla.mockResolvedValue({ ok: false, codigo: 'DATOS_SIN_PERMISO' })
+    const result = await montarCargado()
 
-    let nueva: Plantilla | undefined
-    act(() => {
-      nueva = result.current.crearDesdeDocx('data:;base64,AA==', 'Importada', [])
+    let creada: ResultadoPlantilla | undefined
+    await act(async () => {
+      creada = await result.current.crear()
     })
 
-    expect(nueva).toMatchObject({ origen: 'docx', nombre: 'Importada' })
-    expect(result.current.plantillas.some((plantilla) => plantilla.id === nueva?.id)).toBe(true)
+    expect(creada).toEqual({ ok: false, codigo: 'DATOS_SIN_PERMISO' })
+    expect(result.current.plantillas).toEqual([PLANTILLA_GUARDADA])
+  })
+})
+
+describe('usePlantillas, crear desde .docx', () => {
+  it('sube el archivo antes de insertar la fila, y guarda solo su ruta', async () => {
+    const result = await montarCargado()
+
+    let creada: ResultadoPlantilla | undefined
+    await act(async () => {
+      creada = await result.current.crearDesdeDocx(ARCHIVO_DOCX, 'Importada', [])
+    })
+
+    expect(creada?.ok).toBe(true)
+    if (creada?.ok && creada.plantilla.origen === 'docx') {
+      expect(repositorio.subirDocxDePlantilla).toHaveBeenCalledWith(creada.plantilla.id, ARCHIVO_DOCX)
+      expect(creada.plantilla.rutaArchivoOriginal).toBe(`${creada.plantilla.id}/original.docx`)
+    }
   })
 
-  it('renombrarPlantilla actualiza el nombre de una plantilla existente', () => {
-    const { result } = renderHook(() => usePlantillas())
-    let nueva: Plantilla | undefined
-    act(() => {
-      nueva = result.current.crear()
+  it('si la subida falla, ni siquiera intenta insertar la fila', async () => {
+    repositorio.subirDocxDePlantilla.mockResolvedValue({ ok: false, codigo: 'PLANT_DOCX_FALLO_SUBIDA' })
+    const result = await montarCargado()
+
+    let creada: ResultadoPlantilla | undefined
+    await act(async () => {
+      creada = await result.current.crearDesdeDocx(ARCHIVO_DOCX, 'Importada', [])
     })
 
-    act(() => {
-      result.current.renombrarPlantilla(nueva!.id, 'Nombre nuevo')
-    })
-
-    expect(result.current.plantillas.find((plantilla) => plantilla.id === nueva!.id)?.nombre).toBe('Nombre nuevo')
+    expect(creada).toEqual({ ok: false, codigo: 'PLANT_DOCX_FALLO_SUBIDA' })
+    expect(repositorio.crearPlantilla).not.toHaveBeenCalled()
   })
 
-  it('renombrarPlantilla con id inexistente devuelve PLANT_NO_ENCONTRADA', () => {
-    const { result } = renderHook(() => usePlantillas())
+  /*
+    Postgres y Storage no comparten transacción: si la fila no entra, el
+    archivo ya subido no lo nombra nadie y se quedaría en el bucket para
+    siempre.
+  */
+  it('si el insert falla después de subir, borra el archivo que quedó huérfano', async () => {
+    repositorio.crearPlantilla.mockResolvedValue({ ok: false, codigo: 'DATOS_FALLO_INESPERADO' })
+    const result = await montarCargado()
+
+    await act(async () => {
+      await result.current.crearDesdeDocx(ARCHIVO_DOCX, 'Importada', [])
+    })
+
+    expect(repositorio.eliminarDocxDePlantilla).toHaveBeenCalledOnce()
+  })
+})
+
+describe('usePlantillas, ediciones diferidas', () => {
+  it('renombrar se ve al instante y se guarda una sola vez tras la ráfaga de tecleo', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const result = await montarCargado()
+
+    act(() => {
+      result.current.renombrarPlantilla(PLANTILLA_GUARDADA.id, 'Memo')
+    })
+    act(() => {
+      result.current.renombrarPlantilla(PLANTILLA_GUARDADA.id, 'Memoria de cierre')
+    })
+
+    expect(result.current.plantillas[0]?.nombre).toBe('Memoria de cierre')
+    expect(repositorio.actualizarPlantilla).not.toHaveBeenCalled()
+
+    await act(async () => {
+      vi.advanceTimersByTime(ESPERA_DE_GUARDADO_MS)
+    })
+
+    expect(repositorio.actualizarPlantilla).toHaveBeenCalledOnce()
+    expect(repositorio.actualizarPlantilla.mock.calls[0]?.[0]).toMatchObject({ nombre: 'Memoria de cierre' })
+  })
+
+  it('renombrar con un nombre vacío devuelve el error sin guardar nada', async () => {
+    const result = await montarCargado()
 
     let resultado: ResultadoPlantilla | undefined
     act(() => {
-      resultado = result.current.renombrarPlantilla('pla-no-existe', 'Nombre')
+      resultado = result.current.renombrarPlantilla(PLANTILLA_GUARDADA.id, '   ')
+    })
+
+    expect(resultado).toEqual({ ok: false, codigo: 'PLANT_NOMBRE_REQUERIDO' })
+    expect(repositorio.actualizarPlantilla).not.toHaveBeenCalled()
+  })
+
+  it('renombrar una plantilla que ya no está devuelve PLANT_NO_ENCONTRADA', async () => {
+    const result = await montarCargado()
+
+    let resultado: ResultadoPlantilla | undefined
+    act(() => {
+      resultado = result.current.renombrarPlantilla('11111111-2222-4333-8444-555555555555', 'Nombre')
     })
 
     expect(resultado).toEqual({ ok: false, codigo: 'PLANT_NO_ENCONTRADA' })
   })
 
-  it('cambiarColores actualiza los colores de una plantilla en blanco', () => {
-    const { result } = renderHook(() => usePlantillas())
-    let nueva: Plantilla | undefined
-    act(() => {
-      nueva = result.current.crear()
-    })
+  it('cambiar colores y contenido actualiza el estado y termina en una escritura', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const result = await montarCargado()
 
     act(() => {
-      result.current.cambiarColores(nueva!.id, '#101010', '#202020')
+      result.current.cambiarColores(PLANTILLA_GUARDADA.id, '#101010', '#202020')
+    })
+    act(() => {
+      result.current.actualizarContenido(PLANTILLA_GUARDADA.id, {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hola' }] }],
+      })
     })
 
-    expect(result.current.plantillas.find((plantilla) => plantilla.id === nueva!.id)).toMatchObject({
-      colorPrincipal: '#101010',
-      colorSecundario: '#202020',
+    await act(async () => {
+      vi.advanceTimersByTime(ESPERA_DE_GUARDADO_MS)
     })
+
+    expect(repositorio.actualizarPlantilla).toHaveBeenCalledOnce()
+    const guardada = repositorio.actualizarPlantilla.mock.calls[0]?.[0] as Plantilla
+    expect(guardada).toMatchObject({ colorPrincipal: '#101010', colorSecundario: '#202020' })
+    expect(JSON.stringify(guardada)).toContain('hola')
   })
 
-  it('actualizarContenido reemplaza el documento de una plantilla en blanco', () => {
-    const { result } = renderHook(() => usePlantillas())
-    let nueva: Plantilla | undefined
+  /*
+    Salir del editor es el momento en que una edición a medio guardar se
+    perdería, y el más probable: se escribe y se vuelve al listado en el mismo
+    segundo, mucho antes de que venza la espera.
+  */
+  it('al desmontar, manda de inmediato lo que quedara pendiente', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const { result, unmount } = renderHook(() => usePlantillas())
+    await waitFor(() => expect(result.current.cargando).toBe(false))
+
     act(() => {
-      nueva = result.current.crear()
+      result.current.renombrarPlantilla(PLANTILLA_GUARDADA.id, 'Sin tiempo de guardarse')
+    })
+    expect(repositorio.actualizarPlantilla).not.toHaveBeenCalled()
+
+    unmount()
+
+    expect(repositorio.actualizarPlantilla).toHaveBeenCalledOnce()
+    expect(repositorio.actualizarPlantilla.mock.calls[0]?.[0]).toMatchObject({ nombre: 'Sin tiempo de guardarse' })
+  })
+})
+
+describe('usePlantillas, eliminar', () => {
+  it('la quita del listado y la borra en el repositorio', async () => {
+    const result = await montarCargado()
+
+    await act(async () => {
+      await result.current.eliminar(PLANTILLA_GUARDADA.id)
     })
 
-    const contenidoNuevo = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hola' }] }] }
-    act(() => {
-      result.current.actualizarContenido(nueva!.id, contenidoNuevo)
-    })
-
-    const actualizada = result.current.plantillas.find((plantilla) => plantilla.id === nueva!.id)
-    expect(actualizada?.origen).toBe('blanco')
-    if (actualizada?.origen === 'blanco') {
-      expect(actualizada.contenido).toEqual(contenidoNuevo)
-    }
+    expect(result.current.plantillas).toEqual([])
+    expect(repositorio.eliminarPlantilla).toHaveBeenCalledWith(PLANTILLA_GUARDADA.id)
   })
 
-  it('actualizarMarcadoresDeDocx reemplaza los marcadores de una plantilla docx', () => {
-    const { result } = renderHook(() => usePlantillas())
-    let nueva: Plantilla | undefined
-    act(() => {
-      nueva = result.current.crearDesdeDocx('data:;base64,AA==', 'Importada', [])
+  /* Borrar la fila y dejar el archivo llenaría el bucket de documentos que ya no nombra nadie. */
+  it('de una plantilla importada, borra también su archivo del bucket', async () => {
+    const result = await montarCargado()
+
+    let creada: ResultadoPlantilla | undefined
+    await act(async () => {
+      creada = await result.current.crearDesdeDocx(ARCHIVO_DOCX, 'Importada', [])
     })
 
-    const marcador = {
-      tipo: 'simple' as const,
-      id: 'mar-1',
-      textoOriginal: '[[X]]',
-      contexto: '[[X]]',
-      origenDeDato: { tipo: 'personalizado' as const, etiqueta: 'X' },
-      formato: 'parrafo' as const,
-    }
-
-    act(() => {
-      result.current.actualizarMarcadoresDeDocx(nueva!.id, [marcador])
+    const id = creada?.ok === true ? creada.plantilla.id : ''
+    await act(async () => {
+      await result.current.eliminar(id)
     })
 
-    const actualizada = result.current.plantillas.find((plantilla) => plantilla.id === nueva!.id)
-    expect(actualizada?.origen).toBe('docx')
-    if (actualizada?.origen === 'docx') {
-      expect(actualizada.marcadores).toEqual([marcador])
-    }
+    expect(repositorio.eliminarDocxDePlantilla).toHaveBeenCalledWith(`${id}/original.docx`)
+  })
+})
+
+describe('usePlantillas, poda de abandonadas', () => {
+  it('con la poda pedida, borra las plantillas en blanco sin tocar y deja las demás', async () => {
+    const abandonada = crearPlantillaEnBlanco()
+    repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [abandonada, PLANTILLA_GUARDADA] })
+
+    const result = await montarCargado({ podarAbandonadas: true })
+
+    expect(result.current.plantillas).toEqual([PLANTILLA_GUARDADA])
+    expect(repositorio.eliminarPlantilla).toHaveBeenCalledWith(abandonada.id)
   })
 
-  it('eliminar la quita del estado y de sessionStorage', () => {
-    const { result } = renderHook(() => usePlantillas())
-    let nueva: Plantilla | undefined
-    act(() => {
-      nueva = result.current.crear()
-    })
+  /*
+    El editor monta el mismo hook sobre una plantilla que acaba de crearse y
+    que todavía tiene exactamente la forma de una abandonada. Podar ahí la
+    borraría debajo de la persona que está a punto de escribir en ella.
+  */
+  it('sin pedirla, no borra nada aunque haya plantillas en blanco sin tocar', async () => {
+    const abandonada = crearPlantillaEnBlanco()
+    repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [abandonada] })
 
-    act(() => {
-      result.current.eliminar(nueva!.id)
-    })
+    const result = await montarCargado()
 
-    expect(result.current.plantillas.some((plantilla) => plantilla.id === nueva!.id)).toBe(false)
-  })
-
-  it('podarAbandonadas quita las plantillas en blanco sin tocar, deja las demás', () => {
-    const { result } = renderHook(() => usePlantillas())
-    let abandonada: Plantilla | undefined
-    let conNombre: Plantilla | undefined
-
-    act(() => {
-      abandonada = result.current.crear()
-    })
-    act(() => {
-      conNombre = result.current.crear()
-    })
-    act(() => {
-      result.current.renombrarPlantilla(conNombre!.id, 'Esta sí tiene nombre')
-    })
-    act(() => {
-      result.current.podarAbandonadas()
-    })
-
-    expect(result.current.plantillas.some((plantilla) => plantilla.id === abandonada!.id)).toBe(false)
-    expect(result.current.plantillas.some((plantilla) => plantilla.id === conNombre!.id)).toBe(true)
-  })
-
-  it('podarAbandonadas no hace nada si no hay ninguna abandonada', () => {
-    const { result } = renderHook(() => usePlantillas())
-    const antes = result.current.plantillas
-
-    act(() => {
-      result.current.podarAbandonadas()
-    })
-
-    expect(result.current.plantillas).toEqual(antes)
+    expect(result.current.plantillas).toEqual([abandonada])
+    expect(repositorio.eliminarPlantilla).not.toHaveBeenCalled()
   })
 })

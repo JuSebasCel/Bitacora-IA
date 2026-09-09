@@ -5,7 +5,8 @@ import { useSearchParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
-import { Button, EncabezadoDeSeccion, EstadoVacio, Esqueleto } from '@/shared/ui'
+import { mensajeDeError } from '@/shared/errors'
+import { Button, EncabezadoDeSeccion, EstadoVacio, Esqueleto, PanelDeError } from '@/shared/ui'
 import { BarraDeBusquedaDeMemorias, PanelDeGenerarMemoria, TarjetaDeMemoria } from '../components'
 import { CRITERIOS_POR_DEFECTO, listarMemorias } from '../filtros'
 import type { EntradaDeMemoria } from '../filtros'
@@ -38,7 +39,7 @@ function nombreDePlantilla(plantillas: readonly { id: string; nombre: string }[]
 export function PantallaMemorias(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { memorias, generar, eliminar } = useMemorias()
+  const { memorias, cargando: cargandoMemorias, codigoDeError, generar, eliminar } = useMemorias()
   const { carga, visibles } = useConferenciasVisibles(idUsuario)
   const { plantillas } = usePlantillas()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -91,8 +92,16 @@ export function PantallaMemorias(): ReactElement {
 
         <BarraDeBusquedaDeMemorias valor={criterios.busqueda} alCambiar={alBuscar} />
 
-        {carga === 'cargando' ? (
+        {/*
+          Se espera también a las conferencias, y no solo a las memorias: la
+          tarjeta muestra el nombre de la conferencia de origen, y pintarla
+          antes de que ese listado llegue diría "Conferencia no disponible"
+          sobre memorias que están perfectamente bien.
+        */}
+        {cargandoMemorias || carga === 'cargando' ? (
           <Esqueleto filas={3} etiqueta="Cargando las memorias" />
+        ) : codigoDeError !== null ? (
+          <PanelDeError mensaje={mensajeDeError(codigoDeError)} />
         ) : listadas.length > 0 ? (
           <ul aria-label="Memorias" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {listadas.map(({ memoria, nombreConferencia, nombrePlantilla }) => (
@@ -101,7 +110,7 @@ export function PantallaMemorias(): ReactElement {
                   memoria={memoria}
                   nombreConferencia={nombreConferencia}
                   nombrePlantilla={nombrePlantilla}
-                  alEliminar={() => eliminar(memoria.id)}
+                  alEliminar={() => void eliminar(memoria.id)}
                 />
               </li>
             ))}

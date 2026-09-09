@@ -2,11 +2,63 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
+import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
-import { CLAVE_MEMORIAS } from '../almacenamiento'
+import type { Memoria } from '../data'
 import { PantallaDetalleMemoria } from './PantallaDetalleMemoria'
 
 vi.mock('@/shared/supabase/cliente')
+
+const repositorioDeMemorias = vi.hoisted(() => ({
+  listarMemorias: vi.fn(),
+  crearMemoria: vi.fn(),
+  eliminarMemoria: vi.fn(),
+}))
+
+const repositorioDePlantillas = vi.hoisted(() => ({
+  listarPlantillas: vi.fn(),
+  crearPlantilla: vi.fn(),
+  actualizarPlantilla: vi.fn(),
+  eliminarPlantilla: vi.fn(),
+  subirDocxDePlantilla: vi.fn(),
+  descargarDocxDePlantilla: vi.fn(),
+  eliminarDocxDePlantilla: vi.fn(),
+}))
+
+vi.mock('../repositorio', () => repositorioDeMemorias)
+vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
+
+/*
+  Plantilla en blanco con un marcador de campo fijo: al abrir la memoria se
+  vuelve a generar sobre la conferencia real, así que el documento tiene que
+  terminar mostrando el dato de esa conferencia y no el de ejemplo.
+*/
+const PLANTILLA = {
+  ...crearPlantillaEnBlanco(),
+  nombre: 'Memoria estándar',
+  contenido: {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'marcador',
+            attrs: { origenTipo: 'campo', campo: 'tema_principal', etiquetaPersonalizada: null, formato: 'parrafo' },
+          },
+        ],
+      },
+    ],
+  },
+}
+
+const MEMORIA: Memoria = {
+  id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
+  idConferencia: 'cnf-alc-01',
+  idPlantilla: PLANTILLA.id,
+  nombre: 'Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura',
+  generadaEl: '2026-04-15T10:00:00.000Z',
+}
 
 const ALCANTARA = {
   id: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
@@ -16,9 +68,13 @@ const ALCANTARA = {
 
 beforeEach(() => {
   mockearSesionAutenticada(ALCANTARA)
+  repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [MEMORIA] })
+  repositorioDePlantillas.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA] })
+  repositorioDePlantillas.descargarDocxDePlantilla.mockImplementation(() => new Promise(() => {}))
 })
 
 afterEach(() => {
+  vi.resetAllMocks()
   reiniciarMocksDeSesion()
 })
 
@@ -35,42 +91,83 @@ function montar(idMemoria: string) {
   )
 }
 
-describe('PantallaDetalleMemoria — id inexistente', () => {
-  it('muestra el error MEM_NO_ENCONTRADA y un enlace de regreso', () => {
-    montar('mem-que-no-existe')
+describe('PantallaDetalleMemoria — mientras carga', () => {
+  /*
+    Tres lecturas de red (memoria, plantilla, conferencias) antes de saber si
+    la memoria existe. Decir "no encontramos esa memoria" mientras alguna sigue
+    en curso sería mentir, y era lo que se veía al recargar sobre esta URL.
+  */
+  it('muestra el esqueleto y no el error de memoria inexistente', () => {
+    repositorioDeMemorias.listarMemorias.mockReturnValue(new Promise(() => {}))
 
-    expect(screen.getByText(/no encontramos esa memoria/i)).toBeInTheDocument()
+    montar(MEMORIA.id)
+
+    expect(screen.getByLabelText('Cargando la memoria')).toBeInTheDocument()
+    expect(screen.queryByText(/no encontramos esa memoria/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('PantallaDetalleMemoria — id inexistente', () => {
+  it('muestra el error MEM_NO_ENCONTRADA y un enlace de regreso', async () => {
+    montar('5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d99')
+
+    expect(await screen.findByText(/no encontramos esa memoria/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /volver a memorias/i })).toHaveAttribute('href', '/memorias')
   })
 })
 
 describe('PantallaDetalleMemoria — memoria válida (plantilla en blanco)', () => {
   it('regenera la vista previa con los datos reales de la conferencia', async () => {
-    montar('mem-alc-01')
+    montar(MEMORIA.id)
 
-    expect(screen.getByText('Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura')).toBeInTheDocument()
-    /* «Modelos de lenguaje» es el tema real de cnf-alc-01 — el dato de ejemplo del fixture es «Sesgos algorítmicos…». */
+    expect(await screen.findByText(MEMORIA.nombre)).toBeInTheDocument()
+    /* «Modelos de lenguaje» es el tema real de cnf-alc-01, no un dato de ejemplo de la plantilla. */
     expect(await screen.findByText('Modelos de lenguaje')).toBeInTheDocument()
   })
 })
 
 describe('PantallaDetalleMemoria — plantilla de origen eliminada', () => {
-  it('muestra un error en vez de un documento a medias', () => {
-    sessionStorage.setItem(
-      CLAVE_MEMORIAS,
-      JSON.stringify([
+  it('muestra un error en vez de un documento a medias', async () => {
+    repositorioDePlantillas.listarPlantillas.mockResolvedValue({ ok: true, datos: [] })
+
+    montar(MEMORIA.id)
+
+    expect(await screen.findByText(/no encontramos esa plantilla/i)).toBeInTheDocument()
+  })
+})
+
+describe('PantallaDetalleMemoria — plantilla importada cuyo archivo no baja', () => {
+  /*
+    La fila de la plantilla existe y sus marcadores también; lo que falta son
+    los bytes del bucket. Sin ese aviso, la pantalla se quedaba en "Generando
+    la memoria…" para siempre.
+  */
+  it('lo dice con nombre propio en vez de quedarse generando indefinidamente', async () => {
+    const idPlantilla = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+    repositorioDePlantillas.listarPlantillas.mockResolvedValue({
+      ok: true,
+      datos: [
         {
-          id: 'mem-huerfana',
-          idConferencia: 'cnf-alc-01',
-          idPlantilla: 'pla-que-no-existe',
-          nombre: 'Memoria huérfana',
-          generadaEl: '2026-05-01T00:00:00.000Z',
+          id: idPlantilla,
+          nombre: 'Importada',
+          origen: 'docx',
+          rutaArchivoOriginal: `${idPlantilla}/original.docx`,
+          marcadores: [],
+          actualizadaEl: '2026-04-10T09:00:00.000Z',
         },
-      ]),
-    )
+      ],
+    })
+    repositorioDePlantillas.descargarDocxDePlantilla.mockResolvedValue({
+      ok: false,
+      codigo: 'PLANT_DOCX_FALLO_DESCARGA',
+    })
+    repositorioDeMemorias.listarMemorias.mockResolvedValue({
+      ok: true,
+      datos: [{ ...MEMORIA, idPlantilla }],
+    })
 
-    montar('mem-huerfana')
+    montar(MEMORIA.id)
 
-    expect(screen.getByText(/no encontramos esa plantilla/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no pudimos recuperar el archivo original/i)).toBeInTheDocument()
   })
 })

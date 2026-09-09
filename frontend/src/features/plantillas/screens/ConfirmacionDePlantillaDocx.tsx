@@ -5,9 +5,11 @@ import { RepeatIcon } from '@phosphor-icons/react/dist/csr/Repeat'
 import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
 import type { ChangeEvent, ReactElement } from 'react'
 import { useEffect, useState } from 'react'
-import { Field, Input, Insignia } from '@/shared/ui'
+import { mensajeDeError } from '@/shared/errors'
+import { Field, Input, Insignia, PanelDeError } from '@/shared/ui'
 import type { MarcadorDeDocx, PlantillaDesdeDocx } from '../data'
 import { VistaPreviaDeDocx } from '../components'
+import { useDocxDePlantilla } from '../useDocxDePlantilla'
 
 export type PropsConfirmacionDePlantillaDocx = {
   plantilla: PlantillaDesdeDocx
@@ -90,35 +92,18 @@ function FilaDeMarcador({ marcador }: { marcador: MarcadorDeDocx }): ReactElemen
   Lo único que esta pantalla hace es dejar ver, de solo lectura, que el
   documento subido es el correcto y que sus marcas se reconocieron, y
   ofrecer descargar ese mismo archivo original sin modificar.
+
+  Desde B6 ese archivo ya no viaja dentro de la plantilla: se descarga del
+  bucket `plantillas-docx` por su ruta (`useDocxDePlantilla`), y hasta que
+  llega no hay enlace de descarga que ofrecer.
 */
 export function ConfirmacionDePlantillaDocx({
   plantilla,
   alRenombrar,
 }: PropsConfirmacionDePlantillaDocx): ReactElement {
   const [nombreLocal, setNombreLocal] = useState(plantilla.nombre)
-  const [blob, setBlob] = useState<Blob | null>(null)
+  const { archivo: blob, codigoDeError } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
   const [urlDeDescarga, setUrlDeDescarga] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelado = false
-
-    fetch(plantilla.archivoOriginal)
-      .then((respuesta) => respuesta.blob())
-      .then((resultado) => {
-        if (!cancelado) {
-          setBlob(resultado)
-        }
-      })
-      .catch(() => {
-        if (!cancelado) {
-          setBlob(null)
-        }
-      })
-
-    return () => {
-      cancelado = true
-    }
-  }, [plantilla.archivoOriginal])
 
   useEffect(() => {
     if (blob === null) {
@@ -157,6 +142,14 @@ export function ConfirmacionDePlantillaDocx({
           </a>
         ) : null}
       </div>
+
+      {/*
+        La descarga del archivo puede fallar sin que la plantilla esté mal: los
+        marcadores detectados viven en la fila y se siguen viendo. Se avisa
+        aquí, con nombre propio, en vez de dejar la vista previa vacía
+        insinuando que el documento se perdió.
+      */}
+      {codigoDeError === null ? null : <PanelDeError mensaje={mensajeDeError(codigoDeError)} />}
 
       <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
         <div className="flex items-start gap-2 text-sm text-texto-tenue">

@@ -5,26 +5,26 @@ import { prepararComandos } from './prepararComandos'
 
 const TIPO_MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-async function dataUrlAArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
-  const respuesta = await fetch(dataUrl)
-  return respuesta.arrayBuffer()
-}
-
 /*
   Genera el `.docx` final: el original se lee intacto, solo se reescribe el
   texto de `word/document.xml` donde vivían las marcas `[[...]]`
   (`prepararComandos`), y `docx-templates` sustituye esos comandos por los
   datos de ejemplo preservando el resto del paquete (estilos, encabezados,
-  imágenes, tablas) byte a byte. Nunca se muta `archivoOriginal`: cada
-  llamada parte de él de nuevo.
+  imágenes, tablas) byte a byte. Nunca se mutan los bytes originales: cada
+  llamada parte de ellos de nuevo.
+
+  Recibe los bytes y no la ruta ni una data URL: de dónde salen (antes
+  `sessionStorage`, desde B6 una descarga del bucket `plantillas-docx`) es
+  decisión de quien llama, y esta función no tiene por qué saber que existe
+  Supabase para seguir siendo probable contra el `.docx` versionado en
+  `tests/fixtures/`.
 */
 export async function generarVistaPrevia(
-  archivoOriginal: string,
+  bytesDelOriginal: ArrayBuffer,
   marcadores: readonly MarcadorDeDocx[],
   datosReales?: RegistroDeDatosDeCampo,
 ): Promise<Blob> {
-  const bufferOriginal = await dataUrlAArrayBuffer(archivoOriginal)
-  const zip = await JSZip.loadAsync(bufferOriginal)
+  const zip = await JSZip.loadAsync(bytesDelOriginal)
 
   const documentXmlOriginal = await zip.file('word/document.xml')?.async('string')
   if (documentXmlOriginal === undefined) {
