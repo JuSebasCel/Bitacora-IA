@@ -1,70 +1,52 @@
-import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { CLAVE_OCULTAS } from './almacenamiento'
+import { renderHook, waitFor } from '@testing-library/react'
+import { act } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { supabase } from '@/shared/supabase/cliente'
+import { mockearTabla, reiniciarMocksDeDatos } from '@/test/supabaseDePrueba'
 import { useConferenciasOcultas } from './useConferenciasOcultas'
 
+vi.mock('@/shared/supabase/cliente')
+
 const ZULUAGA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
-const PENALOZA = '1f265edb-88ff-48fb-aeaf-1ff0c8d49aa5'
+
+beforeEach(() => {
+  reiniciarMocksDeDatos()
+  mockearTabla('conferencias_ocultas', [{ id_conferencia: 'cnf-zul-05' }])
+})
+
+afterEach(() => {
+  vi.clearAllMocks()
+})
 
 describe('useConferenciasOcultas', () => {
-  it('arranca sin ninguna conferencia oculta', () => {
+  it('carga las que esta persona ya tenía ocultas', async () => {
     const { result } = renderHook(() => useConferenciasOcultas(ZULUAGA))
 
-    expect(result.current.idsOcultos).toEqual([])
+    await waitFor(() => expect(result.current.idsOcultos).toEqual(['cnf-zul-05']))
   })
 
-  it('oculta una conferencia sin recargar', () => {
+  it('ocultar una conferencia la agrega de inmediato y la escribe', async () => {
     const { result } = renderHook(() => useConferenciasOcultas(ZULUAGA))
+    await waitFor(() => expect(result.current.idsOcultos).toEqual(['cnf-zul-05']))
 
-    act(() => {
-      result.current.ocultar('cnf-zul-01')
-    })
+    act(() => result.current.ocultar('cnf-zul-01'))
 
-    expect(result.current.idsOcultos).toEqual(['cnf-zul-01'])
+    expect(result.current.idsOcultos).toContain('cnf-zul-01')
+    expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('conferencias_ocultas')
   })
 
-  it('persiste lo ocultado para que sobreviva a un recargado', () => {
+  it('mostrar una conferencia la quita de inmediato', async () => {
     const { result } = renderHook(() => useConferenciasOcultas(ZULUAGA))
+    await waitFor(() => expect(result.current.idsOcultos).toEqual(['cnf-zul-05']))
 
-    act(() => {
-      result.current.ocultar('cnf-zul-01')
-    })
+    act(() => result.current.mostrar('cnf-zul-05'))
 
-    expect(sessionStorage.getItem(CLAVE_OCULTAS)).toContain('cnf-zul-01')
-
-    const segundaVisita = renderHook(() => useConferenciasOcultas(ZULUAGA))
-    expect(segundaVisita.result.current.idsOcultos).toEqual(['cnf-zul-01'])
+    expect(result.current.idsOcultos).not.toContain('cnf-zul-05')
   })
 
-  it('vuelve a mostrar una conferencia oculta, sin recargar y sin dejar rastro guardado', () => {
-    const { result } = renderHook(() => useConferenciasOcultas(ZULUAGA))
+  it('sin sesión no consulta y queda vacío', async () => {
+    const { result } = renderHook(() => useConferenciasOcultas(''))
 
-    act(() => {
-      result.current.ocultar('cnf-zul-01')
-      result.current.ocultar('cnf-zul-02')
-    })
-
-    act(() => {
-      result.current.mostrar('cnf-zul-01')
-    })
-
-    expect(result.current.idsOcultos).toEqual(['cnf-zul-02'])
-    expect(sessionStorage.getItem(CLAVE_OCULTAS)).not.toContain('cnf-zul-01')
-  })
-
-  it('cambia de espacio al cambiar de persona', () => {
-    const { result, rerender } = renderHook(
-      ({ idUsuario }) => useConferenciasOcultas(idUsuario),
-      { initialProps: { idUsuario: ZULUAGA } },
-    )
-
-    act(() => {
-      result.current.ocultar('cnf-zul-01')
-    })
-    expect(result.current.idsOcultos).toEqual(['cnf-zul-01'])
-
-    rerender({ idUsuario: PENALOZA })
-
-    expect(result.current.idsOcultos).toEqual([])
+    await waitFor(() => expect(result.current.idsOcultos).toEqual([]))
   })
 })

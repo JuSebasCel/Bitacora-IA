@@ -1,11 +1,16 @@
-import { useCallback, useState } from 'react'
-import { idsOcultosDe, mostrarConferencia, ocultarConferencia } from './almacenamiento'
+import { useCallback, useEffect, useState } from 'react'
+import { listarOcultas, mostrarRemota, ocultarRemota } from './repositorio'
 
 /*
-  Envoltorio fino sobre `almacenamiento.ts`, mismo criterio que `useEtiquetas`:
-  el estado se ajusta durante el render cuando cambia `idUsuario`, para que un
-  cambio de sesión no deje ver, por un render intermedio, lo que ocultó la
-  persona anterior.
+  Qué conferencias sacó esta persona de su propio listado (B10).
+
+  Antes en sessionStorage; ahora en la tabla `conferencias_ocultas`. Ocultar y
+  mostrar actualizan la lista local de inmediato y escriben en segundo plano:
+  es una preferencia de vista, no un dato compartido, y una relectura solo
+  serviría para parpadear.
+
+  Al cambiar de sesión la lista se vacía enseguida (no se muestra la de la
+  cuenta anterior ni por un render) y se recarga la nueva.
 */
 
 export type ValorDeOcultas = {
@@ -14,36 +19,41 @@ export type ValorDeOcultas = {
   readonly mostrar: (idConferencia: string) => void
 }
 
-type EstadoDeOcultas = {
-  readonly idUsuario: string
-  readonly idsOcultos: readonly string[]
-}
-
 export function useConferenciasOcultas(idUsuario: string): ValorDeOcultas {
-  const [estado, setEstado] = useState<EstadoDeOcultas>(() => ({
-    idUsuario,
-    idsOcultos: idsOcultosDe(idUsuario),
-  }))
+  const [idsOcultos, setIdsOcultos] = useState<readonly string[]>([])
 
-  if (estado.idUsuario !== idUsuario) {
-    setEstado({ idUsuario, idsOcultos: idsOcultosDe(idUsuario) })
-  }
+  useEffect(() => {
+    let cancelado = false
 
-  const idsOcultos = estado.idUsuario === idUsuario ? estado.idsOcultos : idsOcultosDe(idUsuario)
+    if (idUsuario === '') {
+      setIdsOcultos([])
+      return
+    }
+
+    setIdsOcultos([])
+    listarOcultas().then((respuesta) => {
+      if (!cancelado && respuesta.ok) setIdsOcultos(respuesta.datos)
+    })
+
+    return () => {
+      cancelado = true
+    }
+  }, [idUsuario])
 
   const ocultar = useCallback(
     (idConferencia: string) => {
-      setEstado({ idUsuario, idsOcultos: ocultarConferencia(idUsuario, idConferencia) })
+      setIdsOcultos((previos) =>
+        previos.includes(idConferencia) ? previos : [...previos, idConferencia],
+      )
+      void ocultarRemota(idUsuario, idConferencia)
     },
     [idUsuario],
   )
 
-  const mostrar = useCallback(
-    (idConferencia: string) => {
-      setEstado({ idUsuario, idsOcultos: mostrarConferencia(idUsuario, idConferencia) })
-    },
-    [idUsuario],
-  )
+  const mostrar = useCallback((idConferencia: string) => {
+    setIdsOcultos((previos) => previos.filter((id) => id !== idConferencia))
+    void mostrarRemota(idConferencia)
+  }, [])
 
   return { idsOcultos, ocultar, mostrar }
 }

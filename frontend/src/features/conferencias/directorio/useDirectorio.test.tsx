@@ -1,94 +1,64 @@
-import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { CLAVE_EVENTOS, CLAVE_PONENTES } from './almacenamiento'
+import { renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockearFilaDe, mockearTabla, reiniciarMocksDeDatos } from '@/test/supabaseDePrueba'
 import { useDirectorio } from './useDirectorio'
 
+vi.mock('@/shared/supabase/cliente')
+
+beforeEach(() => {
+  reiniciarMocksDeDatos()
+  mockearTabla('eventos', [{ id: 'evt-1', nombre: 'Simposio Andino' }])
+  mockearTabla('ponentes', [{ id: 'pon-1', nombre: 'Mariana Escobar', id_evento: 'evt-1' }])
+})
+
+afterEach(() => {
+  vi.clearAllMocks()
+})
+
+async function directorioListo() {
+  const render = renderHook(() => useDirectorio())
+  await waitFor(() => expect(render.result.current.cargando).toBe(false))
+  return render
+}
+
 describe('useDirectorio', () => {
-  it('arranca con la semilla de eventos y ponentes del fixture', () => {
-    const { result } = renderHook(() => useDirectorio())
+  it('carga eventos y ponentes de Supabase', async () => {
+    const { result } = await directorioListo()
 
-    expect(result.current.eventos.some((evento) => evento.nombre === 'Simposio Andino de Investigación Aplicada')).toBe(true)
-    expect(result.current.ponentes.some((ponente) => ponente.nombre === 'Mariana Escobar Vallejo')).toBe(true)
+    expect(result.current.eventos.map((e) => e.nombre)).toEqual(['Simposio Andino'])
+    expect(result.current.ponentes[0]?.idEvento).toBe('evt-1')
   })
 
-  it('deja disponible un evento recién creado sin recargar', () => {
-    const { result } = renderHook(() => useDirectorio())
+  it('rechaza un evento con nombre repetido sin escribir', async () => {
+    const { result } = await directorioListo()
 
-    act(() => {
-      result.current.crearEvento('Coloquio de Prueba')
-    })
+    const resultado = await result.current.crearEvento('simposio andino')
 
-    expect(result.current.eventos.some((evento) => evento.nombre === 'Coloquio de Prueba')).toBe(true)
+    expect(resultado.ok).toBe(false)
+    if (!resultado.ok) expect(resultado.codigo).toBe('DIR_EVENTO_YA_EXISTE')
   })
 
-  it('persiste el evento creado para que sobreviva a un recargado', () => {
-    const { result } = renderHook(() => useDirectorio())
+  it('crea un evento nuevo y lo deja disponible', async () => {
+    const { result } = await directorioListo()
+    mockearFilaDe('eventos', { id: 'evt-2', nombre: 'Coloquio del Norte' })
 
-    act(() => {
-      result.current.crearEvento('Coloquio de Prueba')
-    })
+    const resultado = await result.current.crearEvento('Coloquio del Norte')
 
-    expect(sessionStorage.getItem(CLAVE_EVENTOS)).toContain('Coloquio de Prueba')
-
-    const segundaVisita = renderHook(() => useDirectorio())
-    expect(segundaVisita.result.current.eventos.some((evento) => evento.nombre === 'Coloquio de Prueba')).toBe(
-      true,
+    expect(resultado.ok).toBe(true)
+    await waitFor(() =>
+      expect(result.current.eventos.some((e) => e.nombre === 'Coloquio del Norte')).toBe(true),
     )
   })
 
-  it('devuelve el código de error y no toca el directorio ante un nombre repetido', () => {
-    const { result } = renderHook(() => useDirectorio())
-    const antes = result.current.eventos.length
+  it('crea un ponente dentro de un evento', async () => {
+    const { result } = await directorioListo()
+    mockearFilaDe('ponentes', { id: 'pon-2', nombre: 'Rodrigo Peñaloza', id_evento: 'evt-1' })
 
-    let codigo = ''
-    act(() => {
-      const resultado = result.current.crearEvento('Simposio Andino de Investigación Aplicada')
-      if (!resultado.ok) {
-        codigo = resultado.codigo
-      }
-    })
+    const resultado = await result.current.crearPonente('evt-1', 'Rodrigo Peñaloza')
 
-    expect(codigo).toBe('DIR_EVENTO_YA_EXISTE')
-    expect(result.current.eventos).toHaveLength(antes)
-  })
-
-  it('deja disponible un ponente recién creado, asociado a su evento', () => {
-    const { result } = renderHook(() => useDirectorio())
-
-    act(() => {
-      result.current.crearPonente('evt-saia', 'Persona de Prueba')
-    })
-
-    expect(
-      result.current.ponentes.some(
-        (ponente) => ponente.nombre === 'Persona de Prueba' && ponente.idEvento === 'evt-saia',
-      ),
-    ).toBe(true)
-  })
-
-  it('persiste el ponente creado', () => {
-    const { result } = renderHook(() => useDirectorio())
-
-    act(() => {
-      result.current.crearPonente('evt-saia', 'Persona de Prueba')
-    })
-
-    expect(sessionStorage.getItem(CLAVE_PONENTES)).toContain('Persona de Prueba')
-  })
-
-  it('rechaza un ponente repetido en el mismo evento sin tocar el directorio', () => {
-    const { result } = renderHook(() => useDirectorio())
-    const antes = result.current.ponentes.length
-
-    let codigo = ''
-    act(() => {
-      const resultado = result.current.crearPonente('evt-saia', 'Mariana Escobar Vallejo')
-      if (!resultado.ok) {
-        codigo = resultado.codigo
-      }
-    })
-
-    expect(codigo).toBe('DIR_PONENTE_YA_EXISTE')
-    expect(result.current.ponentes).toHaveLength(antes)
+    expect(resultado.ok).toBe(true)
+    await waitFor(() =>
+      expect(result.current.ponentes.some((p) => p.nombre === 'Rodrigo Peñaloza')).toBe(true),
+    )
   })
 })

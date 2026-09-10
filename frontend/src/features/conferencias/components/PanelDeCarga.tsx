@@ -78,8 +78,21 @@ function validarCamposLocalmente(datos: DatosDeCarga, archivo: File | null): Err
   return errores
 }
 
-function codigoDeEvento(idEvento: string): string {
-  return idEvento.replace(/^evt-/, '').toUpperCase()
+/*
+  Código corto del evento a partir de su nombre: iniciales de las primeras
+  palabras. Antes se derivaba del id (un slug legible); ahora el id es un uuid
+  de Postgres, así que la fuente pasa a ser el nombre. `conferencias` guarda
+  este código denormalizado, no es una llave.
+*/
+function codigoDeEvento(nombreEvento: string): string {
+  const iniciales = nombreEvento
+    .split(/\s+/)
+    .filter((palabra) => palabra.length > 0)
+    .slice(0, 4)
+    .map((palabra) => palabra[0]?.toUpperCase() ?? '')
+    .join('')
+
+  return iniciales.length > 0 ? iniciales : 'EVT'
 }
 
 export type PropsPanelDeCarga = {
@@ -196,8 +209,8 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
     })
   }
 
-  function alCrearEvento(nombre: string): { ok: true } | { ok: false; mensaje: string } {
-    const resultado = crearEvento(nombre)
+  async function alCrearEvento(nombre: string): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+    const resultado = await crearEvento(nombre)
     if (!resultado.ok) {
       return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
     }
@@ -205,8 +218,8 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
     return { ok: true }
   }
 
-  function alCrearPonente(nombre: string): { ok: true } | { ok: false; mensaje: string } {
-    const resultado = crearPonente(datos.idEvento, nombre)
+  async function alCrearPonente(nombre: string): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+    const resultado = await crearPonente(datos.idEvento, nombre)
     if (!resultado.ok) {
       return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
     }
@@ -247,7 +260,7 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
         titulo: datos.titulo,
         ponente: nombrePonente,
         evento: nombreEvento,
-        codigoDeEvento: codigoDeEvento(datos.idEvento),
+        codigoDeEvento: codigoDeEvento(nombreEvento),
         fechaDelEvento: datos.fechaDelEvento,
         idDueno: idUsuario,
         fuente: datos.fuente,

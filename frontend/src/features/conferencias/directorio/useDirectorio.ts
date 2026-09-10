@@ -1,64 +1,93 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Evento, Ponente } from '../data'
-import { agregarEvento, agregarPonente, todosLosEventos, todosLosPonentes } from './almacenamiento'
 import { crearEvento, crearPonente } from './directorio'
 import type { ResultadoEvento, ResultadoPonente } from './directorio'
+import { crearEventoRemoto, crearPonenteRemoto, listarDirectorio } from './repositorio'
 
 /*
-  Envoltorio fino sobre `directorio.ts`, mismo criterio que `useEtiquetas`.
+  Directorio compartido de eventos y ponentes (B10).
 
-  No hay `idUsuario` aquí: el directorio es del grupo, no de una persona, así
-  que no hace falta ajustar el estado al cambiar de sesión.
+  Antes en sessionStorage; ahora de las tablas `eventos`/`ponentes`. No hay
+  `idUsuario`: es del grupo, no de nadie.
+
+  Las reglas puras de `directorio.ts` validan antes del viaje (nombre vacío,
+  muy largo, repetido dentro del mismo evento) para dar el mensaje con nombre
+  propio; Postgres no tiene una restricción `unique` sobre el nombre, así que
+  esa comprobación previa es la única que atrapa el duplicado — se hace sobre
+  la lista ya cargada.
 */
 
 export type ValorDeDirectorio = {
   readonly eventos: readonly Evento[]
   readonly ponentes: readonly Ponente[]
-  readonly crearEvento: (nombre: string) => ResultadoEvento
-  readonly crearPonente: (idEvento: string, nombre: string) => ResultadoPonente
+  readonly cargando: boolean
+  readonly crearEvento: (nombre: string) => Promise<ResultadoEvento>
+  readonly crearPonente: (idEvento: string, nombre: string) => Promise<ResultadoPonente>
 }
 
 export function useDirectorio(): ValorDeDirectorio {
-  const [estado, setEstado] = useState(() => ({
-    eventos: todosLosEventos(),
-    ponentes: todosLosPonentes(),
-  }))
+  const [eventos, setEventos] = useState<readonly Evento[]>([])
+  const [ponentes, setPonentes] = useState<readonly Ponente[]>([])
+  const [cargando, setCargando] = useState(true)
 
-  const crear = useCallback(
-    (nombre: string): ResultadoEvento => {
-      const resultado = crearEvento(estado.eventos, nombre)
+  useEffect(() => {
+    let cancelado = false
 
-      if (resultado.ok) {
-        agregarEvento(resultado.evento)
-        setEstado((anterior) => ({ ...anterior, eventos: [...anterior.eventos, resultado.evento] }))
+    listarDirectorio().then((respuesta) => {
+      if (cancelado) return
+      if (respuesta.ok) {
+        setEventos(respuesta.datos.eventos)
+        setPonentes(respuesta.datos.ponentes)
+      }
+      setCargando(false)
+    })
+
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  const crearEventoNuevo = useCallback(
+    async (nombre: string): Promise<ResultadoEvento> => {
+      const previo = crearEvento(eventos, nombre)
+      if (!previo.ok) {
+        return previo
       }
 
-      return resultado
+      const remoto = await crearEventoRemoto(nombre)
+      if (!remoto.ok) {
+        return { ok: false, codigo: remoto.codigo }
+      }
+
+      setEventos((anteriores) => [...anteriores, remoto.datos])
+      return { ok: true, evento: remoto.datos }
     },
-    [estado.eventos],
+    [eventos],
   )
 
-  const crearDePonente = useCallback(
-    (idEvento: string, nombre: string): ResultadoPonente => {
-      const resultado = crearPonente(estado.ponentes, idEvento, nombre)
-
-      if (resultado.ok) {
-        agregarPonente(resultado.ponente)
-        setEstado((anterior) => ({
-          ...anterior,
-          ponentes: [...anterior.ponentes, resultado.ponente],
-        }))
+  const crearPonenteNuevo = useCallback(
+    async (idEvento: string, nombre: string): Promise<ResultadoPonente> => {
+      const previo = crearPonente(ponentes, idEvento, nombre)
+      if (!previo.ok) {
+        return previo
       }
 
-      return resultado
+      const remoto = await crearPonenteRemoto(idEvento, nombre)
+      if (!remoto.ok) {
+        return { ok: false, codigo: remoto.codigo }
+      }
+
+      setPonentes((anteriores) => [...anteriores, remoto.datos])
+      return { ok: true, ponente: remoto.datos }
     },
-    [estado.ponentes],
+    [ponentes],
   )
 
   return {
-    eventos: estado.eventos,
-    ponentes: estado.ponentes,
-    crearEvento: crear,
-    crearPonente: crearDePonente,
+    eventos,
+    ponentes,
+    cargando,
+    crearEvento: crearEventoNuevo,
+    crearPonente: crearPonenteNuevo,
   }
 }
