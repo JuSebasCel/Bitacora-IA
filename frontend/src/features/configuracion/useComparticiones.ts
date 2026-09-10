@@ -1,54 +1,56 @@
-import { useCallback, useState } from 'react'
-import type { Comparticion, Conferencia, PrivacidadDeComparticion } from '@/features/conferencias/data'
+import { useCallback } from 'react'
+import type { Conferencia, PrivacidadDeComparticion } from '@/features/conferencias/data'
 import { mensajeDeError } from '@/shared/errors'
-import { agregarComparticion, leerComparticionesAgregadas } from './comparticiones/almacenamiento'
 import { crearInvitacion } from './comparticiones/comparticiones'
+import { crearComparticion } from './comparticiones/repositorio'
 
 export type ResultadoDeAccion = { readonly ok: true } | { readonly ok: false; readonly mensaje: string }
 
 export type ValorDeComparticiones = {
-  readonly agregadas: Readonly<Record<string, readonly Comparticion[]>>
   readonly invitar: (
     conferencia: Conferencia | null,
     idInvitado: string,
     puedeCompartir: boolean,
     privacidad: PrivacidadDeComparticion,
-  ) => ResultadoDeAccion
+  ) => Promise<ResultadoDeAccion>
 }
 
 /*
-  Envoltorio fino: `crearInvitacion` (pura, probada aparte) decide si la
-  invitación es válida, este hook solo persiste el resultado y fuerza el
-  re-render para que las pantallas que ya leen `conferenciasVisibles` vean la
-  conferencia recién compartida sin recargar.
+  `crearInvitacion` (pura, probada aparte) decide si la invitación tiene
+  sentido con lo que se sabe en el cliente —conferencia elegida, invitado
+  elegido, permiso para compartir, no duplicada entre lo ya visible—. Este
+  hook la persiste.
+
+  El `puedeCompartir` que recibe ya viene resuelto por la capa de acceso
+  (`privacidadEfectiva` sobre la conferencia visible); la política de RLS lo
+  vuelve a exigir del lado de Postgres, así que un cliente que mienta no logra
+  nada. La comprobación previa existe solo para dar el mensaje con nombre
+  propio antes de gastar el viaje.
 */
 export function useComparticiones(): ValorDeComparticiones {
-  const [agregadas, setAgregadas] = useState(() => leerComparticionesAgregadas())
-
   const invitar = useCallback(
-    (
+    async (
       conferencia: Conferencia | null,
       idInvitado: string,
       puedeCompartir: boolean,
       privacidad: PrivacidadDeComparticion,
-    ): ResultadoDeAccion => {
-      if (conferencia === null) {
-        return { ok: false, mensaje: mensajeDeError('CONFIG_CONFERENCIA_REQUERIDA') }
+    ): Promise<ResultadoDeAccion> => {
+      const previo = crearInvitacion(conferencia, idInvitado, puedeCompartir, privacidad)
+
+      if (!previo.ok) {
+        return { ok: false, mensaje: mensajeDeError(previo.codigo) }
       }
 
-      const resultado = crearInvitacion(conferencia, idInvitado, puedeCompartir, privacidad)
+      /* `conferencia` no es null aquí: `crearInvitacion` ya lo habría rechazado. */
+      const conf = conferencia as Conferencia
+      const resultado = await crearComparticion(conf.id, conf.idDueno, idInvitado, privacidad)
 
-      if (!resultado.ok) {
-        return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
-      }
-
-      agregarComparticion(conferencia.id, resultado.comparticion)
-      setAgregadas(leerComparticionesAgregadas())
-
-      return { ok: true }
+      return resultado.ok
+        ? { ok: true }
+        : { ok: false, mensaje: mensajeDeError(resultado.codigo) }
     },
     [],
   )
 
-  return { agregadas, invitar }
+  return { invitar }
 }

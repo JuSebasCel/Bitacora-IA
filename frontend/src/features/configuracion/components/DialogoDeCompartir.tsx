@@ -1,8 +1,9 @@
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import type { FormEvent, ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { PERSONAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import type { Conferencia, PrivacidadDeComparticion } from '@/features/conferencias/data'
+import { listarPerfiles } from '../comparticiones/repositorio'
+import type { PerfilDelGrupo } from '../comparticiones/repositorio'
 import { Button, Field, MensajeDeFormulario, Select } from '@/shared/ui'
 import { useComparticiones } from '../useComparticiones'
 
@@ -42,6 +43,8 @@ export function DialogoDeCompartir({
   const dialogoRef = useRef<HTMLDialogElement>(null)
 
   const [idInvitado, setIdInvitado] = useState('')
+  const [perfiles, setPerfiles] = useState<readonly PerfilDelGrupo[]>([])
+  const [enviando, setEnviando] = useState(false)
   const [privacidad, setPrivacidad] = useState<PrivacidadDeComparticion>(PRIVACIDAD_INICIAL)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,12 +59,15 @@ export function DialogoDeCompartir({
       setIdInvitado('')
       setPrivacidad(PRIVACIDAD_INICIAL)
       setError(null)
+      void listarPerfiles().then((respuesta) => {
+        if (respuesta.ok) setPerfiles(respuesta.datos)
+      })
     } else if (!abierto && dialogo.open) {
       dialogo.close()
     }
   }, [abierto])
 
-  const invitadosPosibles = PERSONAS_DE_EJEMPLO.filter(
+  const invitadosPosibles = perfiles.filter(
     (persona) => persona.id !== idUsuario && !conferencia.comparticiones.some((c) => c.idInvitado === persona.id),
   )
 
@@ -69,10 +75,13 @@ export function DialogoDeCompartir({
     setPrivacidad((anterior) => ({ ...anterior, [clave]: !anterior[clave] }))
   }
 
-  function alEnviar(evento: FormEvent<HTMLFormElement>): void {
+  async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
+    if (enviando) return
 
-    const resultado = invitar(conferencia, idInvitado, puedeCompartir, privacidad)
+    setEnviando(true)
+    const resultado = await invitar(conferencia, idInvitado, puedeCompartir, privacidad)
+    setEnviando(false)
 
     if (resultado.ok) {
       alCerrar()
@@ -87,7 +96,7 @@ export function DialogoDeCompartir({
       onClose={alCerrar}
       className="m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-fondo/70"
     >
-      <form onSubmit={alEnviar} className="flex w-80 flex-col gap-4 p-5">
+      <form onSubmit={(evento) => { void alEnviar(evento) }} className="flex w-80 flex-col gap-4 p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-texto">Compartir «{conferencia.titulo}»</h2>
           <button
@@ -141,7 +150,7 @@ export function DialogoDeCompartir({
               <Button type="button" variante="sutil" onClick={alCerrar}>
                 Cancelar
               </Button>
-              <Button type="submit" variante="primario">
+              <Button type="submit" variante="primario" cargando={enviando}>
                 Enviar invitación
               </Button>
             </div>
