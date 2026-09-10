@@ -112,7 +112,7 @@ export function PantallaDetalleMemoria(): ReactElement {
     return () => {
       cancelado = true
     }
-  }, [cargandoOrigen, memoria, conferenciaVisible, plantilla, rutaDelDocx, archivo, errorDelDocx, temas])
+  }, [cargandoOrigen, memoria, conferenciaVisible, plantilla, rutaDelDocx, archivo, errorDelDocx, temas, fichasVisiblesTodas])
 
   if (cargandoOrigen) {
     return (

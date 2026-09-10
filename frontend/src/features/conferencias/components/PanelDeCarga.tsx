@@ -14,11 +14,12 @@ import {
   Select,
 } from '@/shared/ui'
 import type { OpcionDeSelect } from '@/shared/ui'
-import { cargarConferencia, agregarConferenciaCargada, EXTENSIONES_POR_FUENTE } from '../carga'
+import { EXTENSIONES_POR_FUENTE, validarArchivo } from '../carga'
 import type { DatosDeCarga } from '../carga'
 import { SegmentacionDeFuente } from './SegmentacionDeFuente'
 import { VistaPreviaDeCarga } from './VistaPreviaDeCarga'
 import type { Conferencia, FuenteDeConferencia } from '../data'
+import { crearConferencia } from '../repositorio'
 import { useDirectorio } from '../directorio'
 
 /*
@@ -223,51 +224,45 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
       return
     }
 
+    const archivoValido = validarArchivo(archivo, datos.fuente)
+    if (!archivoValido.ok) {
+      setErroresDeCampo((anteriores) => ({ ...anteriores, archivo: mensajeDeError(archivoValido.codigo) }))
+      return
+    }
+
     setEnviando(true)
     setError(null)
 
-    try {
-      const resultado = await cargarConferencia(datos, archivo)
+    const nombreEvento = eventos.find((candidato) => candidato.id === datos.idEvento)?.nombre ?? ''
+    const nombrePonente = ponentes.find((candidato) => candidato.id === datos.idPonente)?.nombre ?? ''
 
-      if (!resultado.ok) {
-        const mensaje = mensajeDeError(resultado.codigo)
-        if (resultado.codigo.startsWith('CARGA_ARCHIVO')) {
-          setErroresDeCampo((anteriores) => ({ ...anteriores, archivo: mensaje }))
-        } else {
-          setError(mensaje)
-        }
-        setEnviando(false)
-        return
-      }
-
-      const nombreEvento = eventos.find((candidato) => candidato.id === datos.idEvento)?.nombre ?? ''
-      const nombrePonente = ponentes.find((candidato) => candidato.id === datos.idPonente)?.nombre ?? ''
-
-      const nueva: Conferencia = {
-        id: `cnf-carga-${Date.now()}`,
+    /*
+      El .docx/audio sube al bucket y la fila nace `en-cola`; el backend de
+      análisis la moverá a `procesando` y de ahí a `procesada`. La barra de
+      progreso del listado ya no simula ese avance: refleja el estado real que
+      devuelve cada recarga.
+    */
+    const resultado = await crearConferencia(
+      {
         titulo: datos.titulo,
         ponente: nombrePonente,
         evento: nombreEvento,
         codigoDeEvento: codigoDeEvento(datos.idEvento),
         fechaDelEvento: datos.fechaDelEvento,
-        duracionEnSegundos: 0,
         idDueno: idUsuario,
-        estado: 'procesando',
-        /* Sin tema todavía: lo asigna el procesamiento al clasificar la charla contra la taxonomía. */
-        idTemaPrincipal: '',
-        resumen: '',
         fuente: datos.fuente,
-        comparticiones: [],
-        cargadaEl: new Date().toISOString(),
-      }
+      },
+      archivo,
+    )
 
-      agregarConferenciaCargada(idUsuario, nueva)
-      setEnviando(false)
-      alCargar(nueva)
-    } catch {
-      setError(mensajeDeError('CARGA_FALLO_INESPERADO'))
-      setEnviando(false)
+    setEnviando(false)
+
+    if (!resultado.ok) {
+      setError(mensajeDeError(resultado.codigo))
+      return
     }
+
+    alCargar(resultado.datos)
   }
 
   const opcionesDeEvento: readonly OpcionDeSelect[] = [
