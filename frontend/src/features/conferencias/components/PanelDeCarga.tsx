@@ -19,7 +19,7 @@ import type { DatosDeCarga } from '../carga'
 import { SegmentacionDeFuente } from './SegmentacionDeFuente'
 import { VistaPreviaDeCarga } from './VistaPreviaDeCarga'
 import type { Conferencia, FuenteDeConferencia } from '../data'
-import { crearConferencia } from '../repositorio'
+import { crearConferencia, solicitarProcesamiento } from '../repositorio'
 import { useDirectorio } from '../directorio'
 
 /*
@@ -255,13 +255,20 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
       archivo,
     )
 
-    setEnviando(false)
-
     if (!resultado.ok) {
+      setEnviando(false)
       setError(mensajeDeError(resultado.codigo))
       return
     }
 
+    /*
+      Poner en marcha el análisis es lo último y no bloquea la carga: la fila ya
+      existe. Si el backend no está o rechaza, la conferencia se queda `en-cola`
+      —un estado válido, no un error— y se procesará cuando alguien la retome.
+    */
+    await solicitarProcesamiento(resultado.datos.id)
+
+    setEnviando(false)
     alCargar(resultado.datos)
   }
 

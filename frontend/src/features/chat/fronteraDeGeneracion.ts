@@ -1,8 +1,9 @@
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
 import type { Tema } from '@/features/taxonomia'
+import { hayBackend, pedirAlBackend } from '@/shared/api/backend'
 import type { ResultadoDeConsulta } from '@/shared/supabase/consultas'
 import { extraerCantidadSolicitada } from './cantidad'
-import type { AlcanceDeConsulta, MensajeNuevo } from './data/tipos'
+import type { AlcanceDeConsulta, MensajeNuevo, PasoDeRazonamiento } from './data/tipos'
 import { evaluarPregunta } from './generarRespuesta'
 import type { ResultadoDeEvaluacion } from './generarRespuesta'
 
@@ -88,17 +89,83 @@ export function generadorSimulado(catalogo: CatalogoParaGenerar): GeneradorDeRes
 }
 
 /*
-  El interruptor. Es la única línea que cambia el día que el endpoint
-  conversacional esté en pie: devolver ahí el generador que hable con el
-  backend, en vez del simulado. Ni `useChat` ni el repositorio ni las burbujas
-  se enteran, porque ninguno conoce otra cosa que `GeneradorDeRespuesta`.
+  Forma cruda de lo que devuelve `POST /chat/preguntar` (ver
+  `backend/bitacora/api/chat.py`). Se mapea aquí, en el borde, a
+  `ResultadoDeEvaluacion` — el tipo que ya viaja a la tabla.
+*/
+type RespuestaCrudaDelBackend = {
+  readonly contenido?: unknown
+  readonly ids_fichas_citadas?: unknown
+  readonly pasos_de_razonamiento?: unknown
+}
 
-  Se deja como función (y no como una constante ya construida) porque la
-  implementación simulada depende del catálogo que ve cada persona, que cambia
-  entre sesiones y no se puede fijar al importar el módulo.
+function textoDe(valor: unknown): string {
+  return typeof valor === 'string' ? valor : ''
+}
+
+function listaDeCadenas(valor: unknown): readonly string[] {
+  return Array.isArray(valor) ? valor.filter((x): x is string => typeof x === 'string') : []
+}
+
+function pasosDe(valor: unknown): readonly PasoDeRazonamiento[] {
+  const crudos = Array.isArray(valor) ? valor : []
+
+  return crudos.map((crudo): PasoDeRazonamiento => {
+    const paso = (crudo ?? {}) as Record<string, unknown>
+    const descartadas = Array.isArray(paso['descartadas']) ? paso['descartadas'] : []
+
+    return {
+      descripcion: textoDe(paso['descripcion']),
+      descartadas: descartadas.map((d) => {
+        const item = (d ?? {}) as Record<string, unknown>
+        return {
+          idFicha: textoDe(item['id_ficha'] ?? item['idFicha'] ?? item['id']),
+          motivo: textoDe(item['motivo']),
+        }
+      }),
+      totalDescartadas:
+        typeof paso['total_descartadas'] === 'number' ? paso['total_descartadas'] : descartadas.length,
+    }
+  }) as never
+}
+
+/*
+  El generador real. El backend recupera las fichas de Postgres por su cuenta
+  —por eso no recibe el catálogo— y cita ids reales. Solo devuelve respuestas,
+  nunca aclaraciones: si algún día lo hace, `mensajeNuevoDeEvaluacion` ya
+  cubre ese caso y este mapeo tendría que distinguir el `tipo`.
+*/
+export function generadorConBackend(): GeneradorDeRespuesta {
+  return async (peticion) => {
+    const respuesta = await pedirAlBackend<RespuestaCrudaDelBackend>('/chat/preguntar', {
+      pregunta: peticion.pregunta,
+      id_conversacion: peticion.idConversacion === '' ? null : peticion.idConversacion,
+    })
+
+    if (!respuesta.ok) {
+      return respuesta
+    }
+
+    return {
+      ok: true,
+      datos: {
+        tipo: 'respuesta',
+        contenido: textoDe(respuesta.datos.contenido),
+        idsFichasCitadas: listaDeCadenas(respuesta.datos.ids_fichas_citadas),
+        pasosDeRazonamiento: pasosDe(respuesta.datos.pasos_de_razonamiento),
+      },
+    }
+  }
+}
+
+/*
+  El interruptor. La única decisión: si `VITE_API_URL` está configurada, el
+  agente real; si no, la simulación sobre lo que la persona ve en el navegador.
+  Ni `useChat` ni el repositorio ni las burbujas se enteran, porque ninguno
+  conoce otra cosa que `GeneradorDeRespuesta`.
 */
 export function construirGenerador(catalogo: CatalogoParaGenerar): GeneradorDeRespuesta {
-  return generadorSimulado(catalogo)
+  return hayBackend() ? generadorConBackend() : generadorSimulado(catalogo)
 }
 
 /*

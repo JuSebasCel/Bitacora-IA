@@ -1,4 +1,5 @@
 import { supabase } from '@/shared/supabase/cliente'
+import { hayBackend, pedirAlBackend } from '@/shared/api/backend'
 import { resultadoDe, resultadoDeLista } from '@/shared/supabase/consultas'
 import type { ResultadoDeConsulta } from '@/shared/supabase/consultas'
 import type { Conferencia, EstadoDeValidacion, Ficha } from '../data'
@@ -179,4 +180,28 @@ export async function crearConferencia(
   }
 
   return { ok: true, datos: conferencia }
+}
+
+/*
+  Pide al backend que transcriba y despiece la conferencia. Se llama justo
+  después de crearla: la fila ya está `en-cola`, y esto solo la pone en marcha.
+
+  Sin `VITE_API_URL` configurada no hay a quién pedírselo — la conferencia se
+  queda `en-cola` y alguien la procesará cuando el backend esté en pie. Por eso
+  un backend ausente no es un fallo de la carga: se devuelve ok. Un backend
+  presente que rechaza sí se propaga, para que la interfaz lo pueda decir.
+*/
+export async function solicitarProcesamiento(
+  idConferencia: string,
+): Promise<ResultadoDeConsulta<null>> {
+  if (!hayBackend()) {
+    return { ok: true, datos: null }
+  }
+
+  const respuesta = await pedirAlBackend<{ estado: string }>(
+    `/conferencias/${idConferencia}/procesar`,
+    {},
+  )
+
+  return respuesta.ok ? { ok: true, datos: null } : respuesta
 }

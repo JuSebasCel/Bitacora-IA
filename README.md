@@ -58,6 +58,28 @@ La aplicación queda en `http://localhost:5173`. Sin esas dos variables, arranca
 
 El esquema (tablas, RLS, buckets de Storage) vive versionado en `supabase/migrations/` y se aplica con la CLI de Supabase (`npx supabase link --project-ref <ref>` seguido de `npx supabase db push`).
 
+### Backend de orquestación de IA
+
+El servicio de Python (transcripción, chunking, análisis de discurso y agente
+conversacional) vive en `backend/` y corre aparte del frontend. Ver
+`backend/README.md` para el detalle; en corto:
+
+```bash
+cd backend
+python -m venv .venv && source .venv/Scripts/activate
+pip install -r requirements.txt
+cp .env.example .env    # SUPABASE_URL y SUPABASE_ANON_KEY, las mismas del frontend
+uvicorn main:app --reload
+```
+
+Queda en `http://localhost:8000`. El frontend lo encuentra por `VITE_API_URL`
+(ver `frontend/.env.example`); si esa variable no está, el chat usa una
+respuesta simulada en el navegador y la carga de conferencias queda en cola sin
+procesar.
+
+El backend consulta Supabase con la anon key más el token del usuario que hizo
+la petición, así que RLS sigue aplicando; no usa service-role key.
+
 ### Comandos disponibles
 
 | Comando | Qué hace |
