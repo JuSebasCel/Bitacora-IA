@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
-import { sembrarConferencias } from '@/test/conferenciasDePrueba'
+import { sembrarConferencias, sembrarEtiquetasDe } from '@/test/conferenciasDePrueba'
 import { PantallaDetalleConferencia } from './PantallaDetalleConferencia'
 
 vi.mock('@/shared/supabase/cliente')
@@ -25,6 +25,7 @@ const ALCANTARA = {
 
 function montar(ruta: string, cuenta = ZULUAGA) {
   mockearSesionAutenticada(cuenta)
+  sembrarEtiquetasDe(cuenta.id)
 
   return render(
     <SessionProvider>

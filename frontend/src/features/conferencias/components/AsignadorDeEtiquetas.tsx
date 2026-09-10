@@ -23,7 +23,7 @@ type PropiedadesAsignador = {
   misEtiquetas: readonly Etiqueta[]
   idsAsignadas: readonly string[]
   alAlternar: (idEtiqueta: string) => void
-  alCrear: (nombre: string) => ResultadoCreacion
+  alCrear: (nombre: string) => ResultadoCreacion | Promise<ResultadoCreacion>
 }
 
 export function AsignadorDeEtiquetas({

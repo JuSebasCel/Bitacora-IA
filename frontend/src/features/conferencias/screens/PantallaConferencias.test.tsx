@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
-import { sembrarConferencias } from '@/test/conferenciasDePrueba'
+import { sembrarConferencias, sembrarEtiquetasDe } from '@/test/conferenciasDePrueba'
+import { mockearFilaDe } from '@/test/supabaseDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
 
 vi.mock('@/shared/supabase/cliente')
@@ -42,6 +43,7 @@ function Ubicacion() {
 
 function montar(rutaInicial = '/conferencias', cuenta = ZULUAGA) {
   mockearSesionAutenticada(cuenta)
+  sembrarEtiquetasDe(cuenta.id)
 
   return render(
     <SessionProvider>
@@ -285,6 +287,13 @@ describe('PantallaConferencias, etiquetas', () => {
     const usuario = userEvent.setup()
     montar()
     await listado()
+
+    /* La fila que Postgres devolvería tras insertar 'art2'. */
+    mockearFilaDe('etiquetas', {
+      id: 'etq-nueva',
+      nombre: 'art2',
+      id_propietario: ZULUAGA.id,
+    })
 
     await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
     await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))

@@ -29,7 +29,7 @@ type PropiedadesControles = {
   alCambiar: (cambio: Partial<CriteriosDeListado>) => void
   alBuscar: (busqueda: string) => void
   alAlternarEtiqueta: (idEtiqueta: string) => void
-  alCrearEtiqueta: (nombre: string) => ResultadoCreacion
+  alCrearEtiqueta: (nombre: string) => ResultadoCreacion | Promise<ResultadoCreacion>
 }
 
 export function ControlesDelListado({

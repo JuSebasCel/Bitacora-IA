@@ -21,7 +21,7 @@ type PropiedadesPopoverDeFiltros = {
   alCambiarEstado: (estado: FiltroDeEstado) => void
   alAlternarEtiqueta: (idEtiqueta: string) => void
   alQuitarTodasLasEtiquetas: () => void
-  alCrearEtiqueta: (nombre: string) => ResultadoCreacion
+  alCrearEtiqueta: (nombre: string) => ResultadoCreacion | Promise<ResultadoCreacion>
 }
 
 const ESTADOS: readonly { valor: FiltroDeEstado; texto: string }[] = [

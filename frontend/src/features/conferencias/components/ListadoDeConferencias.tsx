@@ -35,7 +35,7 @@ type PropiedadesListado = {
   alQuitarFiltros: () => void
   misEtiquetas: readonly Etiqueta[]
   alAlternarAsignacion: (idEtiqueta: string, idConferencia: string) => void
-  alCrearYAsignar: (nombre: string, idConferencia: string) => ResultadoCreacion
+  alCrearYAsignar: (nombre: string, idConferencia: string) => ResultadoCreacion | Promise<ResultadoCreacion>
   alOcultar: (idConferencia: string) => void
 }
 

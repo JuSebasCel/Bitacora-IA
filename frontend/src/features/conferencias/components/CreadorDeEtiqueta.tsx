@@ -23,7 +23,7 @@ export type ResultadoCreacion =
 type PropsCreadorDeEtiqueta = {
   abierto: boolean
   alCerrar: () => void
-  alCrear: (nombre: string) => ResultadoCreacion
+  alCrear: (nombre: string) => ResultadoCreacion | Promise<ResultadoCreacion>
 }
 
 export function CreadorDeEtiqueta({ abierto, alCerrar, alCrear }: PropsCreadorDeEtiqueta) {
@@ -47,10 +47,15 @@ export function CreadorDeEtiqueta({ abierto, alCerrar, alCrear }: PropsCreadorDe
     }
   }, [abierto])
 
-  function alEnviar(evento: FormEvent<HTMLFormElement>): void {
-    evento.preventDefault()
+  const [creando, setCreando] = useState(false)
 
-    const resultado = alCrear(nombre)
+  async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
+    evento.preventDefault()
+    if (creando) return
+
+    setCreando(true)
+    const resultado = await alCrear(nombre)
+    setCreando(false)
 
     if (resultado.ok) {
       alCerrar()
@@ -70,7 +75,7 @@ export function CreadorDeEtiqueta({ abierto, alCerrar, alCrear }: PropsCreadorDe
       onClose={alCerrar}
       className="m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-fondo/70"
     >
-      <form onSubmit={alEnviar} className="flex w-72 flex-col gap-4 p-5">
+      <form onSubmit={(evento) => { void alEnviar(evento) }} className="flex w-72 flex-col gap-4 p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-texto">Nueva etiqueta</h2>
           <button

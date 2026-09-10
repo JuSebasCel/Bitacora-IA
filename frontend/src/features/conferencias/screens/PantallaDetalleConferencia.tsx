@@ -19,7 +19,7 @@ import type { ResultadoCreacion } from '../components'
 import { actualizarEstadoDeValidacion } from '../repositorio'
 import { useDetalleConferencia } from './useDetalleConferencia'
 import { fichasVisibles, privacidadEfectiva, resumirFichas } from '../query'
-import { espacioDe, etiquetasVisibles, useEtiquetas } from '../tags'
+import { useEtiquetas } from '../tags'
 
 /*
   Detalle de una conferencia: su resumen, la distribución de sus fichas y las
@@ -67,7 +67,7 @@ export function PantallaDetalleConferencia() {
   const idUsuario = usuario?.id ?? ''
   const ubicacion = useLocation()
 
-  const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
+  const { espacio, crear, asignar, quitar, visiblesDe } = useEtiquetas(idUsuario)
 
   const { carga, resultado, fichas: fichasDeLaConferencia, recargarFichas } = useDetalleConferencia(
     idConferencia,
@@ -101,21 +101,7 @@ export function PantallaDetalleConferencia() {
   */
   const { temas } = useTemas()
 
-  const etiquetas = useMemo(() => {
-    if (!resultado.ok) {
-      return []
-    }
-
-    const { visible } = resultado
-
-    return etiquetasVisibles({
-      espacioPropio: espacio,
-      espacioDelDueno:
-        visible.procedencia === 'compartida' ? espacioDe(visible.conferencia.idDueno) : null,
-      idConferencia: visible.conferencia.id,
-      compartirEtiquetas: privacidadEfectiva(visible).compartirEtiquetas,
-    })
-  }, [resultado, espacio])
+  const etiquetas = resultado.ok ? visiblesDe(resultado.visible.conferencia.id) : []
 
   const idsPropiasAsignadas = etiquetas
     .filter((visible) => visible.propia)
@@ -128,22 +114,18 @@ export function PantallaDetalleConferencia() {
         asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia,
     )
 
-    if (yaAsignada) {
-      quitar(idEtiqueta, idConferencia)
-    } else {
-      asignar(idEtiqueta, idConferencia)
-    }
+    void (yaAsignada ? quitar(idEtiqueta, idConferencia) : asignar(idEtiqueta, idConferencia))
   }
 
   /** Crear una etiqueta nueva y asignarla de una vez a esta conferencia. */
-  function alCrearYAsignar(nombre: string): ResultadoCreacion {
-    const resultado = crear(nombre)
+  async function alCrearYAsignar(nombre: string): Promise<ResultadoCreacion> {
+    const resultado = await crear(nombre)
 
     if (!resultado.ok) {
       return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
     }
 
-    asignar(resultado.etiqueta.id, idConferencia)
+    await asignar(resultado.etiqueta.id, idConferencia)
 
     return { ok: true, etiqueta: resultado.etiqueta }
   }

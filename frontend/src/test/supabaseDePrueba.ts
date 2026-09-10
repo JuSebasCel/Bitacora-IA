@@ -18,21 +18,46 @@ import { supabase } from '@/shared/supabase/cliente'
 
 type RespuestaCruda = { readonly data: unknown; readonly error: PostgrestError | null }
 
-/** Cadena encadenable "thenable": cualquier filtro devuelve la misma cadena y el `await` final resuelve la respuesta. */
-function cadenaQueResuelve(respuesta: RespuestaCruda): Record<string, unknown> {
+const METODOS_DE_CADENA = [
+  'select', 'insert', 'update', 'upsert', 'delete',
+  'eq', 'neq', 'in', 'is', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'contains',
+  'or', 'not', 'filter', 'match', 'order', 'limit', 'range',
+]
+
+/*
+  Cadena encadenable "thenable": cualquier filtro devuelve la misma cadena y el
+  `await` final resuelve la respuesta.
+
+  `single()`/`maybeSingle()` colapsan un arreglo sembrado a su primer elemento,
+  como haría PostgREST tras un `insert ... select ... single()`. El resultado
+  sigue siendo encadenable, pero su `await` resuelve una fila y no la lista.
+*/
+function cadenaQueResuelve(respuesta: RespuestaCruda, fila?: RespuestaCruda): Record<string, unknown> {
   const cadena: Record<string, unknown> = {
-    then: (resolver: (valor: RespuestaCruda) => unknown) => Promise.resolve(respuesta).then(resolver),
+    then: (resolver: (valor: RespuestaCruda) => unknown) =>
+      Promise.resolve(respuesta).then(resolver),
   }
 
-  const metodos = [
-    'select', 'insert', 'update', 'upsert', 'delete',
-    'eq', 'neq', 'in', 'is', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'contains',
-    'or', 'not', 'filter', 'match', 'order', 'limit', 'range', 'single', 'maybeSingle',
-  ]
-
-  for (const metodo of metodos) {
+  for (const metodo of METODOS_DE_CADENA) {
     cadena[metodo] = vi.fn(() => cadena)
   }
+
+  const respuestaDeFila: RespuestaCruda = fila ?? {
+    data: Array.isArray(respuesta.data) ? (respuesta.data[0] ?? null) : respuesta.data,
+    error: respuesta.error,
+  }
+  const cadenaDeFila: Record<string, unknown> = {
+    then: (resolver: (valor: RespuestaCruda) => unknown) =>
+      Promise.resolve(respuestaDeFila).then(resolver),
+  }
+  for (const metodo of METODOS_DE_CADENA) {
+    cadenaDeFila[metodo] = vi.fn(() => cadenaDeFila)
+  }
+  cadenaDeFila['single'] = vi.fn(() => cadenaDeFila)
+  cadenaDeFila['maybeSingle'] = vi.fn(() => cadenaDeFila)
+
+  cadena['single'] = vi.fn(() => cadenaDeFila)
+  cadena['maybeSingle'] = vi.fn(() => cadenaDeFila)
 
   return cadena
 }
@@ -43,17 +68,29 @@ function cadenaQueResuelve(respuesta: RespuestaCruda): Record<string, unknown> {
   casi toda pantalla lee de más de una.
 */
 let respuestasPorTabla: Record<string, RespuestaCruda> = {}
+let filasPorTabla: Record<string, RespuestaCruda> = {}
 
 function instalarFrom(): void {
   vi.mocked(supabase.from).mockImplementation((tabla: string) => {
     const respuesta = respuestasPorTabla[tabla] ?? { data: null, error: null }
-    return cadenaQueResuelve(respuesta) as never
+    return cadenaQueResuelve(respuesta, filasPorTabla[tabla]) as never
   })
 }
 
 /** La tabla devuelve estas filas. Sirve igual para un listado y para un `single()`, según lo que se pase. */
 export function mockearTabla(tabla: string, filas: unknown): void {
   respuestasPorTabla = { ...respuestasPorTabla, [tabla]: { data: filas, error: null } }
+  instalarFrom()
+}
+
+/*
+  Lo que `single()`/`maybeSingle()` de esa tabla resuelven, independiente de lo
+  que devuelva su lectura como lista. Para el caso «la misma tabla se lee como
+  listado en un punto y como `insert ... select ... single()` en otro», donde
+  cada uno espera algo distinto.
+*/
+export function mockearFilaDe(tabla: string, fila: unknown): void {
+  filasPorTabla = { ...filasPorTabla, [tabla]: { data: fila, error: null } }
   instalarFrom()
 }
 
@@ -89,6 +126,7 @@ export function mockearBucket(archivos: Record<string, unknown> = {}): {
 /** Para `afterEach`: olvida lo preparado por la prueba anterior y vuelve a "todas las tablas vacías". */
 export function reiniciarMocksDeDatos(): void {
   respuestasPorTabla = {}
+  filasPorTabla = {}
   vi.mocked(supabase.from).mockReset()
   instalarFrom()
 }

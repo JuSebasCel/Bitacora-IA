@@ -42,7 +42,7 @@ type PropiedadesFila = {
   /** Todas las etiquetas propias de quien mira, para el selector de asignación. */
   misEtiquetas: readonly Etiqueta[]
   alAlternarAsignacion: (idEtiqueta: string) => void
-  alCrearYAsignar: (nombre: string) => ResultadoCreacion
+  alCrearYAsignar: (nombre: string) => ResultadoCreacion | Promise<ResultadoCreacion>
   /** Quita esta conferencia del propio listado, propia o compartida. Ver `ocultas/`. */
   alOcultar: () => void
 }

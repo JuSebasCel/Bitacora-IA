@@ -416,18 +416,21 @@ export function useChat(idUsuario: string): ValorDeChat {
     de `enviar`, para no duplicar la regla en dos sitios.
   */
   const etiquetarPorIds = useCallback(
-    (idsFichasCitadas: readonly string[], nombreEtiqueta: string): ResultadoDeAccion => {
+    async (
+      idsFichasCitadas: readonly string[],
+      nombreEtiqueta: string,
+    ): Promise<ResultadoDeAccion> => {
       if (idsFichasCitadas.length === 0) {
         return registrarFallo('CHAT_ETIQUETA_SIN_FICHAS_CITADAS')
       }
 
-      const resultadoCrear = etiquetas.crear(nombreEtiqueta)
+      const resultadoCrear = await etiquetas.crear(nombreEtiqueta)
       if (!resultadoCrear.ok) {
         return registrarFallo(resultadoCrear.codigo)
       }
 
       for (const idConferencia of idsDeConferenciasCitadas(idsFichasCitadas, todasLasEntradas)) {
-        etiquetas.asignar(resultadoCrear.etiqueta.id, idConferencia)
+        await etiquetas.asignar(resultadoCrear.etiqueta.id, idConferencia)
       }
 
       return exito()
@@ -474,7 +477,7 @@ export function useChat(idUsuario: string): ValorDeChat {
         const anterior = ultimaRespuestaDe(mensajes, conversacion.id)
 
         if (anterior !== null) {
-          etiquetarPorIds(anterior.idsFichasCitadas, nombreEtiqueta)
+          await etiquetarPorIds(anterior.idsFichasCitadas, nombreEtiqueta)
         }
       }
 

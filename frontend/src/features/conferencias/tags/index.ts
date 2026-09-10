@@ -1,6 +1,6 @@
 /*
-  Superficie pública de las etiquetas personales: operaciones puras,
-  persistencia y el hook que las une para la pantalla.
+  Superficie pública de las etiquetas personales: operaciones puras, el
+  repositorio contra Supabase y el hook que las une para la pantalla.
 */
 
 export type {
@@ -17,7 +17,13 @@ export {
   quitarEtiqueta,
 } from './etiquetas'
 
-export { CLAVE_ETIQUETAS, espacioDe, guardarEspacio, leerEspaciosGuardados } from './almacenamiento'
+export {
+  asignarEtiquetaRemota,
+  crearEtiquetaRemota,
+  leerEtiquetasVisiblesPorConferencia,
+  leerMiEspacio,
+  quitarAsignacionRemota,
+} from './repositorio'
 
 export type { ValorDeEtiquetas } from './useEtiquetas'
 export { useEtiquetas } from './useEtiquetas'

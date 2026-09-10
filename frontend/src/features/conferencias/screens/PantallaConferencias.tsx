@@ -18,10 +18,9 @@ import {
   fichasVisibles,
   leerCriterios,
   listarConferencias,
-  privacidadEfectiva,
 } from '../query'
 import type { CriteriosDeListado } from '../query'
-import { espacioDe, etiquetasVisibles, useEtiquetas } from '../tags'
+import { useEtiquetas } from '../tags'
 
 /*
   Dashboard de conferencias (F2).
@@ -50,7 +49,7 @@ export function PantallaConferencias() {
   const idUsuario = usuario?.id ?? ''
 
   const [params, setParams] = useSearchParams()
-  const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
+  const { espacio, crear, asignar, quitar, visiblesDe } = useEtiquetas(idUsuario)
   const { carga, visibles, fichas, recargar } = useConferenciasVisibles(idUsuario)
   const { idsOcultos, ocultar, mostrar } = useConferenciasOcultas(idUsuario)
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
@@ -89,15 +88,9 @@ export function PantallaConferencias() {
       listadas.map((visible) => ({
         visible,
         numeroDeFichas: fichasVisibles(fichas, visible).length,
-        etiquetas: etiquetasVisibles({
-          espacioPropio: espacio,
-          espacioDelDueno:
-            visible.procedencia === 'compartida' ? espacioDe(visible.conferencia.idDueno) : null,
-          idConferencia: visible.conferencia.id,
-          compartirEtiquetas: privacidadEfectiva(visible).compartirEtiquetas,
-        }),
+        etiquetas: visiblesDe(visible.conferencia.id),
       })),
-    [listadas, espacio, fichas],
+    [listadas, fichas, visiblesDe],
   )
 
   /*
@@ -135,8 +128,8 @@ export function PantallaConferencias() {
     También devuelve la etiqueta creada, para que quien la pidió desde una fila
     concreta pueda asignarla ahí mismo sin un segundo viaje.
   */
-  function alCrearEtiqueta(nombre: string): ResultadoCreacion {
-    const resultado = crear(nombre)
+  async function alCrearEtiqueta(nombre: string): Promise<ResultadoCreacion> {
+    const resultado = await crear(nombre)
 
     return resultado.ok
       ? { ok: true, etiqueta: resultado.etiqueta }
@@ -149,19 +142,18 @@ export function PantallaConferencias() {
       (asignacion) => asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia,
     )
 
-    if (yaAsignada) {
-      quitar(idEtiqueta, idConferencia)
-    } else {
-      asignar(idEtiqueta, idConferencia)
-    }
+    void (yaAsignada ? quitar(idEtiqueta, idConferencia) : asignar(idEtiqueta, idConferencia))
   }
 
   /** Crear una etiqueta nueva y asignarla de una vez a la conferencia desde la que se pidió. */
-  function alCrearYAsignarEtiqueta(nombre: string, idConferencia: string): ResultadoCreacion {
-    const resultado = alCrearEtiqueta(nombre)
+  async function alCrearYAsignarEtiqueta(
+    nombre: string,
+    idConferencia: string,
+  ): Promise<ResultadoCreacion> {
+    const resultado = await alCrearEtiqueta(nombre)
 
     if (resultado.ok) {
-      asignar(resultado.etiqueta.id, idConferencia)
+      await asignar(resultado.etiqueta.id, idConferencia)
     }
 
     return resultado

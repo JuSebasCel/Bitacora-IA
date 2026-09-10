@@ -48,6 +48,14 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     css: true,
     /*
+      Tope de procesos worker. Sin esto Vitest abre uno por núcleo, y cada uno
+      con jsdom + esta suite carga entre 0,8 y 2 GB: en una máquina de 8 núcleos
+      son más de 10 GB solo en pruebas, suficiente para dejar el equipo sin RAM.
+      Tres es el punto donde la suite completa sigue tardando poco sin que el
+      pico de memoria se dispare.
+    */
+    maxWorkers: 3,
+    /*
       Los cinco segundos que trae Vitest por defecto se quedaron cortos al pasar
       la suite de 129 a 352 pruebas. Las de acceso y registro escriben en los
       campos tecla a tecla y calculan de verdad un resumen SHA-256 con

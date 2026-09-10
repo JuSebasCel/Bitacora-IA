@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
+import { supabase } from '@/shared/supabase/cliente'
 import * as repositorio from '@/features/conferencias/repositorio'
-import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
+import { CONFERENCIAS_DE_EJEMPLO, ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import type { Conferencia, Ficha } from '@/features/conferencias/data'
 import {
   PROPUESTAS_DE_EJEMPLO,
@@ -92,3 +93,72 @@ export function sembrarFalloDeConferencias(codigo = 'DATOS_SIN_CONEXION' as cons
   vi.mocked(repositorio.listarFichasDe).mockResolvedValue({ ok: false, codigo })
   vi.mocked(repositorio.obtenerConferencia).mockResolvedValue({ ok: false, codigo })
 }
+
+/*
+  Siembra las etiquetas personales de una cuenta (B10). Va aparte de
+  `sembrarConferencias` porque necesita saber quién tiene la sesión, y eso
+  solo se sabe después de `mockearSesionAutenticada` — se llama desde el
+  `montar` de cada prueba, no desde el `beforeEach`.
+
+  Reproduce lo que RLS deja ver: `etiquetas` y `etiquetas_asignaciones` traen
+  solo lo propio de esa cuenta, y la función `mis_etiquetas_visibles` compone
+  lo propio con lo del dueño de una conferencia compartida (aquí se computa
+  desde el mapa completo del fixture, filtrado por `compartirEtiquetas`).
+*/
+export function sembrarEtiquetasDe(idUsuario: string): void {
+  const espacioPropio = ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO[idUsuario] ?? { etiquetas: [], asignaciones: [] }
+
+  mockearTabla(
+    'etiquetas',
+    espacioPropio.etiquetas.map((e) => ({ id: e.id, nombre: e.nombre, id_propietario: e.idPropietario })),
+  )
+  mockearTabla(
+    'etiquetas_asignaciones',
+    espacioPropio.asignaciones.map((a) => ({ id_etiqueta: a.idEtiqueta, id_conferencia: a.idConferencia })),
+  )
+
+  /* Etiquetas visibles por conferencia: propias siempre; ajenas solo si el dueño compartió con la bandera. */
+  const visibles: { id_conferencia: string; id_etiqueta: string; nombre: string; propia: boolean }[] = []
+
+  for (const asignacion of espacioPropio.asignaciones) {
+    const etiqueta = espacioPropio.etiquetas.find((e) => e.id === asignacion.idEtiqueta)
+    if (etiqueta !== undefined) {
+      visibles.push({
+        id_conferencia: asignacion.idConferencia,
+        id_etiqueta: etiqueta.id,
+        nombre: etiqueta.nombre,
+        propia: true,
+      })
+    }
+  }
+
+  for (const conferencia of CONFERENCIAS_DE_EJEMPLO) {
+    const comparticion = conferencia.comparticiones.find((c) => c.idInvitado === idUsuario)
+    if (comparticion === undefined || !comparticion.privacidad.compartirEtiquetas) continue
+
+    const espacioDueno = ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO[conferencia.idDueno]
+    if (espacioDueno === undefined) continue
+
+    for (const asignacion of espacioDueno.asignaciones) {
+      if (asignacion.idConferencia !== conferencia.id) continue
+      const etiqueta = espacioDueno.etiquetas.find((e) => e.id === asignacion.idEtiqueta)
+      if (etiqueta !== undefined) {
+        visibles.push({
+          id_conferencia: conferencia.id,
+          id_etiqueta: etiqueta.id,
+          nombre: etiqueta.nombre,
+          propia: false,
+        })
+      }
+    }
+  }
+
+  vi.mocked(supabase.rpc).mockImplementation((nombre: string) => {
+    if (nombre === 'mis_etiquetas_visibles') {
+      return Promise.resolve({ data: visibles, error: null }) as never
+    }
+    /* leer_mi_api_key y cualquier otra: sin dato. */
+    return Promise.resolve({ data: null, error: null }) as never
+  })
+}
+

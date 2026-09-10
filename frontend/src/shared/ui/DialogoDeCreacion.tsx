@@ -26,7 +26,7 @@ export type PropsDialogoDeCreacion = {
   etiquetaCampo: string
   placeholder?: string
   alCerrar: () => void
-  alCrear: (nombre: string) => ResultadoDeCreacion
+  alCrear: (nombre: string) => ResultadoDeCreacion | Promise<ResultadoDeCreacion>
 }
 
 export function DialogoDeCreacion({
@@ -58,10 +58,15 @@ export function DialogoDeCreacion({
     }
   }, [abierto])
 
-  function alEnviar(evento: FormEvent<HTMLFormElement>): void {
-    evento.preventDefault()
+  const [creando, setCreando] = useState(false)
 
-    const resultado = alCrear(nombre)
+  async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
+    evento.preventDefault()
+    if (creando) return
+
+    setCreando(true)
+    const resultado = await alCrear(nombre)
+    setCreando(false)
 
     if (resultado.ok) {
       alCerrar()
@@ -76,7 +81,7 @@ export function DialogoDeCreacion({
       onClose={alCerrar}
       className="m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-fondo/70"
     >
-      <form onSubmit={alEnviar} className="flex w-72 flex-col gap-4 p-5">
+      <form onSubmit={(evento) => { void alEnviar(evento) }} className="flex w-72 flex-col gap-4 p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-texto">{titulo}</h2>
           <button
@@ -102,7 +107,7 @@ export function DialogoDeCreacion({
           <Button type="button" variante="sutil" onClick={alCerrar}>
             Cancelar
           </Button>
-          <Button type="submit" variante="primario">
+          <Button type="submit" variante="primario" cargando={creando}>
             Crear
           </Button>
         </div>
