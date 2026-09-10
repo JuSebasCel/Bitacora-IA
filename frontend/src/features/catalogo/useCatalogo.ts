@@ -4,7 +4,7 @@ import type { EstadoDeCarga } from '@/features/conferencias/components/useConfer
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
-import { leerTaxonomia } from '@/features/taxonomia'
+import { useTemas } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import { CRITERIOS_POR_DEFECTO, eventosDisponibles, listarCatalogo, temasDisponibles } from './filtros'
 import type { CriteriosDeCatalogo } from './filtros'
@@ -44,7 +44,7 @@ export function useCatalogo(idUsuario: string): ValorDeCatalogo {
     cambia mientras alguien recorre el catálogo, y releerla en cada render
     obligaría a memorizar de nuevo todo lo que depende de ella.
   */
-  const temas = useMemo(() => leerTaxonomia().temas, [])
+  const { temas } = useTemas()
 
   const temasEnCatalogo = useMemo(
     () => temasDisponibles(todasLasEntradas, temas),

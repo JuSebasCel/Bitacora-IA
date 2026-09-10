@@ -1,12 +1,12 @@
 import type { ReactElement } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { fichasVisibles } from '@/features/conferencias/query'
 import { useDocxDePlantilla } from '@/features/plantillas/useDocxDePlantilla'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
-import { leerTaxonomia } from '@/features/taxonomia'
+import { useTemas } from '@/features/taxonomia'
 import type { CodigoError } from '@/shared/errors'
 import { mensajeDeError } from '@/shared/errors'
 import { Esqueleto, PanelDeError } from '@/shared/ui'
@@ -58,7 +58,7 @@ export function PantallaDetalleMemoria(): ReactElement {
     por montaje y no dentro del efecto, para que un arreglo nuevo en cada
     render no vuelva a disparar la generación en bucle.
   */
-  const temas = useMemo(() => leerTaxonomia().temas, [])
+  const { temas } = useTemas()
 
   const [resultado, setResultado] = useState<ResultadoDeMemoria | null>(null)
   const [error, setError] = useState<CodigoError | null>(null)

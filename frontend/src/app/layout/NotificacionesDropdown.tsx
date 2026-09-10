@@ -78,14 +78,14 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
     return taxonomia.temas.find((tema) => normalizarTexto(tema.nombre) === comparable)?.nombre ?? null
   }
 
-  function manejarAprobar(idPropuesta: string): void {
-    const resultado = aprobar(idPropuesta)
+  async function manejarAprobar(idPropuesta: string): Promise<void> {
+    const resultado = await aprobar(idPropuesta)
 
     setAviso(resultado.ok ? null : { idPropuesta, mensaje: resultado.mensaje })
   }
 
-  function manejarRechazar(idPropuesta: string): void {
-    const resultado = rechazar(idPropuesta)
+  async function manejarRechazar(idPropuesta: string): Promise<void> {
+    const resultado = await rechazar(idPropuesta)
 
     setAviso(resultado.ok ? null : { idPropuesta, mensaje: resultado.mensaje })
   }
@@ -145,7 +145,7 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
                         <div className="mt-2 flex justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => manejarRechazar(propuesta.id)}
+                            onClick={() => { void manejarRechazar(propuesta.id) }}
                             aria-label={`Rechazar la propuesta «${propuesta.nombre}»`}
                             className={`${CLASES_DE_ACCION} border-transparent text-texto-tenue hover:border-error-borde hover:text-error`}
                           >
@@ -154,7 +154,7 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
                           </button>
                           <button
                             type="button"
-                            onClick={() => manejarAprobar(propuesta.id)}
+                            onClick={() => { void manejarAprobar(propuesta.id) }}
                             aria-label={`Aprobar la propuesta «${propuesta.nombre}»`}
                             className={`${CLASES_DE_ACCION} border-filete-fuerte bg-panel text-texto hover:border-acento hover:text-acento`}
                           >

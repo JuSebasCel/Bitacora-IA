@@ -2,6 +2,12 @@ import { vi } from 'vitest'
 import * as repositorio from '@/features/conferencias/repositorio'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import type { Conferencia, Ficha } from '@/features/conferencias/data'
+import {
+  PROPUESTAS_DE_EJEMPLO,
+  TEMAS_ACTIVOS_DE_EJEMPLO,
+  TEMAS_DE_EJEMPLO,
+} from '@/features/taxonomia/data'
+import { mockearTabla } from '@/test/supabaseDePrueba'
 
 /*
   Siembra el repositorio de conferencias con datos de dominio, sin red.
@@ -37,6 +43,41 @@ export function sembrarConferencias(
   })
 
   vi.mocked(repositorio.actualizarEstadoDeValidacion).mockResolvedValue({ ok: true, datos: null })
+
+  sembrarTaxonomia()
+}
+
+/*
+  El pool de temas y las propuestas viven en tablas que la taxonomía consulta
+  con `supabase.from(...)` directo (no un módulo mockeado), así que se siembran
+  por el cliente simulado. Cualquier pantalla que resuelva el nombre de un tema
+  —catálogo, chat, detalle— lo necesita.
+*/
+export function sembrarTaxonomia(): void {
+  mockearTabla('temas', TEMAS_DE_EJEMPLO)
+  mockearTabla(
+    'temas_activos_evento',
+    TEMAS_ACTIVOS_DE_EJEMPLO.map((activo: { idEvento: string; idTema: string }) => ({
+      id_evento: activo.idEvento,
+      id_tema: activo.idTema,
+    })),
+  )
+  mockearTabla(
+    'temas_propuestos',
+    PROPUESTAS_DE_EJEMPLO.map((propuesta: {
+      id: string
+      nombre: string
+      idEvento: string
+      justificacion: string
+      propuestoEl: string
+    }) => ({
+      id: propuesta.id,
+      nombre: propuesta.nombre,
+      id_evento: propuesta.idEvento,
+      justificacion: propuesta.justificacion,
+      propuesto_el: propuesta.propuestoEl,
+    })),
+  )
 }
 
 /** Ninguna conferencia visible: para los casos de listado vacío. */

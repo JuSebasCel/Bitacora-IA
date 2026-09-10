@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import { useEtiquetas } from '@/features/conferencias/tags'
-import { leerTaxonomia } from '@/features/taxonomia'
+import { useTemas } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import type { CodigoError } from '@/shared/errors'
 import type { AlcanceDeConsulta, Conversacion, Mensaje, MensajeDeRespuesta, MensajeDeUsuario } from './data/tipos'
@@ -127,7 +127,7 @@ export function useChat(idUsuario: string): ValorDeChat {
     () => fichasDelCatalogo(fichas, visibles),
     [fichas, visibles],
   )
-  const temas = useMemo(() => leerTaxonomia().temas, [])
+  const { temas } = useTemas()
   const generar = useMemo(
     () => construirGenerador({ entradas: todasLasEntradas, temas }),
     [todasLasEntradas, temas],

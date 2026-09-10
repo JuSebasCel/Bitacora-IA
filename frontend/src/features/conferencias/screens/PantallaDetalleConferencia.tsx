@@ -5,7 +5,7 @@ import { ShareNetworkIcon } from '@phosphor-icons/react/dist/csr/ShareNetwork'
 import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { DialogoDeCompartir } from '@/features/configuracion/components'
-import { leerTaxonomia } from '@/features/taxonomia'
+import { useTemas } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import { Esqueleto, PanelDeError } from '@/shared/ui'
 import {
@@ -99,7 +99,7 @@ export function PantallaDetalleConferencia() {
     listado necesita el nombre. Es vocabulario del grupo, así que no cambia
     mientras alguien lee el detalle de una conferencia.
   */
-  const temas = useMemo(() => leerTaxonomia().temas, [])
+  const { temas } = useTemas()
 
   const etiquetas = useMemo(() => {
     if (!resultado.ok) {

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, type ReactElement } from 'react'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
-import { leerTaxonomia } from '@/features/taxonomia'
+import { useTemas } from '@/features/taxonomia'
 import { useChat } from '../useChat'
 import { BurbujaDeMensaje } from './BurbujaDeMensaje'
 import { CompositorDeMensaje } from './CompositorDeMensaje'
@@ -29,7 +29,7 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
 
   const { visibles, fichas } = useConferenciasVisibles(idUsuario)
   const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
-  const temas = useMemo(() => leerTaxonomia().temas, [])
+  const { temas } = useTemas()
 
   const panelRef = useRef<HTMLDivElement>(null)
   const alCerrarRef = useRef(alCerrar)
