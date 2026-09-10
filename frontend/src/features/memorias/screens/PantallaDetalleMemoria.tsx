@@ -3,9 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
-import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasVisibles } from '@/features/conferencias/query'
-import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { useDocxDePlantilla } from '@/features/plantillas/useDocxDePlantilla'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
 import { leerTaxonomia } from '@/features/taxonomia'
@@ -44,7 +42,7 @@ export function PantallaDetalleMemoria(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { memorias, cargando: cargandoMemorias } = useMemorias()
-  const { visibles, carga } = useConferenciasVisibles(idUsuario)
+  const { visibles, fichas: fichasVisiblesTodas, carga } = useConferenciasVisibles(idUsuario)
   const { plantillas, cargando: cargandoPlantillas } = usePlantillas()
 
   const memoria = memorias.find((candidata) => candidata.id === idMemoria)
@@ -94,7 +92,7 @@ export function PantallaDetalleMemoria(): ReactElement {
     setError(null)
     setResultado(null)
 
-    const fichas = fichasVisibles(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), conferenciaVisible)
+    const fichas = fichasVisibles(fichasVisiblesTodas, conferenciaVisible)
 
     const bytes = archivo === null ? Promise.resolve(null) : archivo.arrayBuffer()
 

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
-import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import { useEtiquetas } from '@/features/conferencias/tags'
-import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { leerTaxonomia } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import type { CodigoError } from '@/shared/errors'
@@ -99,7 +97,7 @@ function ultimaRespuestaDe(mensajes: readonly Mensaje[], idConversacion: string)
 }
 
 export function useChat(idUsuario: string): ValorDeChat {
-  const { visibles } = useConferenciasVisibles(idUsuario)
+  const { visibles, fichas } = useConferenciasVisibles(idUsuario)
   const etiquetas = useEtiquetas(idUsuario)
 
   const [conversaciones, setConversaciones] = useState<readonly Conversacion[]>([])
@@ -126,8 +124,8 @@ export function useChat(idUsuario: string): ValorDeChat {
     del lado del servidor (ver `fronteraDeGeneracion.ts`).
   */
   const todasLasEntradas = useMemo(
-    () => fichasDelCatalogo(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), visibles),
-    [visibles],
+    () => fichasDelCatalogo(fichas, visibles),
+    [fichas, visibles],
   )
   const temas = useMemo(() => leerTaxonomia().temas, [])
   const generar = useMemo(

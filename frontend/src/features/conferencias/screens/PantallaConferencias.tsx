@@ -11,7 +11,6 @@ import {
   useConferenciasVisibles,
 } from '../components'
 import type { DatosDeFila, EstadoDelListado, ResultadoCreacion } from '../components'
-import { FICHAS_DE_EJEMPLO } from '../data'
 import { useConferenciasOcultas } from '../ocultas'
 import {
   CRITERIOS_POR_DEFECTO,
@@ -52,7 +51,7 @@ export function PantallaConferencias() {
 
   const [params, setParams] = useSearchParams()
   const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
-  const { carga, visibles, recargar } = useConferenciasVisibles(idUsuario)
+  const { carga, visibles, fichas, recargar } = useConferenciasVisibles(idUsuario)
   const { idsOcultos, ocultar, mostrar } = useConferenciasOcultas(idUsuario)
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
 
@@ -80,16 +79,16 @@ export function PantallaConferencias() {
         visibles: visiblesSinOcultas,
         criterios,
         asignaciones: espacio.asignaciones,
-        fichas: FICHAS_DE_EJEMPLO,
+        fichas,
       }),
-    [visiblesSinOcultas, criterios, espacio.asignaciones],
+    [visiblesSinOcultas, criterios, espacio.asignaciones, fichas],
   )
 
   const filas: readonly DatosDeFila[] = useMemo(
     () =>
       listadas.map((visible) => ({
         visible,
-        numeroDeFichas: fichasVisibles(FICHAS_DE_EJEMPLO, visible).length,
+        numeroDeFichas: fichasVisibles(fichas, visible).length,
         etiquetas: etiquetasVisibles({
           espacioPropio: espacio,
           espacioDelDueno:
@@ -98,7 +97,7 @@ export function PantallaConferencias() {
           compartirEtiquetas: privacidadEfectiva(visible).compartirEtiquetas,
         }),
       })),
-    [listadas, espacio],
+    [listadas, espacio, fichas],
   )
 
   /*

@@ -1,13 +1,15 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import { PantallaDetalleConferencia } from './PantallaDetalleConferencia'
 
 vi.mock('@/shared/supabase/cliente')
+vi.mock('@/features/conferencias/repositorio')
 
 const ZULUAGA = {
   id: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
@@ -50,6 +52,10 @@ async function fichas(): Promise<HTMLElement[]> {
 function conteoDe(rotulo: string): HTMLElement | null {
   return screen.getByText(rotulo).closest('div')
 }
+
+beforeEach(() => {
+  sembrarConferencias()
+})
 
 afterEach(() => {
   reiniciarMocksDeSesion()

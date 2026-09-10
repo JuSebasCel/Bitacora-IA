@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
@@ -9,9 +9,11 @@ import { conferenciasVisibles, fichasDelCatalogo } from '@/features/conferencias
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
 import { TEMAS_DE_EJEMPLO, nombreDeTema } from '@/features/taxonomia'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import { PantallaCatalogo } from './PantallaCatalogo'
 
 vi.mock('@/shared/supabase/cliente')
+vi.mock('@/features/conferencias/repositorio')
 
 /*
   `useConferenciasVisibles` resuelve su efecto dentro del mismo render en las
@@ -87,6 +89,10 @@ async function resultados(): Promise<HTMLElement[]> {
 }
 
 describe('PantallaCatalogo', () => {
+  beforeEach(() => {
+    sembrarConferencias()
+  })
+
   afterEach(() => {
     reiniciarMocksDeSesion()
   })
@@ -181,7 +187,7 @@ describe('PantallaCatalogo', () => {
       `useState`/`useEffect` internos) y React detecta un cambio en el orden
       de hooks entre renders del mismo componente.
     */
-    const cargandoTodavia = { carga: 'cargando' as const, visibles: [], recargar: vi.fn() }
+    const cargandoTodavia = { carga: 'cargando' as const, visibles: [], fichas: [], error: null, recargar: vi.fn() }
     vi.mocked(useConferenciasVisibles).mockReturnValueOnce(cargandoTodavia).mockReturnValueOnce(cargandoTodavia)
 
     montar()

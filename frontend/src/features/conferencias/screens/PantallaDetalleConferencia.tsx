@@ -4,12 +4,10 @@ import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
 import { ShareNetworkIcon } from '@phosphor-icons/react/dist/csr/ShareNetwork'
 import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
-import { conComparticionesAgregadas, leerComparticionesAgregadas } from '@/features/configuracion/comparticiones'
 import { DialogoDeCompartir } from '@/features/configuracion/components'
 import { leerTaxonomia } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
-import { PanelDeError } from '@/shared/ui'
-import { conferenciasCargadasDe } from '../carga'
+import { Esqueleto, PanelDeError } from '@/shared/ui'
 import {
   AsignadorDeEtiquetas,
   ConteosDeFichas,
@@ -18,17 +16,17 @@ import {
   ResumenDeConferencia,
 } from '../components'
 import type { ResultadoCreacion } from '../components'
-import { CONFERENCIAS_DE_EJEMPLO, FICHAS_DE_EJEMPLO } from '../data'
-import { fichasVisibles, obtenerConferencia, privacidadEfectiva, resumirFichas } from '../query'
+import { actualizarEstadoDeValidacion } from '../repositorio'
+import { useDetalleConferencia } from './useDetalleConferencia'
+import { fichasVisibles, privacidadEfectiva, resumirFichas } from '../query'
 import { espacioDe, etiquetasVisibles, useEtiquetas } from '../tags'
-import { fichasConValidacionesAplicadas, leerValidaciones, marcarComoValidada } from '../validacion'
 
 /*
   Detalle de una conferencia: su resumen, la distribución de sus fichas y las
   fichas una a una.
 
   El caso sin acceso y el caso inexistente se pintan exactamente igual, porque
-  `obtenerConferencia` devuelve el mismo código para los dos. Si esta pantalla
+  el repositorio devuelve el mismo código para los dos. Si esta pantalla
   los distinguiera, devolvería por la interfaz la información que la capa de
   acceso se cuida de no dar.
 */
@@ -71,31 +69,29 @@ export function PantallaDetalleConferencia() {
 
   const { espacio, crear, asignar, quitar } = useEtiquetas(idUsuario)
 
-  const resultado = useMemo(
-    () =>
-      obtenerConferencia(
-        conComparticionesAgregadas(
-          [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)],
-          leerComparticionesAgregadas(),
-        ),
-        idUsuario,
-        idConferencia,
-      ),
-    [idUsuario, idConferencia],
+  const { carga, resultado, fichas: fichasDeLaConferencia, recargarFichas } = useDetalleConferencia(
+    idConferencia,
+    idUsuario,
   )
 
-  /* Fuerza a `fichas` a releer las validaciones guardadas tras marcar una: `leerValidaciones()` no es reactivo por sí solo. */
-  const [refrescoDeValidaciones, setRefrescoDeValidaciones] = useState(0)
   const [dialogoCompartirAbierto, setDialogoCompartirAbierto] = useState(false)
 
-  const fichas = useMemo(() => {
-    void refrescoDeValidaciones
-    return resultado.ok ? fichasVisibles(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), resultado.visible) : []
-  }, [resultado, refrescoDeValidaciones])
+  const fichas = useMemo(
+    () => (resultado.ok ? fichasVisibles(fichasDeLaConferencia, resultado.visible) : []),
+    [resultado, fichasDeLaConferencia],
+  )
 
+  /*
+    Quién puede validar lo decide la política de RLS; si la rechaza, la ficha
+    se queda como estaba y no hay recarga. Cuando la acepta, se vuelven a pedir
+    solo las fichas — la conferencia no cambió.
+  */
   function alValidar(idFicha: string): void {
-    marcarComoValidada(idFicha)
-    setRefrescoDeValidaciones((anterior) => anterior + 1)
+    void actualizarEstadoDeValidacion(idFicha, 'validada').then((respuesta) => {
+      if (respuesta.ok) {
+        recargarFichas()
+      }
+    })
   }
 
   /*
@@ -150,6 +146,14 @@ export function PantallaDetalleConferencia() {
     asignar(resultado.etiqueta.id, idConferencia)
 
     return { ok: true, etiqueta: resultado.etiqueta }
+  }
+
+  if (carga === 'cargando') {
+    return (
+      <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
+        <Esqueleto filas={4} etiqueta="Cargando la conferencia" />
+      </div>
+    )
   }
 
   if (!resultado.ok) {

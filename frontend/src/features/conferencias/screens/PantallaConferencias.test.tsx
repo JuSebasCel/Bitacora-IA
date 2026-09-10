@@ -1,13 +1,15 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
 
 vi.mock('@/shared/supabase/cliente')
+vi.mock('@/features/conferencias/repositorio')
 
 /*
   El dashboard de F2. Se monta con la sesión sembrada directamente en
@@ -69,6 +71,10 @@ async function filas(): Promise<HTMLElement[]> {
 async function campoDeBusqueda(): Promise<HTMLElement> {
   return screen.findByLabelText(/buscar/i)
 }
+
+beforeEach(() => {
+  sembrarConferencias()
+})
 
 afterEach(() => {
   reiniciarMocksDeSesion()

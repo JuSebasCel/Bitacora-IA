@@ -5,10 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import type { Memoria } from '../data'
 import { PantallaMemorias } from './PantallaMemorias'
 
 vi.mock('@/shared/supabase/cliente')
+vi.mock('@/features/conferencias/repositorio')
 
 /*
   Dos repositorios sustituidos, porque la pantalla combina dos dominios: sus
@@ -60,6 +62,7 @@ const ALCANTARA = {
 }
 
 beforeEach(() => {
+  sembrarConferencias()
   mockearSesionAutenticada(ALCANTARA)
   repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [MEMORIA_ALCANTARA] })
   repositorioDeMemorias.crearMemoria.mockImplementation((memoria: Memoria) =>

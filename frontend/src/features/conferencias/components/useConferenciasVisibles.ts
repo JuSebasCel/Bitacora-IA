@@ -1,22 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
-import { conComparticionesAgregadas, leerComparticionesAgregadas } from '@/features/configuracion/comparticiones'
-import { conferenciasCargadasDe } from '../carga'
-import { CONFERENCIAS_DE_EJEMPLO } from '../data'
+import { mensajeDeError } from '@/shared/errors'
+import { listarConferencias, listarFichasVisibles } from '../repositorio'
 import { conferenciasVisibles } from '../query'
 import type { ConferenciaVisible } from '../query'
+import type { Ficha } from '../data'
 
 /*
   Lo que una persona puede ver, con su estado de carga.
 
-  Hoy los datos llegan de un fixture y podrían resolverse en el mismo render,
-  pero el hook expone igualmente un estado de carga: cuando B6 sustituya el
-  fixture por una consulta real, la pantalla no tendrá que cambiar y el
-  esqueleto ya estará probado. Un estado de carga añadido después obliga a
-  revisar todos los casos que asumían datos inmediatos.
+  Antes de B5 los datos venían de un fixture y del propio navegador. Ahora
+  salen de dos consultas a Supabase que RLS ya filtró por identidad, así que
+  el listado nunca trae una conferencia ajena aunque se pida `select('*')`
+  sin condiciones. `conferenciasVisibles` sigue corriendo encima: dejó de ser
+  la única puerta y pasó a derivar procedencia (propia o compartida) y
+  privacidad efectiva sobre filas que Postgres ya autorizó — que la interfaz
+  y la base de datos coincidan es lo que hace que un fallo en cualquiera de
+  las dos se note.
 
-  Se fusiona con lo que esa persona cargó en esta sesión (F3): `recargar`
-  existe para que, tras guardar una conferencia nueva, quien la cargó vea el
-  listado actualizado sin tener que recargar la página.
+  Las fichas visibles se traen en una sola consulta y no una por conferencia:
+  el catálogo y el chat cruzan fichas de varias charlas a la vez.
+
+  `recargar` sigue existiendo para que, tras cargar una conferencia nueva,
+  quien la subió vea el listado al día sin refrescar la página.
 */
 
 export type EstadoDeCarga = 'cargando' | 'listo'
@@ -24,24 +29,52 @@ export type EstadoDeCarga = 'cargando' | 'listo'
 export type ConferenciasVisibles = {
   readonly carga: EstadoDeCarga
   readonly visibles: readonly ConferenciaVisible[]
+  readonly fichas: readonly Ficha[]
+  /** Mensaje ya traducido si alguna de las dos consultas falló; null si todo fue bien. */
+  readonly error: string | null
   readonly recargar: () => void
 }
 
 export function useConferenciasVisibles(idUsuario: string): ConferenciasVisibles {
-  const [estado, setEstado] = useState<{ carga: EstadoDeCarga; visibles: readonly ConferenciaVisible[] }>(
-    { carga: 'cargando', visibles: [] },
-  )
+  const [estado, setEstado] = useState<{
+    carga: EstadoDeCarga
+    visibles: readonly ConferenciaVisible[]
+    fichas: readonly Ficha[]
+    error: string | null
+  }>({ carga: 'cargando', visibles: [], fichas: [], error: null })
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
-    const base = [...CONFERENCIAS_DE_EJEMPLO, ...conferenciasCargadasDe(idUsuario)]
-    /* Las invitaciones enviadas desde F8 se mezclan aquí, antes de resolver quién ve qué. */
-    const todas = conComparticionesAgregadas(base, leerComparticionesAgregadas())
+    let cancelado = false
 
-    setEstado({
-      carga: 'listo',
-      visibles: conferenciasVisibles(todas, idUsuario),
-    })
+    if (idUsuario === '') {
+      setEstado({ carga: 'listo', visibles: [], fichas: [], error: null })
+      return
+    }
+
+    setEstado((anterior) => ({ ...anterior, carga: 'cargando' }))
+
+    Promise.all([listarConferencias(), listarFichasVisibles()]).then(
+      ([conferencias, fichas]) => {
+        if (cancelado) return
+
+        if (!conferencias.ok) {
+          setEstado({ carga: 'listo', visibles: [], fichas: [], error: mensajeDeError(conferencias.codigo) })
+          return
+        }
+
+        setEstado({
+          carga: 'listo',
+          visibles: conferenciasVisibles(conferencias.datos, idUsuario),
+          fichas: fichas.ok ? fichas.datos : [],
+          error: fichas.ok ? null : mensajeDeError(fichas.codigo),
+        })
+      },
+    )
+
+    return () => {
+      cancelado = true
+    }
     /* `version` no se lee dentro del efecto: solo fuerza que se repita tras `recargar()`. */
   }, [idUsuario, version])
 

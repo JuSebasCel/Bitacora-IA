@@ -6,9 +6,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useDirectorio } from '@/features/conferencias/directorio'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
-import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { normalizarTexto, privacidadEfectiva } from '@/features/conferencias/query'
-import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { useTaxonomia } from '@/features/taxonomia'
 import { MensajeDeFormulario, Popover } from '@/shared/ui'
 import { PESO_DE_ICONO, TAMANO_DE_ICONO } from './navegacion'
@@ -27,9 +25,8 @@ import { PESO_DE_ICONO, TAMANO_DE_ICONO } from './navegacion'
   existe el botón «Marcar como validada».
 
   La cuenta de fichas pendientes se recalcula cada vez que se abre el panel
-  (`tick`), no en cada render: marcar una ficha desde el detalle de la
-  conferencia escribe directo a `sessionStorage` sin avisar a este componente,
-  así que abrir la campana es el momento natural para releer el dato fresco.
+  (`tick`), no en cada render: abrir la campana vuelve a montar el panel y sus datos, que es el momento
+  natural para reflejar una ficha que se acaba de validar en otra pantalla.
 */
 
 type PendienteDeValidar = {
@@ -42,18 +39,14 @@ const CLASES_DE_ACCION =
   'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors'
 
 export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): ReactElement {
-  const { visibles } = useConferenciasVisibles(idUsuario)
+  const { visibles, fichas } = useConferenciasVisibles(idUsuario)
   const { eventos } = useDirectorio()
   const { taxonomia, aprobar, rechazar } = useTaxonomia()
   const [tick, setTick] = useState(0)
   const [aviso, setAviso] = useState<{ idPropuesta: string; mensaje: string } | null>(null)
 
   const pendientesDeValidar = useMemo<readonly PendienteDeValidar[]>(() => {
-    /* `tick` fuerza releer `leerValidaciones()`: no se referencia directo, marcar una ficha desde el detalle de la conferencia escribe a sessionStorage sin avisar a este componente. */
     void tick
-
-    const overrides = leerValidaciones()
-    const fichas = fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, overrides)
 
     return visibles.flatMap((visible) => {
       const puedeValidar =
@@ -71,7 +64,7 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
         ? []
         : [{ idConferencia: visible.conferencia.id, titulo: visible.conferencia.titulo, cantidad }]
     })
-  }, [visibles, tick])
+  }, [visibles, fichas, tick])
 
   const totalAvisos = taxonomia.propuestas.length + pendientesDeValidar.length
 

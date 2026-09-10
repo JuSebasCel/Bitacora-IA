@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
 
 vi.mock('@/shared/supabase/cliente')
+vi.mock('@/features/conferencias/repositorio')
 
 /*
   Reglas de redacción de las pantallas de F2.
@@ -28,6 +30,10 @@ const LENGUAJE_DE_OBRA_EN_CURSO =
 
 /* Guion largo, escrito como escape para no usarlo literalmente en el código. */
 const GUION_LARGO = '—'
+
+beforeEach(() => {
+  sembrarConferencias()
+})
 
 afterEach(() => {
   reiniciarMocksDeSesion()

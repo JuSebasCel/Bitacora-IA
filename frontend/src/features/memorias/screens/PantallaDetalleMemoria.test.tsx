@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
+import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import type { Memoria } from '../data'
 import { PantallaDetalleMemoria } from './PantallaDetalleMemoria'
 
 vi.mock('@/shared/supabase/cliente')
+vi.mock('@/features/conferencias/repositorio')
 
 const repositorioDeMemorias = vi.hoisted(() => ({
   listarMemorias: vi.fn(),
@@ -67,6 +69,7 @@ const ALCANTARA = {
 }
 
 beforeEach(() => {
+  sembrarConferencias()
   mockearSesionAutenticada(ALCANTARA)
   repositorioDeMemorias.listarMemorias.mockResolvedValue({ ok: true, datos: [MEMORIA] })
   repositorioDePlantillas.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA] })

@@ -2,10 +2,8 @@ import { useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 import type { EstadoDeCarga } from '@/features/conferencias/components/useConferenciasVisibles'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
-import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
-import { fichasConValidacionesAplicadas, leerValidaciones } from '@/features/conferencias/validacion'
 import { leerTaxonomia } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import { CRITERIOS_POR_DEFECTO, eventosDisponibles, listarCatalogo, temasDisponibles } from './filtros'
@@ -33,12 +31,12 @@ export type ValorDeCatalogo = {
   local — una vista filtrada es compartible y sobrevive a un recargado.
 */
 export function useCatalogo(idUsuario: string): ValorDeCatalogo {
-  const { carga, visibles } = useConferenciasVisibles(idUsuario)
+  const { carga, visibles, fichas } = useConferenciasVisibles(idUsuario)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const todasLasEntradas = useMemo(
-    () => fichasDelCatalogo(fichasConValidacionesAplicadas(FICHAS_DE_EJEMPLO, leerValidaciones()), visibles),
-    [visibles],
+    () => fichasDelCatalogo(fichas, visibles),
+    [fichas, visibles],
   )
 
   /*

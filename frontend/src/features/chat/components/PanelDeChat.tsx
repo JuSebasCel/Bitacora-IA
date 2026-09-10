@@ -2,7 +2,6 @@ import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { useEffect, useMemo, useRef, type ReactElement } from 'react'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
-import { FICHAS_DE_EJEMPLO } from '@/features/conferencias/data'
 import { fichasDelCatalogo } from '@/features/conferencias/query'
 import { leerTaxonomia } from '@/features/taxonomia'
 import { useChat } from '../useChat'
@@ -28,8 +27,8 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
   const idUsuario = usuario?.id ?? ''
   const chat = useChat(idUsuario)
 
-  const { visibles } = useConferenciasVisibles(idUsuario)
-  const entradas = useMemo(() => fichasDelCatalogo(FICHAS_DE_EJEMPLO, visibles), [visibles])
+  const { visibles, fichas } = useConferenciasVisibles(idUsuario)
+  const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
   const temas = useMemo(() => leerTaxonomia().temas, [])
 
   const panelRef = useRef<HTMLDivElement>(null)
