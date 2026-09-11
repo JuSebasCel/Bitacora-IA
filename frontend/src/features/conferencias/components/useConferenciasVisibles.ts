@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { mensajeDeError } from '@/shared/errors'
+import { useConsultaCacheada } from '@/shared/cache/useConsultaCacheada'
+import type { ResultadoDeConsulta } from '@/shared/supabase/consultas'
 import { listarConferencias, listarFichasVisibles } from '../repositorio'
 import { conferenciasVisibles } from '../query'
 import type { ConferenciaVisible } from '../query'
-import type { Ficha } from '../data'
+import type { Conferencia, Ficha } from '../data'
 
 /*
   Lo que una persona puede ver, con su estado de carga.
@@ -20,8 +22,13 @@ import type { Ficha } from '../data'
   Las fichas visibles se traen en una sola consulta y no una por conferencia:
   el catálogo y el chat cruzan fichas de varias charlas a la vez.
 
-  `recargar` sigue existiendo para que, tras cargar una conferencia nueva,
-  quien la subió vea el listado al día sin refrescar la página.
+  Desde B13 las dos consultas pasan por `useConsultaCacheada`: es el hook de
+  dominio más montado de toda la app (dashboard, catálogo, chat, detalle de
+  memoria), así que era el que más se notaba al navegar entre pestañas — cada
+  pantalla nueva repetía "buscando fichas" aunque nada hubiera cambiado en
+  Supabase en los últimos segundos. `recargar` ahora es `invalidar()`: fuerza
+  una relectura inmediata sin esperar el TTL, para el caso real (se acaba de
+  cargar una conferencia) donde sí hace falta el dato fresco ya mismo.
 */
 
 export type EstadoDeCarga = 'cargando' | 'listo'
@@ -30,55 +37,54 @@ export type ConferenciasVisibles = {
   readonly carga: EstadoDeCarga
   readonly visibles: readonly ConferenciaVisible[]
   readonly fichas: readonly Ficha[]
-  /** Mensaje ya traducido si alguna de las dos consultas falló; null si todo fue bien. */
+  /** Mensaje ya traducido si la consulta falló; null si todo fue bien. */
   readonly error: string | null
   readonly recargar: () => void
 }
 
+type DatosDeConferencias = {
+  readonly conferencias: readonly Conferencia[]
+  readonly fichas: readonly Ficha[]
+}
+
+/*
+  Combina las dos consultas en un solo resultado cacheable. Un fallo en
+  cualquiera de las dos se trata como fallo del conjunto: repartir el error
+  ficha a ficha (visibles sin fichas, fichas sin visibles) complicaba el tipo
+  de la caché sin que ninguna pantalla distinguiera hoy entre esos dos casos.
+*/
+async function consultarConferenciasYFichas(): Promise<ResultadoDeConsulta<DatosDeConferencias>> {
+  const [conferencias, fichas] = await Promise.all([listarConferencias(), listarFichasVisibles()])
+
+  if (!conferencias.ok) {
+    return conferencias
+  }
+
+  if (!fichas.ok) {
+    return fichas
+  }
+
+  return { ok: true, datos: { conferencias: conferencias.datos, fichas: fichas.datos } }
+}
+
 export function useConferenciasVisibles(idUsuario: string): ConferenciasVisibles {
-  const [estado, setEstado] = useState<{
-    carga: EstadoDeCarga
-    visibles: readonly ConferenciaVisible[]
-    fichas: readonly Ficha[]
-    error: string | null
-  }>({ carga: 'cargando', visibles: [], fichas: [], error: null })
-  const [version, setVersion] = useState(0)
+  const clave = idUsuario === '' ? null : `conferencias-visibles:${idUsuario}`
 
-  useEffect(() => {
-    let cancelado = false
+  const { datos, cargando, codigoDeError, invalidar } = useConsultaCacheada(
+    clave,
+    consultarConferenciasYFichas,
+  )
 
-    if (idUsuario === '') {
-      setEstado({ carga: 'listo', visibles: [], fichas: [], error: null })
-      return
-    }
+  const visibles = useMemo(
+    () => (datos === undefined ? [] : conferenciasVisibles(datos.conferencias, idUsuario)),
+    [datos, idUsuario],
+  )
 
-    setEstado((anterior) => ({ ...anterior, carga: 'cargando' }))
-
-    Promise.all([listarConferencias(), listarFichasVisibles()]).then(
-      ([conferencias, fichas]) => {
-        if (cancelado) return
-
-        if (!conferencias.ok) {
-          setEstado({ carga: 'listo', visibles: [], fichas: [], error: mensajeDeError(conferencias.codigo) })
-          return
-        }
-
-        setEstado({
-          carga: 'listo',
-          visibles: conferenciasVisibles(conferencias.datos, idUsuario),
-          fichas: fichas.ok ? fichas.datos : [],
-          error: fichas.ok ? null : mensajeDeError(fichas.codigo),
-        })
-      },
-    )
-
-    return () => {
-      cancelado = true
-    }
-    /* `version` no se lee dentro del efecto: solo fuerza que se repita tras `recargar()`. */
-  }, [idUsuario, version])
-
-  const recargar = useCallback(() => setVersion((anterior) => anterior + 1), [])
-
-  return { ...estado, recargar }
+  return {
+    carga: cargando ? 'cargando' : 'listo',
+    visibles,
+    fichas: datos?.fichas ?? [],
+    error: codigoDeError === null ? null : mensajeDeError(codigoDeError),
+    recargar: invalidar,
+  }
 }

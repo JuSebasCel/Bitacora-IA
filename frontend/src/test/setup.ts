@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
+import { reiniciarCachePorPruebas } from '@/shared/cache/useConsultaCacheada'
 
 /*
   jsdom refleja el atributo `open` de `<dialog>` (es un atributo booleano
@@ -29,4 +30,11 @@ if (typeof HTMLDialogElement !== 'undefined') {
 afterEach(() => {
   cleanup()
   sessionStorage.clear()
+  /*
+    `useConsultaCacheada` guarda su estado a nivel de módulo, fuera de React,
+    así que sobrevive entre pruebas de un mismo archivo salvo que se limpie
+    a mano. Va después de `cleanup()` para que las suscripciones de los
+    componentes ya desmontados se hayan dado de baja primero.
+  */
+  reiniciarCachePorPruebas()
 })
