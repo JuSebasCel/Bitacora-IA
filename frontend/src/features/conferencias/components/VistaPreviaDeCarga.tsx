@@ -36,11 +36,28 @@ function formatearTamano(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/*
+  `break-words` + `min-w-0`: el nombre de un archivo real puede no traer un
+  solo espacio (`grabacion_del_20260911_conferencia_completa_final_v2.mp3`),
+  y sin las dos cosas juntas un token así de largo no tiene dónde partirse:
+  empuja el ancho de esta columna del formulario más allá del viewport en vez
+  de ajustarse a él. `min-w-0` es el que de verdad importa -- por defecto un
+  hijo de grid/flex no se encoge más allá de su contenido, así que sin él
+  `break-words` no tiene margen para actuar.
+*/
 function Fila({ rotulo, valor, tenue = false }: { rotulo: string; valor: string; tenue?: boolean }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-0.5">
       <span className="text-xs text-texto-tenue">{rotulo}</span>
-      <span className={tenue ? 'text-sm text-texto-tenue' : 'text-sm text-texto'}>{valor}</span>
+      <span
+        className={
+          tenue
+            ? 'min-w-0 text-sm break-words text-texto-tenue'
+            : 'min-w-0 text-sm break-words text-texto'
+        }
+      >
+        {valor}
+      </span>
     </div>
   )
 }
@@ -50,13 +67,16 @@ export function VistaPreviaDeCarga({ datos, archivo, eventos, ponentes }: Propie
   const nombreDelPonente = ponentes.find((ponente) => ponente.id === datos.idPonente)?.nombre ?? null
 
   return (
-    <aside aria-label="Vista previa" className="flex h-fit flex-col gap-4 rounded-md bg-panel p-4 shadow-sm">
+    <aside
+      aria-label="Vista previa"
+      className="flex h-fit min-w-0 flex-col gap-4 rounded-md bg-panel p-4 shadow-sm"
+    >
       <h2 className="text-sm font-medium text-texto">Vista previa</h2>
 
       {datos.titulo.trim() === '' ? (
-        <p className="text-sm text-texto-tenue">Título de la conferencia</p>
+        <p className="min-w-0 text-sm text-texto-tenue">Título de la conferencia</p>
       ) : (
-        <p className="text-sm font-medium text-texto">{datos.titulo}</p>
+        <p className="min-w-0 text-sm font-medium break-words text-texto">{datos.titulo}</p>
       )}
 
       <div className="flex flex-col gap-3 rounded-md bg-fondo p-4">

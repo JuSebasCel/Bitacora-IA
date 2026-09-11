@@ -22,8 +22,8 @@ const ID_CAMPO_API_KEY = 'config-api-key'
   conferencia ya puesta — esta pantalla no necesita saber cuál.
 */
 
-function SeccionApiKey({ idUsuario }: { idUsuario: string }): ReactElement {
-  const { clave, cargando, guardar, borrar } = useApiKey(idUsuario)
+function SeccionApiKey(): ReactElement {
+  const { clave, cargando, guardar, borrar } = useApiKey()
   const [valor, setValor] = useState('')
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -213,7 +213,7 @@ export function PantallaConfiguracion(): ReactElement {
       />
 
       <div className="mt-6 flex flex-col gap-6">
-        <SeccionApiKey idUsuario={idUsuario} />
+        <SeccionApiKey />
         <SeccionCompartidasConmigo visibles={visibles} />
       </div>
     </>

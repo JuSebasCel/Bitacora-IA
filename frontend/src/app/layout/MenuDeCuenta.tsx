@@ -34,7 +34,7 @@ export function MenuDeCuenta({
   cerrarSesion: () => void
 }): ReactElement {
   const { tema, establecerTema } = useTema()
-  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey(usuario.id)
+  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey()
   const apiKeyFaltante = !cargandoApiKey && apiKey === null
   const nombreVisible = usuario.nombre === '' ? usuario.correo : usuario.nombre
 

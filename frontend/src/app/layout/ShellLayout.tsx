@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router'
 import { PanelDeChat } from '@/features/chat/components'
+import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
 import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
 
@@ -105,39 +106,41 @@ export function ShellLayout() {
   }, [cajonAbierto])
 
   return (
-    <div className="min-h-dvh bg-fondo font-sans text-texto">
-      <BarraSuperior
-        cajonAbierto={cajonAbierto}
-        idDeNavegacion={ID_DE_NAVEGACION}
-        alternarCajon={alternarCajon}
-        refDelBotonDelCajon={refDelBotonDelCajon}
-        alAbrirChat={() => setPanelDeChatAbierto(true)}
-      />
-
-      <PanelDeChat abierto={panelDeChatAbierto} alCerrar={() => setPanelDeChatAbierto(false)} />
-
-      <div className="flex">
-        <BarraLateral
-          id={ID_DE_NAVEGACION}
-          abierta={cajonAbierto}
-          alNavegar={cerrarCajon}
-          refDelCajon={refDelCajon}
+    <ProveedorDeApiKey>
+      <div className="min-h-dvh bg-fondo font-sans text-texto">
+        <BarraSuperior
+          cajonAbierto={cajonAbierto}
+          idDeNavegacion={ID_DE_NAVEGACION}
+          alternarCajon={alternarCajon}
+          refDelBotonDelCajon={refDelBotonDelCajon}
+          alAbrirChat={() => setPanelDeChatAbierto(true)}
         />
 
-        {cajonAbierto ? (
-          <div
-            aria-hidden="true"
-            onClick={cerrarCajon}
-            className="fixed top-14 right-0 bottom-0 left-0 z-20 bg-fondo/80 md:hidden"
-          />
-        ) : null}
+        <PanelDeChat abierto={panelDeChatAbierto} alCerrar={() => setPanelDeChatAbierto(false)} />
 
-        <main className="min-w-0 flex-1 px-5 py-8 md:px-8 lg:px-10">
-          <div className="mx-auto w-full max-w-5xl">
-            <Outlet />
-          </div>
-        </main>
+        <div className="flex">
+          <BarraLateral
+            id={ID_DE_NAVEGACION}
+            abierta={cajonAbierto}
+            alNavegar={cerrarCajon}
+            refDelCajon={refDelCajon}
+          />
+
+          {cajonAbierto ? (
+            <div
+              aria-hidden="true"
+              onClick={cerrarCajon}
+              className="fixed top-14 right-0 bottom-0 left-0 z-20 bg-fondo/80 md:hidden"
+            />
+          ) : null}
+
+          <main className="min-w-0 flex-1 px-5 py-8 md:px-8 lg:px-10">
+            <div className="mx-auto w-full max-w-5xl">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ProveedorDeApiKey>
   )
 }

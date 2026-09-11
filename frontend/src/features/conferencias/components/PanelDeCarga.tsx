@@ -106,7 +106,7 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { eventos, ponentes, crearEvento, crearPonente } = useDirectorio()
-  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey(idUsuario)
+  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey()
   const navegar = useNavigate()
 
   const panelRef = useRef<HTMLDivElement>(null)
@@ -352,7 +352,7 @@ export function PanelDeCarga({ abierto, alCerrar, alCargar }: PropsPanelDeCarga)
           className="flex flex-1 flex-col gap-5 overflow-y-auto p-6"
         >
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_18rem]">
-            <div className="flex flex-col gap-5">
+            <div className="flex min-w-0 flex-col gap-5">
               <Field
                 id="carga-titulo"
                 etiqueta="Título"

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
+import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
@@ -48,9 +49,11 @@ function montar() {
 
   return render(
     <SessionProvider>
-      <MemoryRouter initialEntries={['/conferencias']}>
-        <PantallaConferencias />
-      </MemoryRouter>
+      <ProveedorDeApiKey>
+        <MemoryRouter initialEntries={['/conferencias']}>
+          <PantallaConferencias />
+        </MemoryRouter>
+      </ProveedorDeApiKey>
     </SessionProvider>,
   )
 }

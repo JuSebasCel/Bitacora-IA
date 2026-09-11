@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
+import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
 import { mensajeDeError } from '@/shared/errors'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { sembrarConferencias, sembrarEtiquetasDe } from '@/test/conferenciasDePrueba'
@@ -47,13 +48,15 @@ function montar(rutaInicial = '/conferencias', cuenta = ZULUAGA) {
 
   return render(
     <SessionProvider>
-      <MemoryRouter initialEntries={[rutaInicial]}>
-        <Ubicacion />
-        <Routes>
-          <Route path="/conferencias" element={<PantallaConferencias />} />
-          <Route path="/conferencias/:idConferencia" element={<p>Detalle de la conferencia</p>} />
-        </Routes>
-      </MemoryRouter>
+      <ProveedorDeApiKey>
+        <MemoryRouter initialEntries={[rutaInicial]}>
+          <Ubicacion />
+          <Routes>
+            <Route path="/conferencias" element={<PantallaConferencias />} />
+            <Route path="/conferencias/:idConferencia" element={<p>Detalle de la conferencia</p>} />
+          </Routes>
+        </MemoryRouter>
+      </ProveedorDeApiKey>
     </SessionProvider>,
   )
 }
