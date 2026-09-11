@@ -41,7 +41,7 @@ export function PantallaDetalleMemoria(): ReactElement {
   const { idMemoria = '' } = useParams()
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { memorias, cargando: cargandoMemorias } = useMemorias()
+  const { memorias, cargando: cargandoMemorias } = useMemorias(idUsuario)
   const { visibles, fichas: fichasVisiblesTodas, carga } = useConferenciasVisibles(idUsuario)
   const { plantillas, cargando: cargandoPlantillas } = usePlantillas()
 

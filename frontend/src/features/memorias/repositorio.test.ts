@@ -12,6 +12,7 @@ const FILA = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
   id_conferencia: 'a1b2c3d4-1111-4222-8333-444455556666',
   id_plantilla: 'b1b2c3d4-1111-4222-8333-444455556666',
+  id_dueno: 'c1c2c3c4-1111-4222-8333-444455556666',
   nombre: 'Memoria de la charla de apertura',
   generada_el: '2026-04-15T10:00:00.000Z',
 }
@@ -20,6 +21,7 @@ const MEMORIA = {
   id: FILA.id,
   idConferencia: FILA.id_conferencia,
   idPlantilla: FILA.id_plantilla,
+  idDueno: FILA.id_dueno,
   nombre: FILA.nombre,
   generadaEl: FILA.generada_el,
 }
@@ -47,6 +49,7 @@ describe('listarMemorias', () => {
         'id',
         'idConferencia',
         'idPlantilla',
+        'idDueno',
         'nombre',
         'generadaEl',
       ])

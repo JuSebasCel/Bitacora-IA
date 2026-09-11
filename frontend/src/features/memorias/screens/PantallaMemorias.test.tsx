@@ -39,10 +39,14 @@ vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
 
 const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
 
+/* Dueña de `cnf-alc-01`/`cnf-alc-03` en el fixture: Valentina Alcántara Rueda. */
+const ID_ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'
+
 const MEMORIA_ALCANTARA: Memoria = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
   idConferencia: 'cnf-alc-01',
   idPlantilla: PLANTILLA.id,
+  idDueno: ID_ALCANTARA,
   nombre: 'Memoria de Modelos de lenguaje aplicados a la revisión sistemática de literatura',
   generadaEl: '2026-04-15T10:00:00.000Z',
 }
@@ -51,6 +55,7 @@ const MEMORIA_DE_SESGOS: Memoria = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d71',
   idConferencia: 'cnf-alc-03',
   idPlantilla: PLANTILLA.id,
+  idDueno: ID_ALCANTARA,
   nombre: 'Memoria de sesgos algorítmicos',
   generadaEl: '2026-05-20T10:00:00.000Z',
 }

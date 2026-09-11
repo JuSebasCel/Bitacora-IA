@@ -34,6 +34,8 @@ const MEMORIA: Memoria = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
   idConferencia: 'cnf-alc-01',
   idPlantilla: PLANTILLA.id,
+  /* Dueña de `cnf-alc-01` en el fixture: Valentina Alcántara Rueda. */
+  idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
   nombre: 'Memoria de la charla de apertura',
   generadaEl: '2026-04-15T10:00:00.000Z',
 }

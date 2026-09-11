@@ -32,13 +32,20 @@ export type ValorDeMemorias = {
   readonly eliminar: (id: string) => Promise<void>
 }
 
-export function useMemorias(): ValorDeMemorias {
+export function useMemorias(idUsuario: string): ValorDeMemorias {
   const [memorias, setMemorias] = useState<readonly Memoria[]>([])
   const [cargando, setCargando] = useState(true)
   const [codigoDeError, setCodigoDeError] = useState<CodigoError | null>(null)
 
   useEffect(() => {
     let cancelado = false
+
+    if (idUsuario === '') {
+      setMemorias([])
+      setCargando(false)
+      return
+    }
+
     setCargando(true)
 
     listarMemorias().then((resultado) => {
@@ -59,11 +66,11 @@ export function useMemorias(): ValorDeMemorias {
     return () => {
       cancelado = true
     }
-  }, [])
+  }, [idUsuario])
 
   const generar = useCallback(
     async (idConferencia: string, idPlantilla: string, nombre: string): Promise<ResultadoMemoria> => {
-      const resultado = crearMemoriaPura(idConferencia, idPlantilla, nombre)
+      const resultado = crearMemoriaPura(idConferencia, idPlantilla, nombre, idUsuario)
 
       if (!resultado.ok) {
         return resultado
@@ -80,7 +87,7 @@ export function useMemorias(): ValorDeMemorias {
 
       return resultado
     },
-    [],
+    [idUsuario],
   )
 
   const eliminar = useCallback(async (id: string): Promise<void> => {

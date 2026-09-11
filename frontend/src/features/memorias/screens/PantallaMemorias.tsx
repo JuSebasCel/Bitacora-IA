@@ -39,7 +39,7 @@ function nombreDePlantilla(plantillas: readonly { id: string; nombre: string }[]
 export function PantallaMemorias(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { memorias, cargando: cargandoMemorias, codigoDeError, generar, eliminar } = useMemorias()
+  const { memorias, cargando: cargandoMemorias, codigoDeError, generar, eliminar } = useMemorias(idUsuario)
   const { carga, visibles } = useConferenciasVisibles(idUsuario)
   const { plantillas } = usePlantillas()
   const [searchParams, setSearchParams] = useSearchParams()

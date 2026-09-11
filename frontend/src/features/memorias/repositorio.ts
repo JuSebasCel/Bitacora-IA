@@ -26,6 +26,7 @@ type FilaDeMemoria = {
   readonly id: string
   readonly id_conferencia: string
   readonly id_plantilla: string
+  readonly id_dueno: string
   readonly nombre: string
   readonly generada_el: string
 }
@@ -35,6 +36,7 @@ function memoriaDesdeFila(fila: FilaDeMemoria): Memoria {
     id: fila.id,
     idConferencia: fila.id_conferencia,
     idPlantilla: fila.id_plantilla,
+    idDueno: fila.id_dueno,
     nombre: fila.nombre,
     generadaEl: fila.generada_el,
   }
@@ -45,12 +47,13 @@ function filaDesdeMemoria(memoria: Memoria): Record<string, unknown> {
     id: memoria.id,
     id_conferencia: memoria.idConferencia,
     id_plantilla: memoria.idPlantilla,
+    id_dueno: memoria.idDueno,
     nombre: memoria.nombre,
     generada_el: memoria.generadaEl,
   }
 }
 
-/** De la más reciente a la más antigua: lo último generado es lo que se viene a buscar. */
+/** De la más reciente a la más antigua. RLS ya acota a las memorias de quien pregunta (B11). */
 export async function listarMemorias(): Promise<ResultadoDeConsulta<readonly Memoria[]>> {
   const respuesta = await supabase.from(TABLA).select('*').order('generada_el', { ascending: false })
 

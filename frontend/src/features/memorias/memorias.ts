@@ -34,7 +34,12 @@ function idNuevo(): string {
   })
 }
 
-export function crearMemoria(idConferencia: string, idPlantilla: string, nombre: string): ResultadoMemoria {
+export function crearMemoria(
+  idConferencia: string,
+  idPlantilla: string,
+  nombre: string,
+  idDueno: string,
+): ResultadoMemoria {
   if (idConferencia.trim().length === 0) {
     return { ok: false, codigo: 'MEM_CONFERENCIA_REQUERIDA' }
   }
@@ -59,6 +64,7 @@ export function crearMemoria(idConferencia: string, idPlantilla: string, nombre:
       id: idNuevo(),
       idConferencia,
       idPlantilla,
+      idDueno,
       nombre: nombreLimpio,
       generadaEl: new Date().toISOString(),
     },

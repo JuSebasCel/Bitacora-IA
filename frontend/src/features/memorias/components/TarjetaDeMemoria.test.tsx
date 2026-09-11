@@ -9,6 +9,7 @@ const MEMORIA: Memoria = {
   id: 'mem-prueba',
   idConferencia: 'cnf-prueba',
   idPlantilla: 'pla-prueba',
+  idDueno: 'usr-prueba',
   nombre: 'Memoria de prueba',
   generadaEl: '2026-05-01T10:00:00.000Z',
 }

@@ -17,10 +17,13 @@ const repositorio = vi.hoisted(() => ({
 
 vi.mock('./repositorio', () => repositorio)
 
+const ID_USUARIO = 'c1c2c3c4-1111-4222-8333-444455556666'
+
 const MEMORIA_GUARDADA: Memoria = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
   idConferencia: 'a1b2c3d4-1111-4222-8333-444455556666',
   idPlantilla: 'b1b2c3d4-1111-4222-8333-444455556666',
+  idDueno: ID_USUARIO,
   nombre: 'Memoria de la charla de apertura',
   generadaEl: '2026-04-15T10:00:00.000Z',
 }
@@ -36,7 +39,7 @@ afterEach(() => {
 })
 
 async function montarCargado() {
-  const { result } = renderHook(() => useMemorias())
+  const { result } = renderHook(() => useMemorias(ID_USUARIO))
   await waitFor(() => expect(result.current.cargando).toBe(false))
   return result
 }
@@ -45,7 +48,7 @@ describe('useMemorias', () => {
   it('arranca cargando y sin memorias, para no afirmar que no hay ninguna antes de saberlo', () => {
     repositorio.listarMemorias.mockReturnValue(new Promise(() => {}))
 
-    const { result } = renderHook(() => useMemorias())
+    const { result } = renderHook(() => useMemorias(ID_USUARIO))
 
     expect(result.current.cargando).toBe(true)
     expect(result.current.memorias).toEqual([])
