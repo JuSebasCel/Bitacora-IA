@@ -32,6 +32,7 @@ export type CodigoError =
   | 'CARGA_ARCHIVO_MUY_GRANDE'
   | 'CARGA_API_KEY_REQUERIDA'
   | 'CARGA_FALLO_INESPERADO'
+  | 'CARGA_ARCHIVO_RECHAZADO'
   /* Directorio compartido de eventos y ponentes (F3). */
   | 'DIR_EVENTO_NOMBRE_REQUERIDO'
   | 'DIR_EVENTO_YA_EXISTE'
@@ -163,6 +164,15 @@ const MENSAJES: Record<CodigoError, string> = {
   CARGA_ARCHIVO_MUY_GRANDE: 'Ese archivo supera el tamaño máximo admitido. Usa uno más liviano.',
   CARGA_API_KEY_REQUERIDA: 'Necesitas una API key configurada antes de cargar una conferencia.',
   CARGA_FALLO_INESPERADO: 'No pudimos recibir la conferencia. Vuelve a intentarlo en unos momentos.',
+  /*
+    Separado del genérico a propósito: la fila se guarda y el archivo se sube
+    en dos pasos distintos, y confundirlos manda a reintentar cuando lo que
+    hay que hacer es cambiar el archivo. El motivo de verdad (tamaño, formato,
+    permisos del bucket) sale por consola: es de Supabase y no se puede
+    traducir sin adivinar.
+  */
+  CARGA_ARCHIVO_RECHAZADO:
+    'La conferencia se guardó pero el almacenamiento rechazó el archivo. Mira la consola para ver el motivo exacto; lo más habitual es que pese más de lo que el proyecto admite.',
 
   DIR_EVENTO_NOMBRE_REQUERIDO: 'Escribe un nombre para el evento antes de crearlo.',
   DIR_EVENTO_YA_EXISTE: 'Ya existe un evento con ese nombre. Elígelo de la lista o usa otro nombre.',

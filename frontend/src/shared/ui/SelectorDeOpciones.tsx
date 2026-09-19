@@ -1,4 +1,4 @@
-import type { FormEvent, ReactElement } from 'react'
+import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Popover } from './Popover'
 
@@ -78,6 +78,25 @@ export function SelectorDeOpciones<T extends string>({
     )
   }
 
+  function crear(): void {
+    if (alCrear === undefined || creando || nombre.trim().length === 0) {
+      return
+    }
+
+    setCreando(true)
+    void alCrear(nombre).then((resultado) => {
+      setCreando(false)
+
+      if (resultado.ok) {
+        setNombre('')
+        setError(null)
+        alCambiar(resultado.valor)
+      } else {
+        setError(resultado.mensaje)
+      }
+    })
+  }
+
   return (
     <Popover
       alinear={alinear}
@@ -131,27 +150,12 @@ export function SelectorDeOpciones<T extends string>({
           })}
 
           {alCrear === undefined ? null : (
-            <form
-              onSubmit={(evento: FormEvent<HTMLFormElement>) => {
-                evento.preventDefault()
-                if (creando || nombre.trim().length === 0) return
-
-                setCreando(true)
-                void alCrear(nombre).then((resultado) => {
-                  setCreando(false)
-
-                  if (resultado.ok) {
-                    setNombre('')
-                    setError(null)
-                    alCambiar(resultado.valor)
-                    cerrar()
-                  } else {
-                    setError(resultado.mensaje)
-                  }
-                })
-              }}
-              className="mt-1 flex flex-col gap-1.5 border-t border-filete pt-2"
-            >
+            /*
+              Sin `<form>`, por la misma razón que el selector de etiquetas:
+              esto puede acabar dentro de un formulario y anidarlos dispara una
+              submisión nativa que recarga la aplicación.
+            */
+            <div className="mt-1 flex flex-col gap-1.5 border-t border-filete pt-2">
               <div className="flex gap-1.5">
                 <input
                   value={nombre}
@@ -159,12 +163,19 @@ export function SelectorDeOpciones<T extends string>({
                     setNombre(cambio.target.value)
                     setError(null)
                   }}
+                  onKeyDown={(tecla) => {
+                    if (tecla.key === 'Enter') {
+                      tecla.preventDefault()
+                      crear()
+                    }
+                  }}
                   placeholder={textoDeCreacion}
                   aria-label={textoDeCreacion}
                   className="h-10 min-w-0 flex-1 rounded-full bg-acento-tenue px-3 text-sm text-texto placeholder:text-texto-tenue focus:outline-none"
                 />
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={crear}
                   disabled={nombre.trim().length === 0 || creando}
                   aria-label={textoDeCreacion}
                   className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-acento text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-40"
@@ -180,7 +191,7 @@ export function SelectorDeOpciones<T extends string>({
                   {error}
                 </p>
               )}
-            </form>
+            </div>
           )}
         </div>
       )}

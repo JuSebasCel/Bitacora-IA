@@ -157,6 +157,8 @@ export async function crearConferencia(
   }))
 
   if (!fila.ok) {
+    /* Lo mismo que abajo: sin el motivo de Postgres no hay forma de saber si es RLS, una columna o un valor. */
+    console.error('[carga] no se pudo crear la fila de la conferencia:', respuesta.error)
     return fila
   }
 
@@ -175,8 +177,22 @@ export async function crearConferencia(
     .upload(rutaDeAudio(datos.idDueno, conferencia.id, archivo.name), archivo)
 
   if (error !== null) {
+    /*
+      El motivo real se escribe en consola. Supabase distingue entre archivo
+      demasiado grande, tipo no admitido y política del bucket, y los tres
+      llegaban aquí convertidos en el mismo "vuelve a intentarlo" — que además
+      es el peor consejo posible para los tres, porque reintentar no cambia
+      ninguno. No es información sensible: es el mensaje del almacenamiento
+      sobre un archivo que acaba de elegir quien lo está leyendo.
+    */
+    console.error('[carga] el almacenamiento rechazó el archivo:', error.message, {
+      archivo: archivo.name,
+      bytes: archivo.size,
+      ruta: rutaDeAudio(datos.idDueno, conferencia.id, archivo.name),
+    })
+
     await supabase.from('conferencias').delete().eq('id', conferencia.id)
-    return { ok: false, codigo: 'CARGA_FALLO_INESPERADO' }
+    return { ok: false, codigo: 'CARGA_ARCHIVO_RECHAZADO' }
   }
 
   return { ok: true, datos: conferencia }

@@ -239,7 +239,12 @@ describe('crearConferencia', () => {
 
     const resultado = await crearConferencia(DATOS_DE_CARGA, new File(['a'], 'charla.mp3'))
 
-    expect(resultado).toEqual({ ok: false, codigo: 'CARGA_FALLO_INESPERADO' })
+    /*
+      Código propio y no el genérico: que el almacenamiento rechace el archivo
+      pide cambiar el archivo, no reintentar, y con el mismo mensaje que un
+      fallo de escritura el consejo salía siempre equivocado para uno de los dos.
+    */
+    expect(resultado).toEqual({ ok: false, codigo: 'CARGA_ARCHIVO_RECHAZADO' })
     expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('conferencias')
   })
 

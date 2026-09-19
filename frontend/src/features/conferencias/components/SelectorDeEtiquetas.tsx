@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent, ReactElement } from 'react'
+import type { ReactElement } from 'react'
 import type { Etiqueta } from '../data'
 import type { ResultadoCreacion } from './CreadorDeEtiqueta'
 
@@ -51,9 +51,16 @@ export function SelectorDeEtiquetas({
   const [error, setError] = useState<string | null>(null)
   const [creando, setCreando] = useState(false)
 
-  async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
-    evento.preventDefault()
+  /*
+    Crear NO va dentro de un `<form>`.
 
+    Este selector se usa dentro del modal de carga, que ya es un formulario, y
+    un `<form>` dentro de otro es HTML inválido: el botón acababa disparando
+    una submisión nativa que recargaba la aplicación entera y devolvía a la
+    pantalla principal. Un campo con su botón y el Enter atado a mano hace lo
+    mismo sin depender de dónde se monte.
+  */
+  async function alEnviar(): Promise<void> {
     if (alCrear === undefined || creando) {
       return
     }
@@ -154,12 +161,7 @@ export function SelectorDeEtiquetas({
       )}
 
       {alCrear === undefined ? null : (
-        <form
-          onSubmit={(evento) => {
-            void alEnviar(evento)
-          }}
-          className="flex flex-col gap-1.5"
-        >
+        <div className="flex flex-col gap-1.5">
           <div className="flex gap-2">
             <input
               value={nombre}
@@ -167,12 +169,19 @@ export function SelectorDeEtiquetas({
                 setNombre(cambio.target.value)
                 setError(null)
               }}
+              onKeyDown={(tecla) => {
+                if (tecla.key === 'Enter') {
+                  tecla.preventDefault()
+                  void alEnviar()
+                }
+              }}
               placeholder="Nueva etiqueta"
               aria-label="Nombre de la etiqueta nueva"
               className="h-10 min-w-0 flex-1 rounded-full bg-acento-tenue px-4 text-sm text-texto placeholder:text-texto-tenue focus:outline-none"
             />
             <button
-              type="submit"
+              type="button"
+              onClick={() => void alEnviar()}
               disabled={nombre.trim().length === 0 || creando}
               className="h-10 shrink-0 cursor-pointer rounded-full bg-acento px-4 text-sm font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-40"
             >
@@ -185,7 +194,7 @@ export function SelectorDeEtiquetas({
               {error}
             </p>
           )}
-        </form>
+        </div>
       )}
     </div>
   )
