@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react'
+import type { FormEvent, ReactElement } from 'react'
+import { useState } from 'react'
 import { Popover } from './Popover'
 
 /*
@@ -37,6 +38,14 @@ export type PropsSelectorDeOpciones<T extends string> = {
   icono?: string
   alinear?: 'izquierda' | 'derecha'
   deshabilitado?: boolean
+  /**
+   * Si se pasa, el panel trae al final un renglón para crear una opción
+   * nueva. Va aquí dentro y no en un diálogo aparte: crear es otra forma de
+   * elegir, y abrir una ventana encima de la que ya estaba abierta para
+   * escribir una palabra es más ceremonia de la que el gesto pide.
+   */
+  alCrear?: (nombre: string) => Promise<{ ok: true; valor: T } | { ok: false; mensaje: string }>
+  textoDeCreacion?: string
 }
 
 export function SelectorDeOpciones<T extends string>({
@@ -48,7 +57,12 @@ export function SelectorDeOpciones<T extends string>({
   icono,
   alinear = 'izquierda',
   deshabilitado = false,
+  alCrear,
+  textoDeCreacion = 'Crear',
 }: PropsSelectorDeOpciones<T>): ReactElement {
+  const [nombre, setNombre] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [creando, setCreando] = useState(false)
   const elegida = opciones.find((opcion) => opcion.valor === valor)
 
   if (deshabilitado) {
@@ -69,8 +83,10 @@ export function SelectorDeOpciones<T extends string>({
       alinear={alinear}
       etiquetaAccesible={`${etiquetaAccesible}: ${elegida?.etiqueta ?? vacio}`}
       className="min-w-0"
+      claseDelBoton="max-w-full cursor-pointer"
+      claseDelPanel="w-56"
       boton={
-        <span className="flex h-11 min-w-0 items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion">
+        <span className="flex h-11 min-w-0 max-w-full items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion">
           {icono === undefined ? null : (
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
               {icono}
@@ -84,7 +100,7 @@ export function SelectorDeOpciones<T extends string>({
       }
     >
       {(cerrar) => (
-        <div className="flex max-h-[min(360px,50vh)] w-56 flex-col gap-1 overflow-y-auto">
+        <div className="flex flex-col gap-1">
           {opciones.map((opcion, indice) => {
             const activa = opcion.valor === valor
             const enUnExtremo = indice === 0 || indice === opciones.length - 1
@@ -113,6 +129,59 @@ export function SelectorDeOpciones<T extends string>({
               </button>
             )
           })}
+
+          {alCrear === undefined ? null : (
+            <form
+              onSubmit={(evento: FormEvent<HTMLFormElement>) => {
+                evento.preventDefault()
+                if (creando || nombre.trim().length === 0) return
+
+                setCreando(true)
+                void alCrear(nombre).then((resultado) => {
+                  setCreando(false)
+
+                  if (resultado.ok) {
+                    setNombre('')
+                    setError(null)
+                    alCambiar(resultado.valor)
+                    cerrar()
+                  } else {
+                    setError(resultado.mensaje)
+                  }
+                })
+              }}
+              className="mt-1 flex flex-col gap-1.5 border-t border-filete pt-2"
+            >
+              <div className="flex gap-1.5">
+                <input
+                  value={nombre}
+                  onChange={(cambio) => {
+                    setNombre(cambio.target.value)
+                    setError(null)
+                  }}
+                  placeholder={textoDeCreacion}
+                  aria-label={textoDeCreacion}
+                  className="h-10 min-w-0 flex-1 rounded-full bg-acento-tenue px-3 text-sm text-texto placeholder:text-texto-tenue focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={nombre.trim().length === 0 || creando}
+                  aria-label={textoDeCreacion}
+                  className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-acento text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-40"
+                >
+                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                    add
+                  </span>
+                </button>
+              </div>
+
+              {error === null ? null : (
+                <p role="alert" className="px-3 text-sm text-error">
+                  {error}
+                </p>
+              )}
+            </form>
+          )}
         </div>
       )}
     </Popover>

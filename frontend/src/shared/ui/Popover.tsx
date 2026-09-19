@@ -1,14 +1,24 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactElement, ReactNode } from 'react'
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { unirClases } from './clases'
 
 /*
-  Patrón unificado para "un solo botón que abre un panel flotante". Lo usan el
-  selector de orden y el panel de filtros del dashboard, y cualquier control
-  futuro que necesite el mismo gesto: sustituye al `<select>` grande y al
-  bloque de filtros siempre desplegado por algo más cercano a un producto que a
-  un formulario.
+  Patrón unificado para "un solo botón que abre un panel flotante".
+
+  **El panel se dibuja en un portal sobre `document.body`, con posición fija
+  calculada del disparador.** Antes era `absolute` dentro del flujo, y eso lo
+  dejaba a merced de cualquier antepasado con `overflow: hidden` o `auto`: el
+  calendario del modal de carga salía recortado por el cuerpo desplazable del
+  propio modal, que es exactamente el caso que lo destapó. Con el portal, el
+  panel no tiene antepasados que lo recorten.
+
+  El precio del portal es que el panel deja de estar dentro del contenedor, así
+  que el clic de fuera tiene que mirar los dos: el disparador y el panel.
+
+  La posición se recalcula al desplazar o redimensionar, porque un panel fijo
+  no viaja con la página como lo hacía el absoluto.
 
   Deliberadamente no es un menú ARIA (`role="menu"` con navegación por
   flechas): el contenido son controles nativos (radios, checkboxes, botones),
@@ -16,6 +26,9 @@ import { unirClases } from './clases'
   significaría reimplementar a mano una navegación que el navegador ya da
   gratis, y a medias, que es peor que no darla.
 */
+
+const MARGEN = 12
+const SEPARACION = 8
 
 export type PropsPopover = {
   /** Contenido visible del botón disparador (texto, icono, o ambos). */
@@ -28,6 +41,14 @@ export type PropsPopover = {
   alAbrir?: () => void
   alCerrar?: () => void
   className?: string
+  /**
+   * Sustituye por completo el aspecto del disparador. Sin esto, el botón pone
+   * su propio relleno y fondo, que se suman a los del contenido y descuadran
+   * a quien ya llega con forma de pastilla.
+   */
+  claseDelBoton?: string
+  /** Sustituye el tamaño del panel; el fondo, el radio y la elevación se conservan. */
+  claseDelPanel?: string
 }
 
 export function Popover({
@@ -38,12 +59,15 @@ export function Popover({
   alAbrir,
   alCerrar,
   className,
+  claseDelBoton,
+  claseDelPanel,
 }: PropsPopover): ReactElement {
   const [abierto, setAbierto] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
   const disparadorRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const [correccionHorizontal, setCorreccionHorizontal] = useState(0)
+  /* Números y no `CSSProperties`: `motion` tiene su propio tipo de estilo y no acepta el de React. */
+  const [posicion, setPosicion] = useState({ top: -9999, left: -9999, maxHeight: 0 })
   const reducirMovimiento = useReducedMotion()
   const idPanel = useId()
 
@@ -53,37 +77,54 @@ export function Popover({
   }
 
   /*
-    `alinear` fija un lado preferido, pero no basta: en viewports angostos los
-    controles se envuelven (`flex-wrap`) y el mismo botón puede terminar cerca
-    del borde contrario al que asumió `alinear` (el filtro "Filtros" alineado
-    a la derecha, por ejemplo, puede acabar pegado al borde izquierdo en
-    móvil). Tras montar el panel se mide su posición real y, si se sale de la
-    pantalla por cualquier lado, se corrige con un desplazamiento horizontal
-    encima de la posición base, en vez de recalcular `alinear` en cada sitio
-    que usa `Popover`.
+    Sitúa el panel bajo el disparador y lo mete dentro de la pantalla: se
+    corre en horizontal si se sale por un lado, y se pasa arriba si abajo no
+    cabe pero arriba sí.
   */
+  const situar = useCallback((): void => {
+    const disparador = disparadorRef.current
+    const panel = panelRef.current
+
+    if (disparador === null || panel === null) {
+      return
+    }
+
+    const ancla = disparador.getBoundingClientRect()
+    const { width, height } = panel.getBoundingClientRect()
+
+    const izquierdaBase = alinear === 'derecha' ? ancla.right - width : ancla.left
+    const izquierda = Math.min(
+      Math.max(MARGEN, izquierdaBase),
+      Math.max(MARGEN, window.innerWidth - width - MARGEN),
+    )
+
+    const debajo = ancla.bottom + SEPARACION
+    const cabeDebajo = debajo + height <= window.innerHeight - MARGEN
+    const cabeEncima = ancla.top - SEPARACION - height >= MARGEN
+
+    setPosicion({
+      top: cabeDebajo || !cabeEncima ? debajo : ancla.top - SEPARACION - height,
+      left: izquierda,
+      maxHeight: window.innerHeight - MARGEN * 2,
+    })
+  }, [alinear])
+
   useLayoutEffect(() => {
     if (!abierto) {
-      setCorreccionHorizontal(0)
       return
     }
 
-    const panel = panelRef.current
-    if (!panel) {
-      return
-    }
+    situar()
 
-    const margen = 12
-    const { left, right } = panel.getBoundingClientRect()
+    window.addEventListener('resize', situar)
+    /* En captura: sirve también para el desplazamiento de cualquier contenedor interno. */
+    window.addEventListener('scroll', situar, true)
 
-    if (left < margen) {
-      setCorreccionHorizontal(margen - left)
-    } else if (right > window.innerWidth - margen) {
-      setCorreccionHorizontal(window.innerWidth - margen - right)
-    } else {
-      setCorreccionHorizontal(0)
+    return () => {
+      window.removeEventListener('resize', situar)
+      window.removeEventListener('scroll', situar, true)
     }
-  }, [abierto])
+  }, [abierto, situar])
 
   /*
     Devuelve el foco al disparador solo cuando el cierre lo decide el teclado o
@@ -91,11 +132,11 @@ export function Popover({
     parte, y forzar el foco de vuelta ahí sería quitárselo de donde el usuario
     lo puso a propósito.
   */
-  function cerrarYEnfocar(): void {
+  const cerrarYEnfocar = useCallback((): void => {
     setAbierto(false)
     alCerrar?.()
     disparadorRef.current?.focus()
-  }
+  }, [alCerrar])
 
   useEffect(() => {
     if (!abierto) {
@@ -103,27 +144,33 @@ export function Popover({
     }
 
     function alPulsarFuera(evento: MouseEvent): void {
-      if (!contenedorRef.current?.contains(evento.target as Node)) {
-        setAbierto(false)
-        alCerrar?.()
+      const destino = evento.target as Node
+
+      /* El panel vive en un portal: no basta con mirar el contenedor. */
+      if (contenedorRef.current?.contains(destino) || panelRef.current?.contains(destino)) {
+        return
       }
+
+      setAbierto(false)
+      alCerrar?.()
     }
 
     function alPresionarTecla(evento: KeyboardEvent): void {
       if (evento.key === 'Escape') {
+        /* Que no se lo lleve además el modal que haya detrás. */
+        evento.stopPropagation()
         cerrarYEnfocar()
       }
     }
 
     document.addEventListener('mousedown', alPulsarFuera)
-    document.addEventListener('keydown', alPresionarTecla)
+    document.addEventListener('keydown', alPresionarTecla, true)
 
     return () => {
       document.removeEventListener('mousedown', alPulsarFuera)
-      document.removeEventListener('keydown', alPresionarTecla)
+      document.removeEventListener('keydown', alPresionarTecla, true)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto])
+  }, [abierto, alCerrar, cerrarYEnfocar])
 
   return (
     <div className={unirClases('relative', className)} ref={contenedorRef}>
@@ -135,30 +182,36 @@ export function Popover({
         aria-controls={idPanel}
         aria-label={etiquetaAccesible}
         onClick={() => (abierto ? cerrarYEnfocar() : abrir())}
-        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-texto-tenue transition-colors hover:bg-fondo hover:text-texto aria-expanded:bg-fondo aria-expanded:text-acento"
+        className={
+          claseDelBoton ??
+          'inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-texto-tenue transition-colors hover:bg-fondo hover:text-texto aria-expanded:bg-fondo aria-expanded:text-acento'
+        }
       >
         {boton}
       </button>
 
-      <AnimatePresence>
-        {abierto ? (
-          <motion.div
-            id={idPanel}
-            ref={panelRef}
-            initial={reducirMovimiento ? false : { opacity: 0, scale: 0.97, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={reducirMovimiento ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
-            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            style={{ x: correccionHorizontal }}
-            className={unirClases(
-              'elevacion absolute top-full z-30 mt-2 min-w-64 max-w-[min(20rem,90vw)] rounded-md bg-panel p-3',
-              alinear === 'derecha' ? 'right-0' : 'left-0',
-            )}
-          >
-            {children(cerrarYEnfocar)}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {abierto ? (
+            <motion.div
+              id={idPanel}
+              ref={panelRef}
+              initial={reducirMovimiento ? false : { opacity: 0, scale: 0.97, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={reducirMovimiento ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
+              transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              style={posicion}
+              className={unirClases(
+                'elevacion sin-barra-de-scroll fixed z-[60] overflow-y-auto rounded-[24px] bg-panel p-2',
+                claseDelPanel ?? 'min-w-64 max-w-[min(20rem,90vw)]',
+              )}
+            >
+              {children(cerrarYEnfocar)}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   )
 }

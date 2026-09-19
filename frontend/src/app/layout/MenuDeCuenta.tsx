@@ -51,12 +51,27 @@ export function MenuDeCuenta({
         lo despega del fondo y, dentro, el disco con las iniciales. Solo con el
         disco pequeño el avatar se leía como un punto suelto.
       */
+      claseDelBoton="flex w-full cursor-pointer items-center gap-3 rounded-[20px] p-2 text-left transition-colors hover:bg-acento-tenue"
       boton={
-        <span aria-hidden="true" className="relative inline-flex">
-          <span className="flex size-12 items-center justify-center rounded-full bg-acento-tenue">
-            <span className="flex size-7 items-center justify-center rounded-full bg-acento text-[0.6875rem] font-semibold text-acento-contraste">
+        <span aria-hidden="true" className="relative flex min-w-0 flex-1 items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-acento-tenue">
+            <span className="flex size-9 items-center justify-center rounded-full bg-acento text-sm font-semibold text-acento-contraste">
               {inicialesDe(usuario.nombre, usuario.correo)}
             </span>
+          </span>
+
+          {/*
+            El nombre y el correo al lado del avatar. Solo con el disco, la
+            cabecera del dock era un punto suelto en una franja vacía: el
+            hueco pedía contenido, no un círculo más grande.
+          */}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-semibold text-texto">{nombreVisible}</span>
+            <span className="truncate text-xs text-texto-tenue">{usuario.correo}</span>
+          </span>
+
+          <span className="material-symbols-rounded icono-contorno shrink-0 text-lg text-texto-tenue">
+            unfold_more
           </span>
           <AnimatePresence>
             {apiKeyFaltante ? (
@@ -65,7 +80,7 @@ export function MenuDeCuenta({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.4 }}
                 transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-pendiente ring-2 ring-panel"
+                className="absolute top-0 left-8 size-2.5 rounded-full bg-pendiente ring-2 ring-fondo"
               />
             ) : null}
           </AnimatePresence>
@@ -73,12 +88,8 @@ export function MenuDeCuenta({
       }
     >
       {(cerrar) => (
+        /* Sin repetir nombre y correo: desde que el disparador los enseña, volver a ponerlos aquí era decirlos dos veces. */
         <div className="flex flex-col gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-texto">{nombreVisible}</p>
-            <p className="truncate text-xs text-texto-tenue">{usuario.correo}</p>
-          </div>
-
           {apiKeyFaltante ? (
             <Link
               to="/configuracion#config-api-key"

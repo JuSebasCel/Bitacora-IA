@@ -333,10 +333,13 @@ export type PropsPantallaArchivo = {
   etiquetasDe: (idConferencia: string) => readonly EtiquetaVisible[]
   /** Si hay conferencias antes de filtrar: distingue el vacío por filtros del vacío por falta de datos. */
   hayConferenciasSinFiltrar: boolean
+  /** Se cuelga del botón de cargar, que es de donde crece el modal de carga. */
+  refDelBotonDeCarga?: RefObject<HTMLElement | null>
   alCambiarCriterios: (cambio: Partial<CriteriosDeListado>) => void
   alAlternarEtiquetaDelFiltro: (idEtiqueta: string) => void
   alCrearEtiqueta: (nombre: string) => Promise<ResultadoCreacion>
   alAlternarAsignacion: (idEtiqueta: string, idConferencia: string) => void
+  alEliminarEtiqueta?: (idEtiqueta: string) => void
 }
 
 export function PantallaArchivo({
@@ -351,10 +354,12 @@ export function PantallaArchivo({
   etiquetas,
   etiquetasDe,
   hayConferenciasSinFiltrar,
+  refDelBotonDeCarga,
   alCambiarCriterios,
   alAlternarEtiquetaDelFiltro,
   alCrearEtiqueta,
   alAlternarAsignacion,
+  alEliminarEtiqueta,
 }: PropsPantallaArchivo): ReactElement {
   const [evento, setEvento] = useState<string>(TODOS_EVENTOS)
   const [eje, setEje] = useState<Eje>('conferencias')
@@ -372,6 +377,9 @@ export function PantallaArchivo({
   const botonDeFiltros = useRef<HTMLButtonElement>(null)
   const botonDeEtiquetas = useRef<HTMLButtonElement>(null)
   const marco = useRef<HTMLDivElement>(null)
+
+  /* Sin conferencias no hay recorrido que ofrecer: ni eventos, ni temas, ni fichas. */
+  const archivoVacio = !hayConferenciasSinFiltrar && visibles.length === 0
 
   const filtrosActivos = contarFiltros(criterios)
 
@@ -524,24 +532,16 @@ export function PantallaArchivo({
   }
 
   const columnaDeEventos = (
-    <Columna
-      ancho={304}
-      colapsada={rama !== null || (enCompleta && nivelActual !== 'navegacion')}
-      pie={
-        <AccionDeColumna icono="upload" onClick={alCargarConferencia}>
-          Cargar conferencia
-        </AccionDeColumna>
-      }
-    >
+    <Columna ancho={304} colapsada={rama !== null || (enCompleta && nivelActual !== 'navegacion')}>
       {/*
-        Con filtros puestos el vacío significa otra cosa que sin ellos, y la
-        salida también: ahí no hay nada que cargar, hay algo que quitar.
+        Con filtros puestos el vacío significa otra cosa que sin ellos: ahí no
+        hay nada que cargar, hay algo que quitar. Sin ninguna conferencia en
+        absoluto, la columna se queda **muda**: lo que hay que hacer se dice
+        una sola vez, a la derecha, y no repetido en cada columna vacía.
       */}
-      {eventos.length === 0 ? (
+      {eventos.length === 0 && hayConferenciasSinFiltrar ? (
         <p className="px-6 py-4 text-base text-texto-tenue">
-          {hayConferenciasSinFiltrar
-            ? 'Ninguna conferencia pasa los filtros que pusiste.'
-            : 'Todavía no hay conferencias. Carga la primera para empezar.'}
+          Ninguna conferencia pasa los filtros que pusiste.
         </p>
       ) : null}
 
@@ -797,6 +797,7 @@ export function PantallaArchivo({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Conferencias</h1>
 
+          {/* Buscar, filtrar y cambiar de vista no significan nada sobre un archivo vacío. */}
           <div className="flex flex-wrap items-center gap-3">
             {/*
               El buscador abre el modal anclado del sistema, que crece desde
@@ -859,9 +860,12 @@ export function PantallaArchivo({
 
             <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={setVista} />
 
-            <BotonPildora variante="primario" icono="upload" onClick={alCargarConferencia}>
-              Cargar conferencia
-            </BotonPildora>
+            {/* El `span` lleva el ancla: envuelve exactamente la caja del botón. */}
+            <span ref={refDelBotonDeCarga} className="inline-flex">
+              <BotonPildora variante="primario" icono="upload" onClick={alCargarConferencia}>
+                Cargar conferencia
+              </BotonPildora>
+            </span>
           </div>
         </div>
 
@@ -916,6 +920,21 @@ export function PantallaArchivo({
         <Esqueleto filas={4} etiqueta="Cargando el archivo" />
       ) : error !== null ? (
         <PanelDeError mensaje={error} />
+      ) : /*
+        Archivo vacío: las dos columnas de navegación se quedan puestas pero
+        mudas, y lo único que habla es el panel de la derecha. Antes cada
+        columna repetía su propio "no hay nada", que era decir tres veces lo
+        mismo y dar a entender que se podía navegar por algo que no existe.
+        Sin conferencias no hay eventos, ni temas, ni fichas: no hay recorrido.
+      */
+      archivoVacio ? (
+        <div className="flex min-h-0 flex-1 gap-2">
+          <Columna ancho={304}>{null}</Columna>
+          <Columna ancho={304}>{null}</Columna>
+          <section className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-[24px] bg-fondo p-6 shadow-[inset_0_0_0_1px_var(--bitacora-filete)]">
+            <EstadoVacioIlustrado icono="upload_file" mensaje="Crea una conferencia para ver lo que dice" />
+          </section>
+        </div>
       ) : (
         <div className="flex min-h-0 flex-1 gap-2">
           {columnaDeEventos}
@@ -1021,6 +1040,7 @@ export function PantallaArchivo({
             marcadas={criterios.etiquetas}
             alAlternar={alAlternarEtiquetaDelFiltro}
             alCrear={alCrearEtiqueta}
+            {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
             vacio="Todavía no tienes etiquetas. Crea una para agrupar conferencias a tu manera."
           />
         </fieldset>
@@ -1055,6 +1075,7 @@ export function PantallaArchivo({
             }
           }}
           alCrear={alCrearEtiqueta}
+          {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
           vacio="Todavía no tienes etiquetas. Crea la primera aquí abajo."
         />
       </Modal>

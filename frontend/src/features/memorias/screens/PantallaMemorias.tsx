@@ -104,7 +104,13 @@ export function PantallaMemorias(): ReactElement {
   }
 
   return (
-    <>
+    /*
+      La pantalla ocupa el alto entero y el panel se lo reparte, en vez de ser
+      un bloque de alto fijo con el fondo asomando debajo. Es lo mismo que hace
+      el archivo de conferencias: el armazón mide la ventana y lo que se
+      desplaza es el contenido dentro de su caja.
+    */
+    <div className="flex min-h-0 flex-1 flex-col">
       {/*
         Título y controles en el mismo renglón, como la referencia. Antes el
         título iba solo y los controles en una fila aparte debajo, lo que
@@ -146,7 +152,13 @@ export function PantallaMemorias(): ReactElement {
         Al revés —panel relleno con tarjetas del mismo tono— las tarjetas
         desaparecerían contra él.
       */}
-      <div className="mt-8 flex min-h-112 flex-col rounded-[24px] p-6 shadow-[inset_0_0_0_1px_var(--bitacora-filete)]">
+      {/*
+        Relleno con el mismo gris de las columnas del archivo (`bg-panel`) y
+        no solo con filete: sobre el fondo casi negro, un panel únicamente
+        contorneado dejaba la pantalla entera en negro y las tarjetas
+        flotando sin superficie que las sostuviera.
+      */}
+      <div className="sin-barra-de-scroll mt-8 flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] bg-panel p-6">
         {/*
           Se espera también a las conferencias, y no solo a las memorias: la
           tarjeta muestra el nombre de la conferencia de origen, y pintarla
@@ -207,6 +219,6 @@ export function PantallaMemorias(): ReactElement {
         generar={generar}
         alGenerar={cerrarPanel}
       />
-    </>
+    </div>
   )
 }

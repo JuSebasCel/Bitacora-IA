@@ -206,11 +206,17 @@ describe('PantallaConferencias, filtros', () => {
     expect(await screen.findByText(/Ninguna conferencia pasa los filtros/)).toBeInTheDocument()
   })
 
-  it('explica el vacío cuando no hay ninguna conferencia', async () => {
+  /*
+    Con el archivo vacío las columnas se quedan mudas y solo habla el panel de
+    la derecha: repetir "no hay nada" en cada una daba a entender que se podía
+    navegar por algo que no existe.
+  */
+  it('explica el vacío cuando no hay ninguna conferencia, y solo una vez', async () => {
     sembrarSinConferencias()
     montar()
 
-    expect(await screen.findByText(/Todavía no hay conferencias/)).toBeInTheDocument()
+    expect(await screen.findByText('Crea una conferencia para ver lo que dice')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Todos los eventos/ })).not.toBeInTheDocument()
   })
 })
 

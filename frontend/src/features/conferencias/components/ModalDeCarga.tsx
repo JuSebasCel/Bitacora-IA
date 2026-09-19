@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent, ReactElement } from 'react'
+import type { FormEvent, ReactElement, RefObject } from 'react'
 import { useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useApiKey } from '@/features/configuracion/useApiKey'
 import { mensajeDeError } from '@/shared/errors'
-import { DialogoDeCreacion, Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
+import { Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
 import type { OpcionDeSelector } from '@/shared/ui'
 import {
   EXTENSIONES_POR_FUENTE,
@@ -43,9 +43,6 @@ import { SelectorDeEtiquetas } from './SelectorDeEtiquetas'
   la cabecera y el pie de la columna— y anclarlo lo haría nacer en un lugar
   distinto cada vez, una vez pegado al borde izquierdo de la pantalla.
 */
-
-const CREAR_EVENTO = '__crear_evento__'
-const CREAR_PONENTE = '__crear_ponente__'
 
 /* Las dos familias juntas: la extensión decide cuál es, no un control aparte. */
 const EXTENSIONES_ADMITIDAS = [
@@ -94,18 +91,26 @@ function pesoLegible(bytes: number): string {
 export type PropsModalDeCarga = {
   abierto: boolean
   alCerrar: () => void
+  /** El botón desde el que crece. Sin esto el modal solo se funde, sin FLIP. */
+  anclaEn?: RefObject<HTMLElement | null>
+  /** Región dentro de la cual debe caber, para no montarse sobre la navegación. */
+  limites?: RefObject<HTMLElement | null>
   /** La conferencia ya guardada, y las etiquetas que se le eligieron al crearla. */
   alCargar: (conferencia: Conferencia, idsDeEtiqueta: readonly string[]) => void
   etiquetas: readonly Etiqueta[]
   alCrearEtiqueta: (nombre: string) => Promise<ResultadoCreacion>
+  alEliminarEtiqueta?: (idEtiqueta: string) => void
 }
 
 export function ModalDeCarga({
   abierto,
   alCerrar,
+  anclaEn,
+  limites,
   alCargar,
   etiquetas,
   alCrearEtiqueta,
+  alEliminarEtiqueta,
 }: PropsModalDeCarga): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
@@ -122,7 +127,6 @@ export function ModalDeCarga({
   const [errores, setErrores] = useState<ErroresDeCampo>({})
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
-  const [dialogoAbierto, setDialogoAbierto] = useState<'evento' | 'ponente' | null>(null)
 
   /* Cada apertura empieza en blanco: es una conferencia nueva, no la anterior a medias. */
   useEffect(() => {
@@ -168,26 +172,25 @@ export function ModalDeCarga({
     setDuracion(await duracionDeArchivo(elegido))
   }
 
-  async function alCrearEvento(nombre: string): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+  /* Devuelven el id creado: el selector lo deja elegido sin un segundo viaje. */
+  async function alCrearEvento(
+    nombre: string,
+  ): Promise<{ ok: true; valor: string } | { ok: false; mensaje: string }> {
     const resultado = await crearEvento(nombre)
 
-    if (!resultado.ok) {
-      return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
-    }
-
-    actualizar({ idEvento: resultado.evento.id, idPonente: '' })
-    return { ok: true }
+    return resultado.ok
+      ? { ok: true, valor: resultado.evento.id }
+      : { ok: false, mensaje: mensajeDeError(resultado.codigo) }
   }
 
-  async function alCrearPonente(nombre: string): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+  async function alCrearPonente(
+    nombre: string,
+  ): Promise<{ ok: true; valor: string } | { ok: false; mensaje: string }> {
     const resultado = await crearPonente(campos.idEvento, nombre)
 
-    if (!resultado.ok) {
-      return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
-    }
-
-    actualizar({ idPonente: resultado.ponente.id })
-    return { ok: true }
+    return resultado.ok
+      ? { ok: true, valor: resultado.ponente.id }
+      : { ok: false, mensaje: mensajeDeError(resultado.codigo) }
   }
 
   function revisar(): ErroresDeCampo {
@@ -278,21 +281,26 @@ export function ModalDeCarga({
   */
   const opcionesDeEvento: readonly OpcionDeSelector<string>[] = [
     ...eventos.map((evento) => ({ valor: evento.id, etiqueta: evento.nombre })),
-    { valor: CREAR_EVENTO, etiqueta: 'Crear evento nuevo…', icono: 'add' },
   ]
 
   const opcionesDePonente: readonly OpcionDeSelector<string>[] = [
     ...ponentes
       .filter((ponente) => ponente.idEvento === campos.idEvento)
       .map((ponente) => ({ valor: ponente.id, etiqueta: ponente.nombre })),
-    { valor: CREAR_PONENTE, etiqueta: 'Crear ponente nuevo…', icono: 'add' },
   ]
 
   const sinClave = !cargandoApiKey && apiKey === null
 
   return (
     <>
-      <Modal abierto={abierto} alCerrar={alCerrar} titulo="Cargar conferencia" ancho="normal">
+      <Modal
+        abierto={abierto}
+        alCerrar={alCerrar}
+        titulo="Cargar conferencia"
+        ancho="normal"
+        {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
+        {...(limites === undefined ? {} : { limites })}
+      >
         <form
           noValidate
           onSubmit={(evento) => {
@@ -401,11 +409,9 @@ export function ModalDeCarga({
                 vacio="Elige un evento"
                 valor={campos.idEvento}
                 opciones={opcionesDeEvento}
+                textoDeCreacion="Nombre del evento nuevo"
+                alCrear={alCrearEvento}
                 alCambiar={(valor) => {
-                  if (valor === CREAR_EVENTO) {
-                    setDialogoAbierto('evento')
-                    return
-                  }
                   /* Cambiar de evento invalida el ponente: los ponentes cuelgan del evento. */
                   actualizar({ idEvento: valor, idPonente: '' })
                 }}
@@ -418,13 +424,9 @@ export function ModalDeCarga({
                 deshabilitado={campos.idEvento === ''}
                 valor={campos.idPonente}
                 opciones={opcionesDePonente}
-                alCambiar={(valor) => {
-                  if (valor === CREAR_PONENTE) {
-                    setDialogoAbierto('ponente')
-                    return
-                  }
-                  actualizar({ idPonente: valor })
-                }}
+                textoDeCreacion="Nombre del ponente nuevo"
+                alCrear={alCrearPonente}
+                alCambiar={(valor) => actualizar({ idPonente: valor })}
               />
 
               <SelectorDeFecha
@@ -463,6 +465,7 @@ export function ModalDeCarga({
                 )
               }
               alCrear={alCrearEtiqueta}
+              {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
               vacio="Todavía no tienes etiquetas. Puedes crear una aquí y quedará puesta al cargar."
             />
           </div>
@@ -515,23 +518,6 @@ export function ModalDeCarga({
         </form>
       </Modal>
 
-      <DialogoDeCreacion
-        abierto={dialogoAbierto === 'evento'}
-        titulo="Nuevo evento"
-        etiquetaCampo="Nombre"
-        placeholder="Simposio Andino de Investigación Aplicada"
-        alCerrar={() => setDialogoAbierto(null)}
-        alCrear={alCrearEvento}
-      />
-
-      <DialogoDeCreacion
-        abierto={dialogoAbierto === 'ponente'}
-        titulo="Nuevo ponente"
-        etiquetaCampo="Nombre"
-        placeholder="Mariana Escobar Vallejo"
-        alCerrar={() => setDialogoAbierto(null)}
-        alCrear={alCrearPonente}
-      />
     </>
   )
 }

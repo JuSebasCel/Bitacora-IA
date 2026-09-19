@@ -6,6 +6,7 @@ import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
 
 /* Id compartido entre el cajón y su botón (aria-controls). */
+const CLAVE_DEL_DOCK = 'menti-vault:dock'
 const ID_DE_NAVEGACION = 'navegacion-del-shell'
 
 /* Lo que puede recibir el foco por tabulación dentro del cajón. */
@@ -25,6 +26,30 @@ function comoElemento(nodo: Element | null): HTMLElement | null {
 export function ShellLayout() {
   const [cajonAbierto, setCajonAbierto] = useState(false)
   const [panelDeChatAbierto, setPanelDeChatAbierto] = useState(false)
+
+  /*
+    Plegar el dock es una preferencia de quien mira, igual que el tema, así
+    que vive en `localStorage` y no en la URL: no describe qué estás viendo y
+    no tiene sentido que viaje en un enlace compartido.
+
+    El acceso va en `try` porque en una ventana privada o con las cookies
+    bloqueadas lanza, y quedarse sin dock por eso sería absurdo.
+  */
+  const [dockPlegado, setDockPlegado] = useState(() => {
+    try {
+      return localStorage.getItem(CLAVE_DEL_DOCK) === 'plegado'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLAVE_DEL_DOCK, dockPlegado ? 'plegado' : 'desplegado')
+    } catch {
+      /* Sin almacenamiento el dock simplemente no recuerda; no es un fallo que contar. */
+    }
+  }, [dockPlegado])
   const refDelCajon = useRef<HTMLElement>(null)
   const refDelBotonDelCajon = useRef<HTMLButtonElement>(null)
 
@@ -123,6 +148,8 @@ export function ShellLayout() {
           alNavegar={cerrarCajon}
           refDelCajon={refDelCajon}
           alAbrirChat={() => setPanelDeChatAbierto(true)}
+          plegada={dockPlegado}
+          alPlegar={() => setDockPlegado(true)}
         />
 
         {cajonAbierto ? (
@@ -134,6 +161,25 @@ export function ShellLayout() {
         ) : null}
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {/*
+            Con el dock plegado, esto es lo único que queda de él. Va flotando
+            sobre el contenido y no dentro del flujo para que desplegarlo no
+            recoloque la pantalla dos veces —una por el botón que desaparece y
+            otra por el dock que entra—.
+          */}
+          {dockPlegado ? (
+            <button
+              type="button"
+              onClick={() => setDockPlegado(false)}
+              aria-label="Mostrar el panel lateral"
+              className="dock-entra fixed top-4 left-4 z-30 hidden size-10 cursor-pointer items-center justify-center rounded-full bg-panel text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete)] transition-colors hover:text-texto md:flex"
+            >
+              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
+                left_panel_open
+              </span>
+            </button>
+          ) : null}
+
           <BarraSuperior
             cajonAbierto={cajonAbierto}
             idDeNavegacion={ID_DE_NAVEGACION}

@@ -19,7 +19,7 @@ export type PropsTarjetaDeMemoria = {
 }
 
 /*
-  Tarjeta del listado de memorias. La superficie (`bg-panel`) ya separa cada
+  Tarjeta del listado de memorias. La superficie (`bg-fondo`) ya separa cada
   tarjeta en reposo, sin sombra: en este sistema la separación la da el tono,
   no una elevación. El hover solo lleva el título al color de acento.
 
@@ -73,7 +73,13 @@ export function TarjetaDeMemoria({
       que se va a pulsar.
     */
     <div
-      className={`group relative rounded-[24px] bg-panel ${
+      /*
+        `bg-fondo` y no `bg-panel`: el panel que las contiene pasó a ser gris,
+        y una tarjeta del mismo tono sobre él deja de leerse como tarjeta.
+        Aquí la jerarquía es al revés que en el archivo — la superficie que
+        contiene es la clara y la que se apoya, la oscura.
+      */
+      className={`group relative rounded-[24px] bg-fondo ${
         esFila ? 'flex items-center gap-4 py-3 pr-14 pl-4' : 'flex flex-col gap-3 p-6'
       }`}
     >
@@ -117,7 +123,7 @@ export function TarjetaDeMemoria({
               aria-valuenow={progreso}
               aria-valuemin={0}
               aria-valuemax={100}
-              className="h-1 w-full overflow-hidden rounded-full bg-fondo"
+              className="h-1 w-full overflow-hidden rounded-full bg-acento-tenue"
             >
               <div
                 className="h-full rounded-full bg-acento transition-[width] duration-200 ease-linear"

@@ -137,3 +137,29 @@ export async function quitarAsignacionRemota(
     ? { ok: true, datos: null }
     : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'ETQ_NO_EDITABLE' }))
 }
+
+/*
+  Borra una etiqueta propia. Las asignaciones caen solas: la clave foránea de
+  `etiquetas_asignaciones` está declarada `on delete cascade`, así que no hay
+  que recorrerlas a mano ni queda ninguna colgando.
+
+  RLS decide si es tuya. Si no lo es, Postgres no borra nada y no lo considera
+  un error, así que aquí se distingue por el número de filas devueltas.
+*/
+export async function eliminarEtiquetaRemota(
+  idEtiqueta: string,
+): Promise<ResultadoDeConsulta<null>> {
+  const { data, error } = await supabase
+    .from('etiquetas')
+    .delete()
+    .eq('id', idEtiqueta)
+    .select('id')
+
+  if (error !== null) {
+    return resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'ETQ_NO_EDITABLE' }))
+  }
+
+  return (data ?? []).length > 0
+    ? { ok: true, datos: null }
+    : { ok: false, codigo: 'ETQ_NO_EDITABLE' }
+}

@@ -31,6 +31,8 @@ export type PropsSelectorDeEtiquetas = {
   alCrear?: (nombre: string) => ResultadoCreacion | Promise<ResultadoCreacion>
   /** Qué decir cuando todavía no hay ninguna etiqueta. */
   vacio: string
+  /** Si se pasa, cada etiqueta trae una ✕ para borrarla del espacio propio. */
+  alEliminar?: (idEtiqueta: string) => void
 }
 
 const PASTILLA =
@@ -42,7 +44,9 @@ export function SelectorDeEtiquetas({
   alAlternar,
   alCrear,
   vacio,
+  alEliminar,
 }: PropsSelectorDeEtiquetas): ReactElement {
+  const [porBorrar, setPorBorrar] = useState<string | null>(null)
   const [nombre, setNombre] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [creando, setCreando] = useState(false)
@@ -74,24 +78,76 @@ export function SelectorDeEtiquetas({
         <div className="flex flex-wrap gap-1.5">
           {etiquetas.map((etiqueta) => {
             const marcada = marcadas.includes(etiqueta.id)
+            const confirmando = porBorrar === etiqueta.id
+
+            /*
+              Borrar pide un segundo clic sobre la propia pastilla, que se
+              vuelve roja y dice "¿Borrar?". Sin ese paso, una ✕ pequeña
+              pegada al nombre se pulsa sin querer al intentar marcarla — y
+              con la etiqueta se van todas sus asignaciones, que es lo que
+              hace el descuido caro.
+            */
+            if (confirmando) {
+              return (
+                <span
+                  key={etiqueta.id}
+                  className="flex items-center gap-1 rounded-full bg-error px-1 py-0.5 text-sm text-acento-contraste"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPorBorrar(null)
+                      void alEliminar?.(etiqueta.id)
+                    }}
+                    className="cursor-pointer rounded-full px-2 py-0.5"
+                  >
+                    ¿Borrar «{etiqueta.nombre}»?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPorBorrar(null)}
+                    aria-label="Conservar la etiqueta"
+                    className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-acento-contraste/20"
+                  >
+                    <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+                      close
+                    </span>
+                  </button>
+                </span>
+              )
+            }
 
             return (
-              <label
+              <span
                 key={etiqueta.id}
-                className={`${PASTILLA} ${
-                  marcada
-                    ? 'bg-acento text-acento-contraste'
-                    : 'bg-acento-tenue text-texto-tenue hover:text-texto'
+                className={`group flex items-center rounded-full transition-colors ${
+                  marcada ? 'bg-acento text-acento-contraste' : 'bg-acento-tenue text-texto-tenue'
                 }`}
               >
-                <input
-                  type="checkbox"
-                  checked={marcada}
-                  onChange={() => alAlternar(etiqueta.id)}
-                  className="absolute inset-0 cursor-pointer appearance-none opacity-0"
-                />
-                {etiqueta.nombre}
-              </label>
+                <label className={`${PASTILLA} ${marcada ? '' : 'hover:text-texto'}`}>
+                  <input
+                    type="checkbox"
+                    checked={marcada}
+                    onChange={() => alAlternar(etiqueta.id)}
+                    className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+                  />
+                  {etiqueta.nombre}
+                </label>
+
+                {alEliminar === undefined ? null : (
+                  <button
+                    type="button"
+                    onClick={() => setPorBorrar(etiqueta.id)}
+                    aria-label={`Borrar la etiqueta ${etiqueta.nombre}`}
+                    /* Aparece al pasar por encima o al enfocar: no ensucia la lista en reposo. */
+                    className="mr-1 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+                  >
+                    <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+                      close
+                    </span>
+                  </button>
+                )}
+              </span>
             )
           })}
         </div>

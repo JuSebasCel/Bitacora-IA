@@ -11,6 +11,7 @@ import type { EtiquetaVisible, ResultadoEspacio, ResultadoEtiqueta } from './eti
 import {
   asignarEtiquetaRemota,
   crearEtiquetaRemota,
+  eliminarEtiquetaRemota,
   leerEtiquetasVisiblesPorConferencia,
   leerMiEspacio,
   quitarAsignacionRemota,
@@ -45,6 +46,8 @@ export type ValorDeEtiquetas = {
   readonly crear: (nombre: string) => Promise<ResultadoEtiqueta>
   readonly asignar: (idEtiqueta: string, idConferencia: string) => Promise<ResultadoEspacio>
   readonly quitar: (idEtiqueta: string, idConferencia: string) => Promise<ResultadoEspacio>
+  /** Borra la etiqueta del espacio propio; sus asignaciones caen con ella. */
+  readonly eliminar: (idEtiqueta: string) => Promise<ResultadoEspacio>
 }
 
 const MAPA_VACIO: ReadonlyMap<string, readonly EtiquetaVisible[]> = new Map()
@@ -158,5 +161,32 @@ export function useEtiquetas(idUsuario: string): ValorDeEtiquetas {
     [espacio],
   )
 
-  return { espacio, cargando, visiblesDe, crear, asignar, quitar }
+  const eliminar = useCallback(
+    async (idEtiqueta: string): Promise<ResultadoEspacio> => {
+      const remoto = await eliminarEtiquetaRemota(idEtiqueta)
+
+      if (!remoto.ok) {
+        return { ok: false, codigo: remoto.codigo }
+      }
+
+      /*
+        En local hay que quitar las dos cosas. La cascada existe en Postgres,
+        no en este estado: dejar las asignaciones huérfanas aquí haría que las
+        conferencias siguieran enseñando una etiqueta que ya no existe hasta
+        la siguiente recarga.
+      */
+      const espacioNuevo: EspacioDeEtiquetas = {
+        etiquetas: espacio.etiquetas.filter((etiqueta) => etiqueta.id !== idEtiqueta),
+        asignaciones: espacio.asignaciones.filter(
+          (asignacion) => asignacion.idEtiqueta !== idEtiqueta,
+        ),
+      }
+      setEspacio(espacioNuevo)
+
+      return { ok: true, espacio: espacioNuevo }
+    },
+    [espacio],
+  )
+
+  return { espacio, cargando, visiblesDe, crear, asignar, quitar, eliminar }
 }

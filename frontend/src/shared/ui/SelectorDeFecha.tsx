@@ -63,6 +63,8 @@ export function SelectorDeFecha({
     <Popover
       alinear={alinear}
       etiquetaAccesible={`${etiquetaAccesible}: ${valor === null ? vacio : fechaLegible(valor)}`}
+      claseDelBoton="cursor-pointer"
+      claseDelPanel="w-[336px] p-3"
       boton={
         <span
           className={`flex h-11 items-center gap-2 rounded-full px-4 text-base transition-colors ${
@@ -79,7 +81,7 @@ export function SelectorDeFecha({
       }
     >
       {(cerrar) => (
-        <div className="w-80">
+        <div>
           <Calendario
             valor={valor}
             {...(minimo === undefined ? {} : { minimo })}

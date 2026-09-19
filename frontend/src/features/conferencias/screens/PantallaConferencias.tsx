@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useSearchParams } from 'react-router'
 import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
@@ -36,9 +36,17 @@ export function PantallaConferencias(): ReactElement {
   const idUsuario = usuario?.id ?? ''
   const { carga, visibles, fichas, error, recargar } = useConferenciasVisibles(idUsuario)
   const { temas } = useTemas()
-  const { espacio, visiblesDe, crear, asignar, quitar } = useEtiquetas(idUsuario)
+  const { espacio, visiblesDe, crear, asignar, quitar, eliminar } = useEtiquetas(idUsuario)
   const [params, setParams] = useSearchParams()
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
+
+  /*
+    El modal de carga crece desde el botón de la cabecera. También cuando lo
+    abre el dock con `?nuevo=1`: el botón sigue en pantalla, así que el gesto
+    se lee igual de bien venga de donde venga.
+  */
+  const botonDeCarga = useRef<HTMLElement>(null)
+  const marco = useRef<HTMLDivElement>(null)
 
   const idsDeEtiqueta = useMemo(() => espacio.etiquetas.map((etiqueta) => etiqueta.id), [espacio.etiquetas])
 
@@ -120,7 +128,7 @@ export function PantallaConferencias(): ReactElement {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div ref={marco} className="flex min-h-0 flex-1 flex-col">
       {/* El título y los controles viven dentro del archivo, en el mismo renglón. */}
       <PantallaArchivo
         visibles={listadas}
@@ -146,6 +154,8 @@ export function PantallaConferencias(): ReactElement {
         alAlternarEtiquetaDelFiltro={alternarEtiquetaDelFiltro}
         alCrearEtiqueta={alCrearEtiqueta}
         alAlternarAsignacion={alAlternarAsignacion}
+        alEliminarEtiqueta={(idEtiqueta) => void eliminar(idEtiqueta)}
+        refDelBotonDeCarga={botonDeCarga}
       />
 
       <ModalDeCarga
@@ -153,6 +163,9 @@ export function PantallaConferencias(): ReactElement {
         alCerrar={() => setPanelDeCargaAbierto(false)}
         etiquetas={espacio.etiquetas}
         alCrearEtiqueta={alCrearEtiqueta}
+        alEliminarEtiqueta={(idEtiqueta) => void eliminar(idEtiqueta)}
+        anclaEn={botonDeCarga}
+        limites={marco}
         /*
           Las etiquetas elegidas al cargar se asignan aquí y no dentro del
           modal: antes de guardar no hay conferencia a la que pegarlas, así

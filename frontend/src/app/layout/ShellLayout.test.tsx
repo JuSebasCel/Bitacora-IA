@@ -211,21 +211,29 @@ describe('ShellLayout', () => {
     expect(screen.getByText('Contenido del detalle')).toBeInTheDocument()
   })
 
-  it('el círculo de cuenta muestra las iniciales, no el nombre completo', () => {
+  /*
+    La cabecera del dock pasó de ser solo el disco de iniciales a llevar
+    también el nombre y el correo: con el círculo suelto, esa franja se leía
+    vacía. Las iniciales siguen dentro del disco.
+  */
+  it('la cabecera del dock muestra iniciales, nombre y correo', () => {
     montarShell()
 
-    expect(screen.queryByText(NOMBRE_DE_PRUEBA)).not.toBeInTheDocument()
-    expect(botonDeCuenta()).toHaveTextContent('VA')
+    const cuenta = botonDeCuenta()
+
+    expect(cuenta).toHaveTextContent('VA')
+    expect(cuenta).toHaveTextContent(NOMBRE_DE_PRUEBA)
+    expect(cuenta).toHaveTextContent('valentina.alcantara@labanfora.org')
   })
 
-  it('abre el menú de cuenta y muestra el nombre y el correo', async () => {
+  /* El menú ya no los repite: quien los enseña es el disparador. */
+  it('el menú de cuenta no repite el nombre ni el correo', async () => {
     const usuario = userEvent.setup()
     montarShell()
 
     await usuario.click(botonDeCuenta())
 
-    expect(screen.getByText(NOMBRE_DE_PRUEBA)).toBeInTheDocument()
-    expect(screen.getByText('valentina.alcantara@labanfora.org')).toBeInTheDocument()
+    expect(within(panelDeCuenta()).queryByText(NOMBRE_DE_PRUEBA)).not.toBeInTheDocument()
   })
 
   it('el menú de cuenta ofrece un atajo a Configuración', async () => {
