@@ -459,6 +459,40 @@
     instante (0.125s) y el tamaño se toma su tiempo (0.2s), que es lo que hace
     que el número parezca inflarse en vez de saltar.
   */
+  /*
+    Barrido de luz sobre algo que está trabajando.
+
+    Va en un pseudo-elemento y no en el fondo de la fila para no pelearse con
+    el color que la fila ya tiene (activa, al pasar por encima). `translate`
+    es lo único que se anima, así que corre en el compositor y no repinta la
+    lista entera cada cuadro.
+
+    El elemento necesita `position: relative` y `overflow: hidden`, que es lo
+    que recorta el brillo a su propia caja.
+  */
+  .barrido-de-carga::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--bitacora-acento-tenue) 45%,
+      var(--bitacora-acento-tenue) 55%,
+      transparent 100%
+    );
+    opacity: 0.9;
+    transform: translateX(-100%);
+    animation: barrido 1.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes barrido {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
   .dia-de-calendario {
     transition:
       background-color 0.125s,

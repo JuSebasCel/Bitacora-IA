@@ -266,6 +266,7 @@ function Fila({
   icono,
   secundario,
   etiquetas,
+  trabajando = false,
   onClick,
   children,
 }: {
@@ -274,6 +275,8 @@ function Fila({
   secundario?: string
   /* Solo texto: la fila entera ya es un botón y anidar otro dentro no es válido. */
   etiquetas?: readonly EtiquetaVisible[]
+  /** Barrido de luz mientras el análisis corre: es la única señal de que algo se mueve. */
+  trabajando?: boolean
   onClick?: () => void
   children: ReactNode
 }): ReactElement {
@@ -283,8 +286,8 @@ function Fila({
       onClick={onClick}
       aria-current={activa ? 'true' : undefined}
       className={`${FILA} transition-colors ${
-        activa ? 'bg-ilustracion text-ilustracion-texto' : 'text-texto hover:bg-acento-tenue'
-      }`}
+        trabajando ? 'barrido-de-carga relative overflow-hidden' : ''
+      } ${activa ? 'bg-ilustracion text-ilustracion-texto' : 'text-texto hover:bg-acento-tenue'}`}
     >
       <span
         aria-hidden="true"
@@ -680,6 +683,7 @@ export function PantallaArchivo({
               }
               etiquetas={etiquetasDe(v.conferencia.id)}
               {...(v.conferencia.estado === 'procesada' ? {} : { icono: ICONO_DE_ESTADO[v.conferencia.estado] })}
+              trabajando={v.conferencia.estado === 'procesando'}
               activa={rama === v.conferencia.id}
               onClick={() => {
                 setRama(v.conferencia.id)
