@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import type { ReactElement, ReactNode } from 'react'
+import type { ReactElement, ReactNode, RefObject } from 'react'
 import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import {
@@ -12,11 +12,14 @@ import {
   SelectorDeVista,
 } from '@/shared/ui'
 import type { OpcionDeVista } from '@/shared/ui'
+import type { ResultadoCreacion } from '../components'
+import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
-import type { EstadoDeValidacion, Ficha } from '../data'
-import { fichasDelCatalogo, privacidadEfectiva } from '../query'
-import type { ConferenciaVisible, FichaDelCatalogo } from '../query'
+import type { Etiqueta, EstadoDeValidacion, Ficha } from '../data'
+import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo, privacidadEfectiva } from '../query'
+import type { ConferenciaVisible, CriteriosDeListado, FichaDelCatalogo, FiltroDeEstado, Segmento } from '../query'
+import type { EtiquetaVisible } from '../tags'
 
 /*
   Archivo: todo el material en una sola pantalla, con el modelo de columnas de
@@ -74,6 +77,29 @@ const AMBITOS: readonly { valor: Ambito; etiqueta: string }[] = [
   { valor: 'seleccion', etiqueta: 'En esta selección' },
   { valor: 'todo', etiqueta: 'En todo el archivo' },
 ]
+
+const PROCEDENCIAS: readonly { valor: Segmento; etiqueta: string }[] = [
+  { valor: 'todas', etiqueta: 'Todas' },
+  { valor: 'propias', etiqueta: 'Propias' },
+  { valor: 'compartidas', etiqueta: 'Compartidas' },
+]
+
+/* Cinco opciones son demasiadas para un segmentado: van como pastillas de una sola elección. */
+const ESTADOS: readonly { valor: FiltroDeEstado; etiqueta: string }[] = [
+  { valor: 'todos', etiqueta: 'Cualquier estado' },
+  { valor: 'procesada', etiqueta: 'Procesada' },
+  { valor: 'procesando', etiqueta: 'Procesando' },
+  { valor: 'en-cola', etiqueta: 'En cola' },
+  { valor: 'fallida', etiqueta: 'Procesamiento interrumpido' },
+]
+
+/** Cuántos filtros están puestos. Lo dice el botón, para no tener que abrirlo a mirar. */
+function contarFiltros(criterios: CriteriosDeListado): number {
+  const porSegmento = criterios.segmento === CRITERIOS_POR_DEFECTO.segmento ? 0 : 1
+  const porEstado = criterios.estado === CRITERIOS_POR_DEFECTO.estado ? 0 : 1
+
+  return porSegmento + porEstado + criterios.etiquetas.length
+}
 
 /*
   Grupo de pastillas mutuamente excluyentes; lo usan el eje y el ámbito.
@@ -202,12 +228,15 @@ function Fila({
   activa = false,
   icono,
   secundario,
+  etiquetas,
   onClick,
   children,
 }: {
   activa?: boolean
   icono: string
   secundario?: string
+  /* Solo texto: la fila entera ya es un botón y anidar otro dentro no es válido. */
+  etiquetas?: readonly EtiquetaVisible[]
   onClick?: () => void
   children: ReactNode
 }): ReactElement {
@@ -233,6 +262,26 @@ function Fila({
         {secundario === undefined ? null : (
           <span className={`truncate text-sm ${activa ? 'opacity-80' : 'text-texto-tenue'}`}>{secundario}</span>
         )}
+
+        {etiquetas === undefined || etiquetas.length === 0 ? null : (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {etiquetas.map(({ etiqueta, propia }) => (
+              <span
+                key={etiqueta.id}
+                /* Las ajenas van en contorno: son de quien compartió, no se pueden quitar desde aquí. */
+                className={`rounded-full px-2 py-0.5 text-xs ${
+                  activa
+                    ? 'bg-ilustracion-texto/15'
+                    : propia
+                      ? 'bg-acento-tenue text-texto-tenue'
+                      : 'text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete)]'
+                }`}
+              >
+                {etiqueta.nombre}
+              </span>
+            ))}
+          </span>
+        )}
       </span>
     </button>
   )
@@ -242,22 +291,35 @@ function AccionDeColumna({
   icono,
   children,
   onClick,
+  ref,
+  insignia,
 }: {
   icono: string
   children: string
   onClick?: () => void
+  ref?: RefObject<HTMLButtonElement | null>
+  insignia?: number
 }): ReactElement {
   return (
-    <button type="button" onClick={onClick} className={`${FILA} text-texto transition-colors hover:bg-acento-tenue`}>
+    <button
+      ref={ref}
+      type="button"
+      onClick={onClick}
+      className={`${FILA} text-texto transition-colors hover:bg-acento-tenue`}
+    >
       <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-xl">
         {icono}
       </span>
       {children}
+      {insignia === undefined || insignia === 0 ? null : (
+        <span className="ml-auto rounded-full bg-acento px-2 text-sm text-acento-contraste">{insignia}</span>
+      )}
     </button>
   )
 }
 
 export type PropsPantallaArchivo = {
+  /** Ya filtradas por los criterios: esta pantalla pinta, no decide qué entra. */
   visibles: readonly ConferenciaVisible[]
   fichas: readonly Ficha[]
   temas: readonly Tema[]
@@ -265,6 +327,16 @@ export type PropsPantallaArchivo = {
   error: string | null
   alCargarConferencia: () => void
   alValidar: (idFicha: string) => void
+  criterios: CriteriosDeListado
+  /** Las etiquetas propias, que son las únicas que se pueden poner y quitar. */
+  etiquetas: readonly Etiqueta[]
+  etiquetasDe: (idConferencia: string) => readonly EtiquetaVisible[]
+  /** Si hay conferencias antes de filtrar: distingue el vacío por filtros del vacío por falta de datos. */
+  hayConferenciasSinFiltrar: boolean
+  alCambiarCriterios: (cambio: Partial<CriteriosDeListado>) => void
+  alAlternarEtiquetaDelFiltro: (idEtiqueta: string) => void
+  alCrearEtiqueta: (nombre: string) => Promise<ResultadoCreacion>
+  alAlternarAsignacion: (idEtiqueta: string, idConferencia: string) => void
 }
 
 export function PantallaArchivo({
@@ -275,6 +347,14 @@ export function PantallaArchivo({
   error,
   alCargarConferencia,
   alValidar,
+  criterios,
+  etiquetas,
+  etiquetasDe,
+  hayConferenciasSinFiltrar,
+  alCambiarCriterios,
+  alAlternarEtiquetaDelFiltro,
+  alCrearEtiqueta,
+  alAlternarAsignacion,
 }: PropsPantallaArchivo): ReactElement {
   const [evento, setEvento] = useState<string>(TODOS_EVENTOS)
   const [eje, setEje] = useState<Eje>('conferencias')
@@ -284,10 +364,29 @@ export function PantallaArchivo({
   const [busqueda, setBusqueda] = useState('')
   const [ambito, setAmbito] = useState<Ambito>('seleccion')
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
+  const [asignadorAbierto, setAsignadorAbierto] = useState(false)
   const [vista, setVista] = useState<Vista>('columnas')
 
   const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
+  const botonDeFiltros = useRef<HTMLButtonElement>(null)
+  const botonDeEtiquetas = useRef<HTMLButtonElement>(null)
   const marco = useRef<HTMLDivElement>(null)
+
+  const filtrosActivos = contarFiltros(criterios)
+
+  /* Solo hay conferencia concreta sobre la que etiquetar si el eje es el de conferencias. */
+  const idConferenciaSeleccionada = eje === 'conferencias' && rama !== null && rama !== TODOS ? rama : null
+
+  const etiquetasPropiasDeLaSeleccionada = useMemo(
+    () =>
+      idConferenciaSeleccionada === null
+        ? []
+        : etiquetasDe(idConferenciaSeleccionada)
+            .filter((visible) => visible.propia)
+            .map((visible) => visible.etiqueta.id),
+    [idConferenciaSeleccionada, etiquetasDe],
+  )
 
   const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
 
@@ -434,16 +533,30 @@ export function PantallaArchivo({
         </AccionDeColumna>
       }
     >
-      <Fila
-        icono="inventory_2"
-        activa={evento === TODOS_EVENTOS}
-        onClick={() => {
-          setEvento(TODOS_EVENTOS)
-          setIdFicha(null)
-        }}
-      >
-        Todos los eventos
-      </Fila>
+      {/*
+        Con filtros puestos el vacío significa otra cosa que sin ellos, y la
+        salida también: ahí no hay nada que cargar, hay algo que quitar.
+      */}
+      {eventos.length === 0 ? (
+        <p className="px-6 py-4 text-base text-texto-tenue">
+          {hayConferenciasSinFiltrar
+            ? 'Ninguna conferencia pasa los filtros que pusiste.'
+            : 'Todavía no hay conferencias. Carga la primera para empezar.'}
+        </p>
+      ) : null}
+
+      {eventos.length === 0 ? null : (
+        <Fila
+          icono="inventory_2"
+          activa={evento === TODOS_EVENTOS}
+          onClick={() => {
+            setEvento(TODOS_EVENTOS)
+            setIdFicha(null)
+          }}
+        >
+          Todos los eventos
+        </Fila>
+      )}
 
       {eventos.map((nombre) => (
         <Fila
@@ -522,6 +635,7 @@ export function PantallaArchivo({
               key={v.conferencia.id}
               icono="mic"
               secundario={`${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`}
+              etiquetas={etiquetasDe(v.conferencia.id)}
               activa={rama === v.conferencia.id}
               onClick={() => {
                 setRama(v.conferencia.id)
@@ -540,16 +654,34 @@ export function PantallaArchivo({
       expandida={enCompleta && nivelActual === 'fichas'}
       colapsada={(rama === null && !buscandoEnTodo) || (enCompleta && nivelActual !== 'fichas')}
       pie={
-        /* Buscando en todo el archivo no hay rama a la que volver: lo que cierra el paso es limpiar. */
-        buscandoEnTodo ? (
-          <AccionDeColumna icono="close" onClick={limpiarBusqueda}>
-            Limpiar la búsqueda
-          </AccionDeColumna>
-        ) : (
-          <AccionDeColumna icono="arrow_back" onClick={() => setRama(null)}>
-            {eje === 'temas' ? 'Volver a los temas' : 'Volver a las conferencias'}
-          </AccionDeColumna>
-        )
+        <>
+          {/*
+            Las etiquetas se ponen desde la conferencia elegida, que es el
+            único sitio donde la acción tiene un sujeto claro. En la fila no
+            caben: la fila entera ya es un botón.
+          */}
+          {idConferenciaSeleccionada === null ? null : (
+            <AccionDeColumna
+              ref={botonDeEtiquetas}
+              icono="label"
+              insignia={etiquetasPropiasDeLaSeleccionada.length}
+              onClick={() => setAsignadorAbierto(true)}
+            >
+              Etiquetas de esta conferencia
+            </AccionDeColumna>
+          )}
+
+          {/* Buscando en todo el archivo no hay rama a la que volver: lo que cierra el paso es limpiar. */}
+          {buscandoEnTodo ? (
+            <AccionDeColumna icono="close" onClick={limpiarBusqueda}>
+              Limpiar la búsqueda
+            </AccionDeColumna>
+          ) : (
+            <AccionDeColumna icono="arrow_back" onClick={() => setRama(null)}>
+              {eje === 'temas' ? 'Volver a los temas' : 'Volver a las conferencias'}
+            </AccionDeColumna>
+          )}
+        </>
       }
     >
       {fichasListadas.length === 0 ? (
@@ -705,6 +837,26 @@ export function PantallaArchivo({
               ) : null}
             </div>
 
+            {/* El contador dice cuántos filtros hay puestos sin tener que abrirlo. */}
+            <button
+              ref={botonDeFiltros}
+              type="button"
+              onClick={() => setFiltrosAbiertos(true)}
+              className={`flex h-10 cursor-pointer items-center gap-2 rounded-full px-4 text-base transition-colors ${
+                filtrosActivos > 0
+                  ? 'bg-acento text-acento-contraste'
+                  : 'bg-acento-tenue text-texto-tenue hover:text-texto'
+              }`}
+            >
+              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                filter_list
+              </span>
+              Filtros
+              {filtrosActivos === 0 ? null : (
+                <span className="rounded-full bg-acento-contraste px-1.5 text-sm text-acento">{filtrosActivos}</span>
+              )}
+            </button>
+
             <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={setVista} />
 
             <BotonPildora variante="primario" icono="upload" onClick={alCargarConferencia}>
@@ -807,6 +959,104 @@ export function PantallaArchivo({
                 buscandoEnTodo ? 'en todo el archivo' : `en ${nombreDeLaSeleccion}`
               }`}
         </p>
+      </Modal>
+
+      {/*
+        Los filtros acotan qué conferencias entran al explorador entero: los
+        eventos, las conferencias, los temas y las fichas salen todos de lo
+        que sobrevive a esto.
+      */}
+      <Modal
+        abierto={filtrosAbiertos}
+        alCerrar={() => setFiltrosAbiertos(false)}
+        titulo="Filtros"
+        anclaje="disparador"
+        anclaEn={botonDeFiltros}
+        ancho="angosto"
+        limites={marco}
+      >
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-sm font-medium text-texto-tenue">Procedencia</legend>
+          <Segmentado
+            opciones={PROCEDENCIAS}
+            valor={criterios.segmento}
+            alCambiar={(segmento) => alCambiarCriterios({ segmento })}
+          />
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-sm font-medium text-texto-tenue">Estado de procesamiento</legend>
+
+          <div className="flex flex-wrap gap-1.5">
+            {ESTADOS.map((opcion) => {
+              const activa = opcion.valor === criterios.estado
+
+              return (
+                <label
+                  key={opcion.valor}
+                  className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
+                    activa
+                      ? 'bg-acento text-acento-contraste'
+                      : 'bg-acento-tenue text-texto-tenue hover:text-texto'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="estado-del-archivo"
+                    checked={activa}
+                    onChange={() => alCambiarCriterios({ estado: opcion.valor })}
+                    className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+                  />
+                  {opcion.etiqueta}
+                </label>
+              )
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-sm font-medium text-texto-tenue">Etiquetas</legend>
+          <SelectorDeEtiquetas
+            etiquetas={etiquetas}
+            marcadas={criterios.etiquetas}
+            alAlternar={alAlternarEtiquetaDelFiltro}
+            alCrear={alCrearEtiqueta}
+            vacio="Todavía no tienes etiquetas. Crea una para agrupar conferencias a tu manera."
+          />
+        </fieldset>
+
+        {filtrosActivos === 0 ? null : (
+          <button
+            type="button"
+            onClick={() => alCambiarCriterios(CRITERIOS_POR_DEFECTO)}
+            className="h-10 cursor-pointer rounded-full bg-acento-tenue text-base text-texto transition-colors hover:bg-acento hover:text-acento-contraste"
+          >
+            Quitar los filtros
+          </button>
+        )}
+      </Modal>
+
+      {/* Poner y quitar etiquetas sobre la conferencia elegida. */}
+      <Modal
+        abierto={asignadorAbierto}
+        alCerrar={() => setAsignadorAbierto(false)}
+        titulo="Etiquetas"
+        anclaje="disparador"
+        anclaEn={botonDeEtiquetas}
+        ancho="angosto"
+        limites={marco}
+      >
+        <SelectorDeEtiquetas
+          etiquetas={etiquetas}
+          marcadas={etiquetasPropiasDeLaSeleccionada}
+          alAlternar={(idEtiqueta) => {
+            if (idConferenciaSeleccionada !== null) {
+              alAlternarAsignacion(idEtiqueta, idConferenciaSeleccionada)
+            }
+          }}
+          alCrear={alCrearEtiqueta}
+          vacio="Todavía no tienes etiquetas. Crea la primera aquí abajo."
+        />
       </Modal>
     </div>
   )

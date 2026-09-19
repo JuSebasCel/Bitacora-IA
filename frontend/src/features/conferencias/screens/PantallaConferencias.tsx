@@ -1,34 +1,66 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useSearchParams } from 'react-router'
 import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
 import { useSession } from '@/features/auth/session'
 import { useTemas } from '@/features/taxonomia'
+import { mensajeDeError } from '@/shared/errors'
 import { PanelDeCarga, useConferenciasVisibles } from '../components'
+import type { ResultadoCreacion } from '../components'
+import { escribirCriterios, leerCriterios, listarConferencias } from '../query'
+import type { CriteriosDeListado } from '../query'
 import { actualizarEstadoDeValidacion } from '../repositorio/repositorio'
+import { useEtiquetas } from '../tags'
 import { PantallaArchivo } from './PantallaArchivo'
 
 /*
   Conferencias y fichas en una sola sección.
 
-  Esta pantalla ya no lista nada por su cuenta: eso lo hace `PantallaArchivo`,
+  Esta pantalla no lista nada por su cuenta: eso lo hace `PantallaArchivo`,
   con el modelo de columnas de la referencia. Aquí queda lo que rodea a ese
-  recorrido — el título, el panel de carga y el parámetro `?nuevo=1` con el
-  que el dock pide abrirlo.
+  recorrido — los criterios, las etiquetas, el panel de carga y el parámetro
+  `?nuevo=1` con el que el dock pide abrirlo.
+
+  **Los criterios viven en la URL y no en estado de React.** Así una vista
+  filtrada se comparte como enlace, sobrevive a un recargado y se conserva al
+  volver de otra pantalla. La consecuencia es que la entrada es texto que
+  cualquiera puede escribir a mano, y de eso ya se encarga `leerCriterios`:
+  nada lanza, lo que no se reconoce cae al valor por defecto.
+
+  El orden dejó de ser un control —el archivo se lee por fecha, de lo último a
+  lo primero— pero sigue en los criterios porque sin él el listado cambiaría
+  solo entre recargas.
 */
 export function PantallaConferencias(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { carga, visibles, fichas, error, recargar } = useConferenciasVisibles(idUsuario)
   const { temas } = useTemas()
+  const { espacio, visiblesDe, crear, asignar, quitar } = useEtiquetas(idUsuario)
   const [params, setParams] = useSearchParams()
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
+
+  const idsDeEtiqueta = useMemo(() => espacio.etiquetas.map((etiqueta) => etiqueta.id), [espacio.etiquetas])
+
+  const criterios = useMemo(() => leerCriterios(params, idsDeEtiqueta), [params, idsDeEtiqueta])
+
+  const listadas = useMemo(
+    () =>
+      listarConferencias({
+        visibles,
+        criterios,
+        asignaciones: espacio.asignaciones,
+        fichas,
+      }),
+    [visibles, criterios, espacio.asignaciones, fichas],
+  )
 
   /*
     "Cargar conferencia" vive en el dock y llega como `?nuevo=1`. Va en un
     efecto y no en el valor inicial porque quien pulsa la acción puede estar
     ya en esta pantalla: entonces la ruta no se remonta, solo cambia la
-    consulta. El parámetro se borra al abrir para que recargar no lo reabra.
+    consulta. El parámetro se borra al abrir para que recargar no lo reabra,
+    y se conserva el resto de la consulta para no tirar los filtros puestos.
   */
   useEffect(() => {
     if (params.get(PARAMETRO_DE_CREACION) === null) {
@@ -42,11 +74,56 @@ export function PantallaConferencias(): ReactElement {
     setParams(siguiente, { replace: true })
   }, [params, setParams])
 
+  /*
+    Los cambios se aplican sobre los criterios que la URL tenga en ese
+    momento, no sobre los del render actual. Con la forma directa, dos cambios
+    seguidos antes de un re-render se pisaban entre sí: elegir una procedencia
+    y marcar una etiqueta a continuación descartaba la procedencia recién
+    elegida.
+  */
+  function aplicar(cambio: Partial<CriteriosDeListado>): void {
+    setParams((anteriores) => escribirCriterios({ ...leerCriterios(anteriores, idsDeEtiqueta), ...cambio }))
+  }
+
+  function alternarEtiquetaDelFiltro(idEtiqueta: string): void {
+    setParams((anteriores) => {
+      const previos = leerCriterios(anteriores, idsDeEtiqueta)
+      const etiquetas = previos.etiquetas.includes(idEtiqueta)
+        ? previos.etiquetas.filter((id) => id !== idEtiqueta)
+        : [...previos.etiquetas, idEtiqueta]
+
+      return escribirCriterios({ ...previos, etiquetas })
+    })
+  }
+
+  /*
+    Devuelve el mensaje ya traducido en el momento de intentar crear, y no un
+    estado que llegue en un render posterior: así quien abrió el campo decide
+    por sí solo si se limpia (éxito) o muestra el error, sin que esta pantalla
+    tenga que mantener ese estado por él.
+  */
+  async function alCrearEtiqueta(nombre: string): Promise<ResultadoCreacion> {
+    const resultado = await crear(nombre)
+
+    return resultado.ok
+      ? { ok: true, etiqueta: resultado.etiqueta }
+      : { ok: false, mensaje: mensajeDeError(resultado.codigo) }
+  }
+
+  /** Poner o quitar una etiqueta propia sobre la conferencia elegida. */
+  function alAlternarAsignacion(idEtiqueta: string, idConferencia: string): void {
+    const yaAsignada = espacio.asignaciones.some(
+      (asignacion) => asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia,
+    )
+
+    void (yaAsignada ? quitar(idEtiqueta, idConferencia) : asignar(idEtiqueta, idConferencia))
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* El título y los controles viven dentro del archivo, en el mismo renglón. */}
       <PantallaArchivo
-        visibles={visibles}
+        visibles={listadas}
         fichas={fichas}
         temas={temas}
         cargando={carga === 'cargando'}
@@ -61,6 +138,14 @@ export function PantallaConferencias(): ReactElement {
             if (respuesta.ok) recargar()
           })
         }}
+        criterios={criterios}
+        etiquetas={espacio.etiquetas}
+        etiquetasDe={visiblesDe}
+        hayConferenciasSinFiltrar={visibles.length > 0}
+        alCambiarCriterios={aplicar}
+        alAlternarEtiquetaDelFiltro={alternarEtiquetaDelFiltro}
+        alCrearEtiqueta={alCrearEtiqueta}
+        alAlternarAsignacion={alAlternarAsignacion}
       />
 
       <PanelDeCarga

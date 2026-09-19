@@ -6,7 +6,11 @@ import { SessionProvider } from '@/features/auth/session'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
 import { mensajeDeError } from '@/shared/errors'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
-import { sembrarConferencias, sembrarEtiquetasDe } from '@/test/conferenciasDePrueba'
+import {
+  sembrarConferencias,
+  sembrarEtiquetasDe,
+  sembrarSinConferencias,
+} from '@/test/conferenciasDePrueba'
 import { mockearFilaDe } from '@/test/supabaseDePrueba'
 import { PantallaConferencias } from './PantallaConferencias'
 
@@ -14,10 +18,15 @@ vi.mock('@/shared/supabase/cliente')
 vi.mock('@/features/conferencias/repositorio')
 
 /*
-  El dashboard de F2. Se monta con la sesión sembrada directamente en
-  sessionStorage, igual que hace la prueba del shell en F1: el recorrido de
-  acceso ya está cubierto por su propio módulo y repetirlo aquí solo alarga
-  cada caso.
+  El archivo de conferencias, después del rediseño.
+
+  La pantalla dejó de ser un listado de filas y pasó a ser el explorador de
+  columnas (`PantallaArchivo`). Lo que se prueba aquí es lo que esta pantalla
+  aporta por encima de ese recorrido: los criterios que viven en la URL, los
+  filtros que los cambian y las etiquetas personales.
+
+  Los recorridos del explorador en sí —bajar de evento a conferencia, abrir
+  una ficha, la vista completa— son suyos y no de esta pantalla.
 
   Camila Zuluaga es la cuenta de referencia porque es la única que ve las dos
   procedencias a la vez: tres conferencias propias y cuatro compartidas.
@@ -29,13 +38,7 @@ const ZULUAGA = {
   correo: 'camila.zuluaga@labanfora.org',
 }
 
-const BERRIO = {
-  id: 'fd5f0a48-ca53-425c-819a-a1b005f529bd',
-  nombre: 'Joaquín Berrío Salazar',
-  correo: 'joaquin.berrio@labanfora.org',
-}
-
-/* Expone la ubicación del router para poder comprobar que los filtros viajan a la URL. */
+/* Expone la ubicación del router para comprobar que los criterios viajan a la URL. */
 function Ubicacion() {
   const ubicacion = useLocation()
 
@@ -53,7 +56,6 @@ function montar(rutaInicial = '/conferencias', cuenta = ZULUAGA) {
           <Ubicacion />
           <Routes>
             <Route path="/conferencias" element={<PantallaConferencias />} />
-            <Route path="/conferencias/:idConferencia" element={<p>Detalle de la conferencia</p>} />
           </Routes>
         </MemoryRouter>
       </ProveedorDeApiKey>
@@ -65,16 +67,32 @@ function ubicacion(): string {
   return screen.getByTestId('ubicacion').textContent ?? ''
 }
 
-async function listado(): Promise<HTMLElement> {
-  return screen.findByRole('list', { name: /conferencias/i })
+/* La columna de conferencias es la segunda; la primera es la de eventos. */
+function columnaDeConferencias(): HTMLElement {
+  const columnas = document.querySelectorAll('section.columna-colapsable')
+  return columnas[1] as HTMLElement
 }
 
-async function filas(): Promise<HTMLElement[]> {
-  return within(await listado()).getAllByRole('listitem')
+async function esperarAlArchivo(): Promise<void> {
+  await screen.findByRole('button', { name: /Todos los eventos|Todavía no hay conferencias/ })
 }
 
-async function campoDeBusqueda(): Promise<HTMLElement> {
-  return screen.findByLabelText(/buscar/i)
+/** Títulos de las conferencias que el explorador está mostrando. */
+async function conferenciasListadas(): Promise<string[]> {
+  await esperarAlArchivo()
+
+  return within(columnaDeConferencias())
+    .getAllByRole('button')
+    .map((boton) => boton.textContent ?? '')
+    .filter((texto) => !/^(Conferencias|Temas)$/.test(texto.trim()))
+    .filter((texto) => !texto.includes('Todas las conferencias'))
+}
+
+async function abrirFiltros(): Promise<HTMLElement> {
+  await esperarAlArchivo()
+  await userEvent.click(screen.getByRole('button', { name: /Filtros/ }))
+
+  return screen.findByRole('dialog', { name: 'Filtros' })
 }
 
 beforeEach(() => {
@@ -89,311 +107,188 @@ describe('PantallaConferencias', () => {
   it('se anuncia con su encabezado de sección', async () => {
     montar()
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Conferencias' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Conferencias' })).toBeInTheDocument()
   })
 
-  /*
-    El estado de carga no se prueba desde aquí: React vacía el efecto dentro del
-    render, así que la pantalla nunca llega a observarse cargando. Los cuatro
-    estados del listado se prueban sobre el componente, en
-    `components/ListadoDeConferencias.test.tsx`, que es para lo que los recibe
-    como prop.
-  */
-  it('lista una fila por conferencia visible y ninguna ajena', async () => {
+  it('lista las conferencias que la sesión puede ver, y ninguna ajena', async () => {
     montar()
 
-    expect(await filas()).toHaveLength(7)
-    expect(screen.queryByText(/Evaluación de modelos de predicción/)).not.toBeInTheDocument()
-  })
+    const listadas = (await conferenciasListadas()).join(' | ')
 
-  it('muestra la coordenada de cada charla en monoespaciada', async () => {
-    montar()
-
-    const coordenada = await screen.findByText('CCDN-2026-01')
-
-    expect(coordenada).toHaveClass('coordenada')
-    /* Dos charlas del mismo día, así que la fecha aparece más de una vez. */
-    expect(screen.getAllByText('14 may 2026').length).toBeGreaterThan(0)
-  })
-
-  it('enlaza cada fila con el detalle de esa conferencia', async () => {
-    montar()
-
-    const enlace = await screen.findByRole('link', {
-      name: /Calidad de datos en registros administrativos/,
-    })
-
-    expect(enlace).toHaveAttribute('href', expect.stringContaining('/conferencias/cnf-zul-01'))
-  })
-
-  it('dice quién compartió cada conferencia ajena', async () => {
-    montar()
-
-    expect(await screen.findAllByText(/Valentina Alcántara Rueda/)).not.toHaveLength(0)
-  })
-
-  it('muestra el número de fichas y el estado de procesamiento', async () => {
-    montar()
-
-    expect(await screen.findByText('12 fichas')).toBeInTheDocument()
-    expect(screen.getAllByText('Procesada').length).toBeGreaterThan(0)
-  })
-
-  it('anuncia cuántas conferencias quedan a la vista', async () => {
-    montar()
-
-    expect(await screen.findByText(/7 conferencias/i)).toBeInTheDocument()
+    expect(listadas).toContain('Modelos de lenguaje aplicados a la revisión sistemática de literatura')
+    /* De Joaquín Berrío, que no comparte con Camila. */
+    expect(listadas).not.toContain('Series de tiempo aplicadas a la demanda')
   })
 })
 
-describe('PantallaConferencias, controles', () => {
-  it('acota el listado a las propias y lo deja escrito en la URL', async () => {
-    const usuario = userEvent.setup()
+describe('PantallaConferencias, filtros', () => {
+  it('acota por procedencia y lo deja escrito en la URL', async () => {
     montar()
-    await listado()
 
-    await usuario.click(screen.getByRole('radio', { name: 'Mías' }))
+    const filtros = await abrirFiltros()
+    await userEvent.click(within(filtros).getByRole('button', { name: 'Propias' }))
 
-    await waitFor(() => expect(ubicacion()).toContain('segmento=propias'))
-    expect(await filas()).toHaveLength(3)
+    await waitFor(() => {
+      expect(ubicacion()).toBe('/conferencias?segmento=propias')
+    })
   })
 
-  it('acota el listado a las compartidas conmigo', async () => {
-    const usuario = userEvent.setup()
+  it('acota por estado de procesamiento', async () => {
     montar()
-    await listado()
 
-    await usuario.click(screen.getByRole('radio', { name: 'Compartidas conmigo' }))
+    const filtros = await abrirFiltros()
+    await userEvent.click(within(filtros).getByRole('radio', { name: 'En cola' }))
 
-    await waitFor(async () => expect(await filas()).toHaveLength(4))
+    await waitFor(() => {
+      expect(ubicacion()).toBe('/conferencias?estado=en-cola')
+    })
+  })
+
+  it('acota por una etiqueta personal y lo deja escrito en la URL', async () => {
+    montar()
+
+    const filtros = await abrirFiltros()
+    await userEvent.click(within(filtros).getByRole('checkbox', { name: 'tesis' }))
+
+    await waitFor(() => {
+      expect(ubicacion()).toContain('etiquetas=etq-zul-tesis')
+    })
+
+    /* "tesis" está sobre cnf-alc-03 y cnf-zul-01; nada más debe quedar. */
+    const listadas = await conferenciasListadas()
+    expect(listadas).toHaveLength(2)
   })
 
   it('lee los criterios que ya venían en la URL al abrir la pantalla', async () => {
+    montar('/conferencias?segmento=compartidas')
+
+    const filtros = await abrirFiltros()
+
+    expect(within(filtros).getByRole('button', { name: 'Compartidas' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('descarta de la URL una etiqueta que no es de esta persona', async () => {
+    montar('/conferencias?etiquetas=etq-alc-art1')
+
+    const filtros = await abrirFiltros()
+
+    /* Es de Valentina: no aparece marcada ninguna, y el listado no se vacía por ella. */
+    for (const casilla of within(filtros).getAllByRole('checkbox')) {
+      expect(casilla).not.toBeChecked()
+    }
+  })
+
+  it('dice en el botón cuántos filtros están puestos', async () => {
+    montar('/conferencias?segmento=propias&estado=procesada')
+
+    await esperarAlArchivo()
+
+    expect(screen.getByRole('button', { name: /Filtros/ }).textContent).toContain('2')
+  })
+
+  it('devuelve el listado completo al quitar los filtros', async () => {
     montar('/conferencias?segmento=propias')
 
-    expect(await filas()).toHaveLength(3)
-    expect(screen.getByRole('radio', { name: 'Mías' })).toBeChecked()
+    const filtros = await abrirFiltros()
+    await userEvent.click(within(filtros).getByRole('button', { name: 'Quitar los filtros' }))
+
+    await waitFor(() => {
+      expect(ubicacion()).toBe('/conferencias')
+    })
   })
 
-  it('filtra por texto y lo deja escrito en la URL', async () => {
-    const usuario = userEvent.setup()
-    montar()
-    await listado()
-
-    await usuario.type(await campoDeBusqueda(), 'sesgos')
-
-    await waitFor(async () => expect(await filas()).toHaveLength(1))
-    expect(ubicacion()).toContain('buscar=sesgos')
-  })
-
-  it('filtra por estado de procesamiento', async () => {
-    const usuario = userEvent.setup()
-    montar()
-    await listado()
-
-    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    await usuario.click(await screen.findByRole('radio', { name: 'Procesada' }))
-
-    await waitFor(async () => expect(await filas()).toHaveLength(6))
-  })
-
-  it('ordena el listado por título', async () => {
-    const usuario = userEvent.setup()
-    montar()
-    await listado()
-
-    await usuario.click(screen.getByRole('button', { name: /ordenar por/i }))
-    await usuario.click(await screen.findByRole('radio', { name: 'Título, de la A a la Z' }))
-
-    await waitFor(() => expect(ubicacion()).toContain('orden=titulo-asc'))
-
-    const primera = (await filas())[0]
-    expect(primera).toHaveTextContent('Calidad de datos en registros administrativos')
-  })
-
-  it('filtra por una etiqueta personal', async () => {
-    const usuario = userEvent.setup()
-    montar()
-    await listado()
-
-    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    await usuario.click(await screen.findByRole('checkbox', { name: 'revisión 2026' }))
-
-    await waitFor(async () => expect(await filas()).toHaveLength(1))
-    expect(ubicacion()).toContain('etiquetas=')
-  })
-
-  /*
-    El contador sobre el botón "Filtros" es lo único que dice cuántos filtros
-    están activos sin tener que abrir el panel: si no se actualizara, alguien
-    podría dejar un filtro puesto sin saberlo.
-  */
-  it('muestra en el botón de filtros cuántos están activos', async () => {
-    const usuario = userEvent.setup()
-    montar()
-    await listado()
-
-    expect(screen.queryByText('1', { selector: 'span' })).not.toBeInTheDocument()
-
-    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    await usuario.click(await screen.findByRole('radio', { name: 'Procesada' }))
-
-    expect(screen.getByRole('button', { name: 'Filtros' })).toHaveTextContent('1')
-  })
-})
-
-describe('PantallaConferencias, estados vacíos', () => {
-  /*
-    Berrío no ha recibido nada compartido. Es el único caso del fixture que
-    permite probar este vacío con datos reales.
-  */
-  it('explica el vacío cuando no hay nada compartido con esa persona', async () => {
-    montar('/conferencias?segmento=compartidas', BERRIO)
-
-    expect(await screen.findByText(/nadie ha compartido/i)).toBeInTheDocument()
-  })
-
-  /*
-    Los dos vacíos no son el mismo: uno se resuelve cargando una conferencia y
-    el otro quitando un filtro. Decir lo mismo en los dos manda a la persona al
-    lugar equivocado.
-  */
   it('distingue el vacío por filtros del vacío por falta de datos', async () => {
-    montar('/conferencias?buscar=termodinamica')
+    montar('/conferencias?estado=fallida&segmento=compartidas&etiquetas=etq-zul-revision')
 
-    expect(await screen.findByText(/ningún resultado/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /quitar filtros/i })).toBeInTheDocument()
+    expect(await screen.findByText(/Ninguna conferencia pasa los filtros/)).toBeInTheDocument()
   })
 
-  it('restablece el listado completo al quitar los filtros', async () => {
-    const usuario = userEvent.setup()
-    montar('/conferencias?buscar=termodinamica')
+  it('explica el vacío cuando no hay ninguna conferencia', async () => {
+    sembrarSinConferencias()
+    montar()
 
-    await usuario.click(await screen.findByRole('button', { name: /quitar filtros/i }))
-
-    await waitFor(async () => expect(await filas()).toHaveLength(7))
-    expect(ubicacion()).toBe('/conferencias')
+    expect(await screen.findByText(/Todavía no hay conferencias/)).toBeInTheDocument()
   })
 })
 
 describe('PantallaConferencias, etiquetas', () => {
-  /*
-    Crear una etiqueta abre el panel de filtros, dispara el diálogo modal
-    desde el chip "Nueva etiqueta", y ese diálogo se cierra solo al crear con
-    éxito. Para comprobar que la etiqueta quedó disponible hay que volver a
-    abrir el panel: crearla no lo deja abierto a propósito, un diálogo por
-    encima de un popover abierto sería dos capas flotantes a la vez.
-  */
-  it('deja disponible una etiqueta recién creada', async () => {
-    const usuario = userEvent.setup()
+  it('muestra sobre cada conferencia las etiquetas que esa persona le puso', async () => {
     montar()
-    await listado()
 
-    /* La fila que Postgres devolvería tras insertar 'art2'. */
+    await esperarAlArchivo()
+
+    const fila = within(columnaDeConferencias()).getByRole('button', {
+      name: /Modelos de lenguaje aplicados a la revisión sistemática/,
+    })
+
+    /* Camila le puso "IA" a cnf-alc-01, que no es suya. */
+    expect(fila.textContent).toContain('IA')
+  })
+
+  it('pone una etiqueta sobre la conferencia elegida', async () => {
+    montar()
+
+    await esperarAlArchivo()
+
+    await userEvent.click(
+      within(columnaDeConferencias()).getByRole('button', {
+        name: /Modelos de lenguaje aplicados a la revisión sistemática/,
+      }),
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: /Etiquetas de esta conferencia/ }))
+
+    const asignador = await screen.findByRole('dialog', { name: 'Etiquetas' })
+    const casilla = within(asignador).getByRole('checkbox', { name: 'revisión 2026' })
+
+    expect(casilla).not.toBeChecked()
+
+    mockearFilaDe('etiquetas_asignaciones', {
+      id_etiqueta: 'etq-zul-revision',
+      id_conferencia: 'cnf-alc-01',
+    })
+    await userEvent.click(casilla)
+
+    await waitFor(() => {
+      expect(within(asignador).getByRole('checkbox', { name: 'revisión 2026' })).toBeChecked()
+    })
+  })
+
+  it('deja disponible una etiqueta recién creada', async () => {
+    montar()
+
+    const filtros = await abrirFiltros()
+
     mockearFilaDe('etiquetas', {
-      id: 'etq-nueva',
-      nombre: 'art2',
+      id: 'etq-zul-nueva',
+      nombre: 'congreso',
       id_propietario: ZULUAGA.id,
     })
 
-    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))
-    const dialogo = await screen.findByRole('dialog')
-    await usuario.type(within(dialogo).getByLabelText('Nombre'), 'art2')
-    await usuario.click(within(dialogo).getByRole('button', { name: 'Crear' }))
+    await userEvent.type(
+      within(filtros).getByLabelText('Nombre de la etiqueta nueva'),
+      'congreso',
+    )
+    await userEvent.click(within(filtros).getByRole('button', { name: 'Crear' }))
 
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    })
-
-    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    expect(await screen.findByRole('checkbox', { name: 'art2' })).toBeInTheDocument()
+    expect(await within(filtros).findByRole('checkbox', { name: 'congreso' })).toBeInTheDocument()
   })
 
-  it('traduce el choque de nombres sin mostrar el código crudo, sin cerrar el diálogo', async () => {
-    const usuario = userEvent.setup()
-    montar()
-    await listado()
-
-    await usuario.click(screen.getByRole('button', { name: 'Filtros' }))
-    await usuario.click(await screen.findByRole('button', { name: /nueva etiqueta/i }))
-    const dialogo = await screen.findByRole('dialog')
-    await usuario.type(within(dialogo).getByLabelText('Nombre'), 'tesis')
-    await usuario.click(within(dialogo).getByRole('button', { name: 'Crear' }))
-
-    const alerta = await screen.findByRole('alert')
-
-    expect(alerta).toHaveTextContent(mensajeDeError('ETQ_YA_EXISTE'))
-    expect(alerta.textContent).not.toContain('ETQ_')
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-  })
-
-  it('muestra sobre cada fila las etiquetas que esa persona le puso', async () => {
+  it('traduce el choque de nombres sin mostrar el código crudo', async () => {
     montar()
 
-    const listadoDeFilas = await filas()
-    const conTesis = listadoDeFilas.filter((fila) => fila.textContent?.includes('tesis'))
+    const filtros = await abrirFiltros()
 
-    expect(conTesis.length).toBeGreaterThan(0)
-  })
-})
+    /* "tesis" ya existe en el espacio de Camila: la regla pura lo atrapa antes del viaje. */
+    await userEvent.type(within(filtros).getByLabelText('Nombre de la etiqueta nueva'), 'tesis')
+    await userEvent.click(within(filtros).getByRole('button', { name: 'Crear' }))
 
-describe('PantallaConferencias, ocultar', () => {
-  /*
-    Ocultar es una preferencia de vista, no una regla de acceso: no hace falta
-    volver a montar la pantalla para comprobar que persiste, con que la fila
-    desaparezca del listado actual ya queda probado que la acción funcionó.
-  */
-  it('ocultar una conferencia la saca del listado', async () => {
-    const usuario = userEvent.setup()
-    montar()
+    const aviso = await within(filtros).findByRole('alert')
 
-    const filasIniciales = await filas()
-    expect(filasIniciales).toHaveLength(7)
-
-    const [botonDeQuitar] = screen.getAllByRole('button', { name: /quitar «.*» de tu listado/i })
-    if (botonDeQuitar === undefined) throw new Error('se esperaba al menos un botón de quitar')
-    await usuario.click(botonDeQuitar)
-
-    await waitFor(async () => expect(await filas()).toHaveLength(6))
-  })
-
-  /*
-    Sin esta salida, quitar una conferencia del listado solo se deshacía
-    conociendo la URL directa. La línea además hace visible que lo ocultado
-    sigue ahí: sin ella, el listado mentiría por omisión.
-  */
-  it('anuncia lo oculto y lo devuelve al listado completo', async () => {
-    const usuario = userEvent.setup()
-    montar()
-
-    expect(await filas()).toHaveLength(7)
-
-    const [botonDeQuitar] = screen.getAllByRole('button', { name: /quitar «.*» de tu listado/i })
-    if (botonDeQuitar === undefined) throw new Error('se esperaba al menos un botón de quitar')
-    await usuario.click(botonDeQuitar)
-
-    expect(await screen.findByText(/hay 1 conferencia oculta/i)).toBeInTheDocument()
-
-    await usuario.click(screen.getByRole('button', { name: /volver a mostrarlas/i }))
-
-    await waitFor(async () => expect(await filas()).toHaveLength(7))
-    expect(screen.queryByText(/conferencia oculta/i)).not.toBeInTheDocument()
-  })
-
-  it('funciona igual sobre una conferencia compartida', async () => {
-    const usuario = userEvent.setup()
-    montar('/conferencias?segmento=compartidas')
-
-    const filasIniciales = await filas()
-    expect(filasIniciales).toHaveLength(4)
-
-    const [botonDeQuitar] = screen.getAllByRole('button', { name: /quitar «.*» de tu listado/i })
-    if (botonDeQuitar === undefined) throw new Error('se esperaba al menos un botón de quitar')
-    await usuario.click(botonDeQuitar)
-
-    await waitFor(async () => expect(await filas()).toHaveLength(3))
+    expect(aviso.textContent).toBe(mensajeDeError('ETQ_YA_EXISTE'))
+    expect(aviso.textContent).not.toContain('ETQ_YA_EXISTE')
   })
 })
