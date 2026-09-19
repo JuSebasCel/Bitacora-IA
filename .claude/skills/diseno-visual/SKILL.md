@@ -271,6 +271,72 @@ modal —que es hijo del velo— queda nítido.
 
 Los anchos (440 y 720) también son más generosos que los suyos (400 y 600).
 
+**Trampa de medición, ampliada.** Con la ventana minimizada
+(`document.visibilityState === 'hidden'`, `innerWidth === 0`) el navegador no
+solo congela las animaciones: **devuelve estilos calculados rancios** de los
+elementos que ya existían cuando cambian de clase. Un elemento recién
+insertado —o un `cloneNode` del propio elemento— sí computa de cero. Si una
+medida no cuadra con lo que dice el `className`, clona el nodo y mide el clon
+antes de dar por hecho que hay un fallo.
+
+## Selección: el control lleva puesto su valor — APROBADO
+
+Medido en la app de tareas de la referencia (`/apps/tasks`), en los controles
+"Estado" y "Tablero" y en el creador de tareas.
+
+**El botón no tiene rótulo: el botón ES el valor.** Cerrado dice "Pendiente",
+no "Estado: Pendiente". Al abrirse, la opción elegida aparece resaltada dentro
+de la lista —en el sitio donde estaba el botón— y las demás salen alrededor.
+El nombre del campo solo haría falta si la respuesta no estuviera a la vista,
+y lo está. El icono es el que desambigua de qué va.
+
+Un formulario así se lee de un vistazo porque no tiene ninguna fila
+"rótulo + campo vacío": solo el campo de escritura libre se ve como campo, y
+todo lo demás son pastillas que ya traen un valor por defecto válido.
+
+    lista       flex columna, gap 4px
+    opción      alto 48, padding 0 16, radio 24, 14px, fondo transparente
+    :hover      fondo contenedor, color de acento
+    .elegida    fondo secundario, radio 16 — salvo primera y última, que
+                vuelven a 24 para que el bloque conserve forma de pastilla
+
+Implementado en `shared/ui/SelectorDeOpciones.tsx`.
+
+## Calendario — APROBADO
+
+Medido de la misma app. La semana empieza en **domingo** (Do Lu Ma Mi Ju Vi Sa).
+
+    rejilla     7 columnas, gap 2px, centrado
+    rótulos     11px/500, color tenue, padding 4px 0
+    día         cuadrado (aspect-ratio 1), 14px, radio 16
+    hoy         fondo tenue, color de acento, peso 600
+    elegido     fondo de acento, 20px, peso 800
+    fuera       opacidad 0.4, no se pulsa
+    bloqueado   opacidad 0.35, tachado
+
+**La firma:** el número **crece** al elegirlo, de 14px/400 a 20px/800. Es el
+mismo recurso del dock (la sección activa pasa de 24 a 28px). En esta casa la
+selección se dice agrandando el texto; el color solo acompaña.
+
+Las duraciones son distintas a propósito — el fondo responde al instante y el
+tamaño se toma su tiempo, que es lo que hace que el número se infle en vez de
+saltar:
+
+    transition: background-color .125s, color .125s,
+                font-size .2s ease-in-out, font-weight .2s ease-in-out
+
+Está en `.dia-de-calendario` (`styles/index.css`) y no en clases de Tailwind
+porque son cuatro propiedades con dos duraciones y dos curvas distintas.
+
+Solo se dibujan las filas que hagan falta: un mes de cinco semanas no pinta
+una sexta vacía, o el panel cambiaría de alto al pasar de mes.
+
+Fechas como texto ISO de principio a fin. Construir un `Date` para volver a
+texto es por donde se cuela el desfase de zona horaria: `new Date('2026-09-19')`
+es medianoche UTC, que en Bogotá es el día 18.
+
+Implementado en `shared/ui/Calendario.tsx` y `shared/ui/SelectorDeFecha.tsx`.
+
 ## Pendiente de aprobar
 
 En revisión en `/_diseno`, todavía no consolidado aquí: tarjetas (contorno y

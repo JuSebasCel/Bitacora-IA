@@ -447,6 +447,26 @@
     no llega a cerrarse, así que al colapsar se pone a cero — y si ese cambio
     no se anima, el contenido pega un salto de 24px en el primer cuadro.
   */
+  /*
+    El día del calendario, medido de la app de referencia.
+
+    Lo característico no es el fondo: es que **el número crece** al elegirlo,
+    de 14px/400 a 20px/800. Es el mismo recurso del dock, donde la sección
+    activa sube de 24 a 28px. En esta casa la selección se dice agrandando el
+    texto, y el color solo acompaña.
+
+    Las duraciones son distintas a propósito: el fondo y el color responden al
+    instante (0.125s) y el tamaño se toma su tiempo (0.2s), que es lo que hace
+    que el número parezca inflarse en vez de saltar.
+  */
+  .dia-de-calendario {
+    transition:
+      background-color 0.125s,
+      color 0.125s,
+      font-size 0.2s ease-in-out,
+      font-weight 0.2s ease-in-out;
+  }
+
   .columna-colapsable {
     overflow: hidden;
     transition:

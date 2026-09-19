@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent, ReactElement, ReactNode } from 'react'
+import type { FormEvent, ReactElement } from 'react'
 import { useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useApiKey } from '@/features/configuracion/useApiKey'
 import { mensajeDeError } from '@/shared/errors'
-import { DialogoDeCreacion, Modal } from '@/shared/ui'
+import { DialogoDeCreacion, Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
+import type { OpcionDeSelector } from '@/shared/ui'
 import {
   EXTENSIONES_POR_FUENTE,
   duracionDeArchivo,
@@ -89,35 +90,6 @@ function pesoLegible(bytes: number): string {
 
   return mega >= 1 ? `${mega.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
-
-function Campo({
-  id,
-  etiqueta,
-  error,
-  children,
-}: {
-  id: string
-  etiqueta: string
-  error?: string | undefined
-  children: ReactNode
-}): ReactElement {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <label htmlFor={id} className="px-1 text-sm font-medium text-texto-tenue">
-        {etiqueta}
-      </label>
-      {children}
-      {error === undefined ? null : (
-        <p role="alert" className="px-1 text-sm text-error">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
-
-const CONTROL =
-  'h-11 w-full min-w-0 rounded-full bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-2 focus:outline-offset-2 focus:outline-acento'
 
 export type PropsModalDeCarga = {
   abierto: boolean
@@ -299,7 +271,23 @@ export function ModalDeCarga({
     alCargar(resultado.datos, etiquetasElegidas)
   }
 
-  const ponentesDelEvento = ponentes.filter((ponente) => ponente.idEvento === campos.idEvento)
+  /*
+    La opción de crear va como una más al final de la lista, no como un botón
+    aparte: crear un evento es otra forma de elegirlo, y separarla obligaría a
+    buscar en dos sitios lo que es la misma decisión.
+  */
+  const opcionesDeEvento: readonly OpcionDeSelector<string>[] = [
+    ...eventos.map((evento) => ({ valor: evento.id, etiqueta: evento.nombre })),
+    { valor: CREAR_EVENTO, etiqueta: 'Crear evento nuevo…', icono: 'add' },
+  ]
+
+  const opcionesDePonente: readonly OpcionDeSelector<string>[] = [
+    ...ponentes
+      .filter((ponente) => ponente.idEvento === campos.idEvento)
+      .map((ponente) => ({ valor: ponente.id, etiqueta: ponente.nombre })),
+    { valor: CREAR_PONENTE, etiqueta: 'Crear ponente nuevo…', icono: 'add' },
+  ]
+
   const sinClave = !cargandoApiKey && apiKey === null
 
   return (
@@ -377,77 +365,84 @@ export function ModalDeCarga({
             )}
           </div>
 
-          <Campo id="carga-titulo" etiqueta="Título" error={errores.titulo}>
+          {/*
+            El título es el único campo de escritura libre, y por eso es el
+            único que se ve como campo. No lleva rótulo encima: el marcador de
+            posición ya dice qué va ahí, y un rótulo sería decir lo mismo dos
+            veces en un formulario que cabe de un vistazo.
+          */}
+          <div className="flex flex-col gap-1.5">
             <input
               id="carga-titulo"
               value={campos.titulo}
               onChange={(cambio) => actualizar({ titulo: cambio.target.value })}
-              placeholder="Cómo se dijo, no cómo se archiva"
-              className={CONTROL}
+              placeholder="Título de la conferencia"
+              aria-label="Título de la conferencia"
+              className="h-12 w-full rounded-2xl bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-2 focus:outline-offset-2 focus:outline-acento"
             />
-          </Campo>
+            {errores.titulo === undefined ? null : (
+              <p role="alert" className="px-1 text-sm text-error">
+                {errores.titulo}
+              </p>
+            )}
+          </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Campo id="carga-evento" etiqueta="Evento" error={errores.idEvento}>
-              <select
-                id="carga-evento"
-                value={campos.idEvento}
-                onChange={(cambio) => {
-                  if (cambio.target.value === CREAR_EVENTO) {
+          {/*
+            Lo demás son pastillas que llevan puesto su propio valor, como en
+            la app de referencia: cerradas dicen lo que vale el campo, no cómo
+            se llama. El icono es el que dice de qué va, y cuando están vacías
+            piden lo que les falta ("Elige un evento").
+          */}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <SelectorDeOpciones
+                etiquetaAccesible="Evento"
+                icono="folder"
+                vacio="Elige un evento"
+                valor={campos.idEvento}
+                opciones={opcionesDeEvento}
+                alCambiar={(valor) => {
+                  if (valor === CREAR_EVENTO) {
                     setDialogoAbierto('evento')
                     return
                   }
                   /* Cambiar de evento invalida el ponente: los ponentes cuelgan del evento. */
-                  actualizar({ idEvento: cambio.target.value, idPonente: '' })
+                  actualizar({ idEvento: valor, idPonente: '' })
                 }}
-                className={CONTROL}
-              >
-                <option value="">Elige un evento</option>
-                {eventos.map((evento) => (
-                  <option key={evento.id} value={evento.id}>
-                    {evento.nombre}
-                  </option>
-                ))}
-                <option value={CREAR_EVENTO}>+ Crear evento nuevo…</option>
-              </select>
-            </Campo>
+              />
 
-            <Campo id="carga-ponente" etiqueta="Ponente" error={errores.idPonente}>
-              <select
-                id="carga-ponente"
-                value={campos.idPonente}
-                disabled={campos.idEvento === ''}
-                onChange={(cambio) => {
-                  if (cambio.target.value === CREAR_PONENTE) {
+              <SelectorDeOpciones
+                etiquetaAccesible="Ponente"
+                icono="mic"
+                vacio={campos.idEvento === '' ? 'Elige primero el evento' : 'Elige un ponente'}
+                deshabilitado={campos.idEvento === ''}
+                valor={campos.idPonente}
+                opciones={opcionesDePonente}
+                alCambiar={(valor) => {
+                  if (valor === CREAR_PONENTE) {
                     setDialogoAbierto('ponente')
                     return
                   }
-                  actualizar({ idPonente: cambio.target.value })
+                  actualizar({ idPonente: valor })
                 }}
-                className={`${CONTROL} disabled:opacity-50`}
-              >
-                <option value="">
-                  {campos.idEvento === '' ? 'Elige primero el evento' : 'Elige un ponente'}
-                </option>
-                {ponentesDelEvento.map((ponente) => (
-                  <option key={ponente.id} value={ponente.id}>
-                    {ponente.nombre}
-                  </option>
-                ))}
-                <option value={CREAR_PONENTE}>+ Crear ponente nuevo…</option>
-              </select>
-            </Campo>
-          </div>
+              />
 
-          <Campo id="carga-fecha" etiqueta="Fecha del evento" error={errores.fechaDelEvento}>
-            <input
-              id="carga-fecha"
-              type="date"
-              value={campos.fechaDelEvento}
-              onChange={(cambio) => actualizar({ fechaDelEvento: cambio.target.value })}
-              className={`${CONTROL} sm:w-60`}
-            />
-          </Campo>
+              <SelectorDeFecha
+                etiquetaAccesible="Fecha del evento"
+                vacio="Fecha del evento"
+                valor={campos.fechaDelEvento === '' ? null : campos.fechaDelEvento}
+                alElegir={(iso) => actualizar({ fechaDelEvento: iso })}
+              />
+            </div>
+
+            {[errores.idEvento, errores.idPonente, errores.fechaDelEvento]
+              .filter((mensaje): mensaje is string => mensaje !== undefined)
+              .map((mensaje) => (
+                <p key={mensaje} role="alert" className="px-1 text-sm text-error">
+                  {mensaje}
+                </p>
+              ))}
+          </div>
 
           {/*
             Etiquetas al crear, no después: quien sube una charla suele saber
