@@ -126,8 +126,36 @@ export async function actualizarEstadoDeValidacion(
 }
 
 /** Ruta del audio dentro del bucket. El primer segmento es el dueño porque la política de Storage lo exige. */
+/*
+  Supabase Storage no acepta cualquier nombre como clave de objeto: su
+  validación es ASCII, así que una tilde o una eñe la rechazan con un 400
+  («Invalid key»). En español eso no es un caso raro, es el caso normal —
+  "04 Sesgos algorítmicos.mp3" no se puede subir tal cual.
+
+  Se saca el acento de la letra en vez de borrarla, para que el nombre siga
+  siendo legible para un humano que mire el bucket. Lo que no sea letra,
+  número, punto, guion o subrayado pasa a guion, y los guiones seguidos se
+  juntan en uno.
+
+  Que el nombre cambie no rompe nada aguas abajo: el backend **lista la
+  carpeta** y toma el objeto que encuentre (`descargar_fuente`), no
+  reconstruye la ruta a partir del nombre original, que además no se guarda en
+  ninguna parte.
+*/
+export function nombreParaAlmacenamiento(nombreDeArchivo: string): string {
+  const sinAcentos = nombreDeArchivo.normalize('NFD').replace(/\p{Diacritic}/gu, '')
+
+  const limpio = sinAcentos
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-.]+/, '')
+
+  /* Un nombre que era todo símbolos se queda sin nada: mejor un marcador que una clave vacía. */
+  return limpio.length > 0 ? limpio : 'archivo'
+}
+
 export function rutaDeAudio(idDueno: string, idConferencia: string, nombreDeArchivo: string): string {
-  return `${idDueno}/${idConferencia}/${nombreDeArchivo}`
+  return `${idDueno}/${idConferencia}/${nombreParaAlmacenamiento(nombreDeArchivo)}`
 }
 
 /*

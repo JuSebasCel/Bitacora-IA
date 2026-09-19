@@ -203,6 +203,28 @@ describe('rutaDeAudio', () => {
   it('pone al dueño como primer segmento, que es lo que exige la política del bucket', () => {
     expect(rutaDeAudio('usuario-1', 'conf-1', 'charla.mp3')).toBe('usuario-1/conf-1/charla.mp3')
   })
+
+  /*
+    Supabase rechaza con 400 cualquier clave que no sea ASCII, así que un
+    nombre en español —con tildes, eñes o espacios— no se puede usar tal cual.
+    Esto lo destapó una carga real: la fila se creaba (201) y la subida moría
+    (400) sobre un archivo llamado "04 ...".
+  */
+  it('quita los acentos y los espacios del nombre, que Supabase rechaza como clave', () => {
+    expect(rutaDeAudio('u1', 'c1', '04 Sesgos algorítmicos en la asignación.mp3')).toBe(
+      'u1/c1/04-Sesgos-algoritmicos-en-la-asignacion.mp3',
+    )
+  })
+
+  it('conserva la extensión y junta los guiones seguidos', () => {
+    expect(rutaDeAudio('u1', 'c1', 'Ponencia — Mariana (final)  v2.m4a')).toBe(
+      'u1/c1/Ponencia-Mariana-final-v2.m4a',
+    )
+  })
+
+  it('un nombre que era todo símbolos no deja la clave vacía', () => {
+    expect(rutaDeAudio('u1', 'c1', '¿¡—!?')).toBe('u1/c1/archivo')
+  })
 })
 
 describe('crearConferencia', () => {
