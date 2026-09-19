@@ -76,14 +76,21 @@ function TarjetaDePlantillaEnBlanco({
   }, [plantilla.actualizadaEl])
 
   return (
-    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm">
+    <div className="elevacion group relative flex flex-col gap-3 rounded-md bg-panel p-4">
+      <span
+        aria-hidden="true"
+        className="absolute top-3 bottom-3 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
+      />
+
       <Link to={`/plantillas/${plantilla.id}`} className="flex flex-col gap-3">
         <div className="h-48 overflow-hidden rounded-sm border border-filete">
           <EditorDeDocumento editor={editor} className="pointer-events-none w-[161%] origin-top-left scale-[0.62]" />
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-texto">{plantilla.nombre}</span>
+          <span className="truncate text-sm font-medium text-texto transition-colors group-hover:text-acento">
+            {plantilla.nombre}
+          </span>
           <div className="flex shrink-0 items-center gap-1">
             <span
               aria-hidden="true"
@@ -129,14 +136,21 @@ function TarjetaDePlantillaDocx({
   const { archivo } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
 
   return (
-    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm">
+    <div className="elevacion group relative flex flex-col gap-3 rounded-md bg-panel p-4">
+      <span
+        aria-hidden="true"
+        className="absolute top-3 bottom-3 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
+      />
+
       <Link to={`/plantillas/${plantilla.id}`} className="flex flex-col gap-3">
         <div className="h-48 overflow-hidden rounded-sm bg-fondo">
           <MiniaturaDeDocx archivo={archivo} />
         </div>
 
         <div className="flex flex-col gap-0.5">
-          <span className="truncate text-sm font-medium text-texto">{plantilla.nombre}</span>
+          <span className="truncate text-sm font-medium text-texto transition-colors group-hover:text-acento">
+            {plantilla.nombre}
+          </span>
           <span className="text-xs text-texto-tenue">
             {plantilla.marcadores.length} marcador{plantilla.marcadores.length === 1 ? '' : 'es'} detectado
             {plantilla.marcadores.length === 1 ? '' : 's'}

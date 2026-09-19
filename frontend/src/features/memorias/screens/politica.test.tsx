@@ -102,13 +102,25 @@ describe('Redacción de la pantalla de memorias', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Memorias' })).toBeInTheDocument()
   })
 
-  it('describe con una línea qué trabajo se hace en la sección', () => {
+  /*
+    Política invertida a propósito. Antes se exigía un párrafo bajo el título
+    que dijera qué trabajo se hace en la sección; ahora se exige que NO esté.
+
+    El motivo: es texto que se lee una vez en la vida del usuario y ocupa una
+    banda de la pantalla en cada visita. El nombre de la sección, el dock y el
+    propio contenido ya dicen dónde está uno. La app de referencia que se está
+    calcando no pone texto explicativo bajo ningún título.
+
+    Si algún día hace falta explicar una sección, el sitio es su estado vacío
+    —donde sí hay espacio y sí hace falta orientación— no el encabezado.
+  */
+  it('va directo al contenido, sin párrafo explicativo bajo el título', () => {
     montarListado()
 
     const encabezado = screen.getByRole('heading', { level: 1, name: 'Memorias' })
-    const descripcion = encabezado.parentElement?.textContent?.replace('Memorias', '').trim() ?? ''
+    const alrededor = encabezado.parentElement?.textContent?.replace('Memorias', '').trim() ?? ''
 
-    expect(descripcion.length).toBeGreaterThan(30)
+    expect(alrededor.length).toBeLessThan(30)
   })
 
   it('no usa lenguaje de obra en curso', async () => {

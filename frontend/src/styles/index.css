@@ -1,5 +1,7 @@
-@import '@fontsource-variable/geist';
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource-variable/bricolage-grotesque';
 @import '@fontsource-variable/geist-mono';
+@import 'material-symbols/rounded.css';
 @import 'tailwindcss';
 
 /*
@@ -17,28 +19,68 @@
 */
 
 @theme {
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, monospace;
+  /*
+    Segunda familia, solo para títulos. La referencia separa las dos: DM Sans
+    para navegación y texto corrido, Bricolage Grotesque para lo que encabeza
+    (títulos de página, títulos de tarjeta, mensajes de estado vacío). No es
+    decorativo — es lo que hace que un título se lea como título sin depender
+    únicamente del tamaño.
+  */
+  --font-titulo: 'Bricolage Grotesque Variable', 'DM Sans Variable', ui-sans-serif, sans-serif;
 }
 
 :root {
   color-scheme: light dark;
 
+  /*
+    Paleta Menti Vault, modo claro. Valores medidos sobre la app de
+    referencia (ver la skill `diseno-visual`), no elegidos a ojo.
+
+    El acento dejó de ser un color: ahora es contraste puro — negro en claro,
+    blanco en oscuro. Lo interactivo se distingue por peso y luminancia, no
+    por tono. Los semánticos de validación (`validado`, `pendiente`, `error`)
+    **sí conservan color**: ahí el tono no es decoración, es el dato.
+
+    El fondo no es blanco puro: #fbf9fc. Se nota aunque no se sepa por qué.
+  */
+
   /* Superficies */
-  --bitacora-fondo: oklch(0.97 0.002 265);
-  --bitacora-panel: oklch(0.99 0.001 265);
-  --bitacora-filete: oklch(0.91 0.004 265);
-  --bitacora-filete-fuerte: oklch(0.82 0.006 265);
+  --bitacora-fondo: #fbf9fc;
+  --bitacora-panel: #f5f3f6;
+  --bitacora-filete: #e9e7ea;
+  --bitacora-filete-fuerte: #c5c6ce;
 
   /* Texto */
-  --bitacora-texto: oklch(0.24 0.006 265);
-  --bitacora-texto-tenue: oklch(0.46 0.008 265);
+  --bitacora-texto: #1b1b1e;
+  --bitacora-texto-tenue: #44474e;
 
-  /* Acento: azul tinta */
-  --bitacora-acento: oklch(0.48 0.17 262);
-  --bitacora-acento-fuerte: oklch(0.41 0.17 262);
-  --bitacora-acento-tenue: oklch(0.94 0.02 262);
-  --bitacora-acento-contraste: oklch(0.99 0.001 265);
+  /* Acento: contraste, no color */
+  --bitacora-acento: #000000;
+  --bitacora-acento-fuerte: #000000;
+  --bitacora-acento-tenue: #efedf0;
+  --bitacora-acento-contraste: #ffffff;
+
+  /* Navegación: el gris apagado del dock es más tenue que el texto secundario. */
+  --bitacora-nav-tenue: #c5c6ce;
+  --bitacora-nav-activo: #000000;
+
+  /*
+    Par para ilustraciones (el disco del estado vacío y su icono). Es el
+    `secondary-container` de Material: funciona en los dos temas sin tocarlo,
+    y es el único sitio donde el sistema se permite un tinte.
+  */
+  --bitacora-ilustracion: #e0e6f8;
+  --bitacora-ilustracion-texto: #444a58;
+
+  /*
+    Velo de los modales. Aquí nos apartamos de la referencia a propósito:
+    medida, usa `rgba(0, 0, 0, 0.1)` y ningún desenfoque, y con eso el modal
+    apenas se despega del fondo. Para volver a ella: 0.1 y 0.
+  */
+  --bitacora-velo: oklch(0 0 0 / 0.32);
+  --bitacora-velo-desenfoque: 6px;
 
   /* Semánticos de validación de fichas */
   --bitacora-validado: oklch(0.48 0.13 155);
@@ -62,6 +104,16 @@
   --bitacora-sombra: oklch(0.24 0.006 265 / 0.17);
 
   /*
+    Scrim de superficies modales (cajón móvil, `<dialog>` nativo). A
+    diferencia de `--bitacora-sombra`, no se redefine bajo tema oscuro: un
+    scrim oscurece lo que queda detrás para marcar "esto está activo, lo de
+    atrás no", y ese rol es el mismo sin importar el tema — por eso antes de
+    esto los dos usaban `bg-fondo/*`, casi blanco en tema claro y por lo
+    tanto casi invisible como scrim.
+  */
+  --bitacora-scrim: oklch(0.15 0.01 265 / 0.5);
+
+  /*
     Hoja de documento (editor de plantillas, F4): a diferencia de `panel`, que
     sigue el tema claro/oscuro de la app, la hoja se mantiene siempre clara —
     igual que un documento de Word o Google Docs no invierte de color con el
@@ -79,18 +131,24 @@
   la preferencia del sistema operativo.
 */
 :root[data-theme='dark'] {
-  --bitacora-fondo: oklch(0.17 0.004 265);
-  --bitacora-panel: oklch(0.21 0.005 265);
-  --bitacora-filete: oklch(0.28 0.006 265);
-  --bitacora-filete-fuerte: oklch(0.38 0.008 265);
+  --bitacora-fondo: #000000;
+  --bitacora-panel: #101012;
+  --bitacora-filete: #202022;
+  --bitacora-filete-fuerte: #3a3d43;
 
-  --bitacora-texto: oklch(0.94 0.002 265);
-  --bitacora-texto-tenue: oklch(0.7 0.008 265);
+  --bitacora-texto: #e4e2e5;
+  --bitacora-texto-tenue: #c5c6ce;
 
-  --bitacora-acento: oklch(0.72 0.15 262);
-  --bitacora-acento-fuerte: oklch(0.8 0.12 262);
-  --bitacora-acento-tenue: oklch(0.29 0.06 262);
-  --bitacora-acento-contraste: oklch(0.17 0.004 265);
+  --bitacora-acento: #ffffff;
+  --bitacora-acento-fuerte: #ffffff;
+  --bitacora-acento-tenue: #17171a;
+  --bitacora-acento-contraste: #000000;
+
+  --bitacora-nav-tenue: #3a3d43;
+  --bitacora-nav-activo: #ffffff;
+
+  --bitacora-ilustracion: #313641;
+  --bitacora-ilustracion-texto: #c3c9db;
 
   --bitacora-validado: oklch(0.76 0.14 155);
   --bitacora-pendiente: oklch(0.79 0.14 70);
@@ -110,18 +168,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bitacora-fondo: oklch(0.17 0.004 265);
-    --bitacora-panel: oklch(0.21 0.005 265);
-    --bitacora-filete: oklch(0.28 0.006 265);
-    --bitacora-filete-fuerte: oklch(0.38 0.008 265);
+    --bitacora-fondo: #000000;
+    --bitacora-panel: #101012;
+    --bitacora-filete: #202022;
+    --bitacora-filete-fuerte: #3a3d43;
 
-    --bitacora-texto: oklch(0.94 0.002 265);
-    --bitacora-texto-tenue: oklch(0.7 0.008 265);
+    --bitacora-texto: #e4e2e5;
+    --bitacora-texto-tenue: #c5c6ce;
 
-    --bitacora-acento: oklch(0.72 0.15 262);
-    --bitacora-acento-fuerte: oklch(0.8 0.12 262);
-    --bitacora-acento-tenue: oklch(0.29 0.06 262);
-    --bitacora-acento-contraste: oklch(0.17 0.004 265);
+    --bitacora-acento: #ffffff;
+    --bitacora-acento-fuerte: #ffffff;
+    --bitacora-acento-tenue: #17171a;
+    --bitacora-acento-contraste: #000000;
+
+    --bitacora-nav-tenue: #3a3d43;
+    --bitacora-nav-activo: #ffffff;
+
+    --bitacora-ilustracion: #313641;
+    --bitacora-ilustracion-texto: #c3c9db;
 
     --bitacora-validado: oklch(0.76 0.14 155);
     --bitacora-pendiente: oklch(0.79 0.14 70);
@@ -138,6 +202,41 @@
 
     --bitacora-sombra: oklch(0.05 0.01 265 / 0.55);
   }
+}
+
+/*
+  Iconos: Material Symbols Rounded, la misma familia de la referencia. Son un
+  tipo de letra, no SVGs — el nombre del icono va como texto (`folder_open`) y
+  la ligadura lo dibuja, así que el tamaño se controla con `font-size` y no
+  con ancho y alto.
+
+  `FILL 1` es un eje de la fuente variable: la referencia usa la variante
+  rellena, bastante más sólida que la de contorno por defecto.
+
+  Esta regla va deliberadamente FUERA de `@layer base`. El CSS que trae el
+  paquete de iconos tampoco está en ninguna capa y fija `font-size: 24px`, y
+  en la cascada lo que está fuera de capas le gana a lo que está dentro — así
+  que desde `@layer base` esta regla perdería, y con ella cualquier utilidad
+  de tamaño de Tailwind. Con `font-size: inherit` el icono toma el tamaño de
+  su contenedor, que es donde se declara.
+*/
+.icono-relleno,
+.icono-contorno {
+  font-size: inherit;
+  line-height: 1;
+}
+
+.icono-relleno {
+  font-variation-settings: 'FILL' 1;
+}
+
+/*
+  El contorno necesita declarar el eje explícitamente, aunque 0 sea el valor
+  por defecto: para animar entre relleno y contorno, los dos extremos tienen
+  que nombrar el mismo eje. Sin esto el relleno saltaría en vez de morfar.
+*/
+.icono-contorno {
+  font-variation-settings: 'FILL' 0;
 }
 
 @theme inline {
@@ -167,6 +266,26 @@
 
   --color-papel: var(--bitacora-papel);
   --color-papel-texto: var(--bitacora-papel-texto);
+
+  --color-scrim: var(--bitacora-scrim);
+
+  --color-nav-tenue: var(--bitacora-nav-tenue);
+  --color-nav-activo: var(--bitacora-nav-activo);
+
+  --color-ilustracion: var(--bitacora-ilustracion);
+  --color-ilustracion-texto: var(--bitacora-ilustracion-texto);
+}
+
+/*
+  Movimiento del dock. Vivía dentro del sandbox `.lienzo-m3`; ahora que la
+  navegación real lo usa, sale al ámbito global. Curvas y medidas están
+  documentadas en la skill `diseno-visual` — las dos primeras terminan en
+  y > 1, y ese rebote es de donde sale la sensación elástica.
+*/
+@theme {
+  --ease-rebote-fuerte: cubic-bezier(0.38, 0.49, 0, 1.5);
+  --ease-rebote-suave: cubic-bezier(0.38, 0.49, 0, 1.2);
+  --ease-entrada: cubic-bezier(0.37, 0.35, 0, 1);
 }
 
 @layer base {
@@ -211,11 +330,184 @@
       linear-gradient(180deg, transparent 45%, var(--bitacora-marca-profunda) 100%);
   }
 
+  /*
+    Ítems del dock. La jerarquía es puramente tipográfica: el activo no lleva
+    fondo ni pastilla, solo crece de 24 a 28px y sube de peso. El
+    `line-height` queda clavado en 24px aunque la letra crezca, y por eso la
+    fila sigue midiendo 40px y la columna no salta al cambiar de sección.
+
+    Tres propiedades, cada una con su tiempo: el color entra en la mitad que
+    el tamaño, y por eso se siente más reactivo de lo que es. `font-weight`
+    queda fuera a propósito — salta, no se interpola.
+
+    El origen a la izquierda hace que el texto crezca hacia la derecha sin
+    descuadrar la columna. `prefers-reduced-motion` ya anula todo esto al
+    final del archivo.
+  */
+  .item-de-dock {
+    cursor: pointer;
+    transform-origin: left center;
+    transition-property: font-size, color, transform;
+    transition-duration: 0.3s, 0.15s, 0.3s;
+    transition-timing-function:
+      var(--ease-rebote-fuerte),
+      ease,
+      var(--ease-rebote-suave);
+  }
+
+  .item-de-dock:hover {
+    color: var(--bitacora-nav-activo);
+    transform: scale(1.2);
+  }
+
+  /*
+    Iconos de un selector de vista: el relleno morfa en vez de saltar. El eje
+    `FILL` es animable por ser fuente variable.
+  */
+  .icono-de-vista {
+    transition:
+      font-variation-settings 0.2s ease,
+      color 0.15s ease;
+  }
+
+  /*
+    Velo y entrada de los modales. Vivían dentro del sandbox `.lienzo-m3`;
+    ahora que la app real los usa, salen al ámbito global.
+
+    La animación de entrada va en su propia clase, separada del aspecto del
+    velo, y solo se aplica al abrir: una animación CSS le gana a los estilos
+    en línea en las propiedades que anima, así que si se queda puesta, la
+    salida —que se hace con estilos en línea— no tiene ningún efecto.
+  */
+  .velo-de-modal {
+    background-color: var(--bitacora-velo);
+    backdrop-filter: blur(var(--bitacora-velo-desenfoque));
+  }
+
+  .velo-entra {
+    animation: entrada-de-velo 0.25s ease;
+  }
+
+  .entra-con-desenfoque {
+    animation: entrada-desenfocada 0.3s var(--ease-entrada);
+  }
+
+  @keyframes entrada-de-velo {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0);
+    }
+  }
+
+  @keyframes entrada-desenfocada {
+    from {
+      filter: blur(32px);
+    }
+  }
+
+  /*
+    Columnas que scrollean sin mostrar la barra. En la referencia no se ve
+    ninguna, y con tres columnas contiguas tres barras grises rompen la
+    silueta. El contenido sigue siendo desplazable con rueda, teclado y
+    gesto — solo se oculta el indicador.
+  */
+  .sin-barra-de-scroll {
+    scrollbar-width: none;
+  }
+
+  .sin-barra-de-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /*
+    Entrada de una columna que aparece al seleccionar algo. Mismo desenfoque
+    que usa la referencia al cambiar de contenido: entra borrosa y se enfoca,
+    en vez de aparecer de golpe.
+  */
+  .columna-entra {
+    animation: entrada-de-columna 0.3s var(--ease-entrada);
+  }
+
+  /*
+    Colapso de columna, medido sobre la referencia: anima `max-width` durante
+    **0.7s** con `cubic-bezier(0.1, 0.8, 0, 1)`.
+
+    Animar `max-width` y no `width` es lo que hace que funcione: la columna
+    conserva su ancho natural como tope y se estrecha hasta cero sin que su
+    contenido se reflowee a cada cuadro — con `overflow: hidden` el texto se
+    recorta en vez de reacomodarse, que es lo que da la sensación de puerta
+    corredera en lugar de un encogimiento elástico.
+
+    Los 0.7s son largos a propósito: es el único movimiento de la pantalla que
+    reordena la estructura, y a 300ms se lee como un salto.
+  */
+  /*
+    El relleno entra en la transición junto al ancho. Con `box-sizing:
+    border-box` una columna con `max-width: 0` conserva sus 48px de padding y
+    no llega a cerrarse, así que al colapsar se pone a cero — y si ese cambio
+    no se anima, el contenido pega un salto de 24px en el primer cuadro.
+  */
+  .columna-colapsable {
+    overflow: hidden;
+    transition:
+      max-width 0.7s cubic-bezier(0.1, 0.8, 0, 1),
+      padding 0.7s cubic-bezier(0.1, 0.8, 0, 1);
+  }
+
+  @keyframes entrada-de-columna {
+    from {
+      opacity: 0;
+      filter: blur(16px);
+    }
+  }
+
+  /* Entrada del dock al abrir la app: más lenta que todo lo demás porque corre una sola vez. */
+  .dock-entra {
+    animation: entrada-de-dock 0.7s var(--ease-entrada);
+  }
+
+  @keyframes entrada-de-dock {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+  }
+
   /* Elevación única del proyecto. Sombra tintada con el neutro, nunca negra. */
   .elevacion {
     box-shadow:
       0 1px 2px var(--bitacora-sombra),
       0 16px 40px -16px var(--bitacora-sombra);
+  }
+
+  /*
+    `<dialog>` nativo (DialogoDeCreacion, DialogoDeCompartir): entrada sutil
+    en vez de aparecer de golpe, misma curva que `Popover` (la otra
+    superficie flotante del sistema) para que las dos se sientan del mismo
+    lenguaje. Sin salida animada a propósito: `close()` es síncrono y
+    animarlo exigiría retrasar el cierre real a mano por muy poca ganancia.
+    `prefers-reduced-motion` ya la anula globalmente (regla al final de este
+    archivo).
+  */
+  .dialogo-nativo[open] {
+    animation: entrada-de-dialogo 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dialogo-nativo[open]::backdrop {
+    animation: entrada-de-fondo 0.15s ease;
+  }
+
+  @keyframes entrada-de-dialogo {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(-4px);
+    }
+  }
+
+  @keyframes entrada-de-fondo {
+    from {
+      opacity: 0;
+    }
   }
 
   /*
@@ -297,6 +589,242 @@
     box-shadow:
       0 1px 2px var(--bitacora-sombra),
       0 16px 40px -16px var(--bitacora-sombra) !important;
+  }
+
+  /*
+    Sandbox de diseño (`/_diseno`, ver `src/dev/diseno/`). La app de
+    referencia que se está calcando resultó estar construida sobre Material
+    Design 3: expone el set completo de `--md-sys-color-*`, con su paleta
+    oscura sobreescrita a un negro puro y el acento reemplazado por blanco
+    (`primary: #ffffff`), que es exactamente por qué no se ve un solo color
+    en toda su interfaz.
+
+    Estos valores NO son estimados a ojo: salen de leer `--md-sys-color-*`
+    sobre la referencia. Se conservan los nombres de M3 para que, si el
+    diseño se aprueba, portarlos al tema real sea un renombrado y no una
+    reinterpretación.
+
+    Todo vive bajo `.lienzo-m3` a propósito: mientras esto esté en revisión
+    no debe alterar ni un token del tema real de la app.
+  */
+  .lienzo-m3 {
+    --m3-background: #000000;
+    --m3-surface: #000000;
+    --m3-surface-dim: #0a0a0a;
+    --m3-surface-container-lowest: #0a0a0a;
+    --m3-surface-container-low: #101012;
+    --m3-surface-container: #17171a;
+    --m3-surface-container-highest: #28282b;
+    /*
+      Superficie de los modales. En claro la referencia la deja en #fbf9fc,
+      idéntica a `surface`, así que ahí los dos tokens son indistinguibles;
+      en oscuro `surface` es negro puro y un modal negro sobre lienzo negro
+      desaparece, porque estas ventanas no llevan sombra. Este es el único
+      valor del sistema que no está medido en los dos temas.
+    */
+    --m3-surface-bright: #121214;
+
+    --m3-on-background: #e4e2e5;
+    --m3-on-surface: #e4e2e5;
+    /* Texto secundario legible (descripciones, no rótulos apagados). */
+    --m3-on-surface-variant: #c5c6ce;
+
+    --m3-outline: #7e8088;
+    /* El gris apagado del nav inactivo y de los rótulos de sección. */
+    --m3-outline-variant: #3a3d43;
+    /* Filete de tarjeta: va como box-shadow inset de 1px, nunca como `border`. */
+    --m3-filete: #202022;
+
+    /* Par de Material para ilustraciones: disco + icono del estado vacío. */
+    --m3-secondary-container: #313641;
+    --m3-on-secondary-container: #c3c9db;
+
+    /* El "acento" del sistema. En oscuro es blanco; en claro, negro. */
+    --m3-primary: #ffffff;
+    --m3-on-primary: #000000;
+
+    /* Énfasis máximo del nav activo: blanco puro, por encima de on-surface. */
+    --m3-nav-activo: #ffffff;
+
+    /*
+      Curvas de la referencia, capturadas de sus transiciones en vuelo. Las dos
+      primeras terminan en y > 1: el valor se pasa del destino y vuelve, que es
+      de donde sale la sensación elástica. No son curvas inventadas ni
+      aproximadas a ojo.
+    */
+    --m3-curva-rebote-fuerte: cubic-bezier(0.38, 0.49, 0, 1.5);
+    --m3-curva-rebote-suave: cubic-bezier(0.38, 0.49, 0, 1.2);
+    --m3-curva-entrada: cubic-bezier(0.37, 0.35, 0, 1);
+
+    /*
+      Velo de los modales. Aquí nos apartamos de la referencia a propósito:
+      medida, ella usa `rgba(0, 0, 0, 0.1)` y **ningún** desenfoque —
+      comprobado con el modal abierto, tanto en el scrim (`backdrop-filter:
+      none`) como en el contenido de atrás (`filter: none`). Un velo del 10%
+      apenas despega el modal del fondo.
+
+      Estos dos valores son la única decisión de gusto del sistema; todo lo
+      demás está medido. Para volver a la referencia exacta: velo a 0.1 y
+      desenfoque a 0.
+    */
+    --m3-velo: oklch(0 0 0 / 0.32);
+    --m3-velo-desenfoque: 6px;
+  }
+
+  /*
+    Modo claro, ya medido sobre la referencia (antes estaba deducido y se
+    notaba). El fondo no es blanco puro: es #fbf9fc, un blanco apenas frío que
+    a simple vista se lee como hueso. Poner #ffffff era el error más visible
+    de la versión anterior.
+  */
+  .lienzo-m3[data-tema='claro'] {
+    --m3-background: #fbf9fc;
+    --m3-surface: #fbf9fc;
+    --m3-surface-dim: #dbd9dc;
+    --m3-surface-container-lowest: #ffffff;
+    --m3-surface-container-low: #f5f3f6;
+    --m3-surface-container: #efedf0;
+    --m3-surface-container-highest: #e4e2e5;
+    --m3-surface-bright: #fbf9fc;
+
+    --m3-on-background: #1b1b1e;
+    --m3-on-surface: #1b1b1e;
+    --m3-on-surface-variant: #44474e;
+
+    --m3-outline: #75777e;
+    --m3-outline-variant: #c5c6ce;
+    --m3-filete: #e9e7ea;
+
+    --m3-secondary-container: #e0e6f8;
+    --m3-on-secondary-container: #444a58;
+
+    --m3-primary: #000000;
+    --m3-on-primary: #ffffff;
+
+    --m3-nav-activo: #000000;
+  }
+
+  /*
+    Movimiento del dock, medido sobre la referencia (no estimado): tres
+    propiedades con duración y curva propias cada una.
+
+    - `font-size` en 0.3s con rebote fuerte: el ítem activo no crece, da un
+      saltito elástico al asentarse.
+    - `color` en 0.15s, la mitad de tiempo: el texto se ilumina antes de
+      terminar de crecer, y por eso se siente más reactivo de lo que es.
+    - `transform` solo entra en hover.
+
+    `font-weight` queda fuera a propósito: en la referencia salta de 400 a 600
+    sin transición, y animarlo se vería distinto a lo que estamos calcando.
+
+    El origen a la izquierda es lo que permite que el texto crezca hacia la
+    derecha sin descuadrar la alineación de la columna.
+
+    `prefers-reduced-motion` ya anula todo esto globalmente (al final del
+    archivo), así que no hace falta repetir la guardia aquí.
+  */
+  .lienzo-m3 .item-de-dock {
+    cursor: pointer;
+    transform-origin: left center;
+    transition-property: font-size, color, transform;
+    transition-duration: 0.3s, 0.15s, 0.3s;
+    transition-timing-function:
+      var(--m3-curva-rebote-fuerte),
+      ease,
+      var(--m3-curva-rebote-suave);
+  }
+
+  .lienzo-m3 .item-de-dock:hover {
+    color: var(--m3-nav-activo);
+    transform: scale(1.2);
+  }
+
+  /*
+    Entrada del dock al cargar (`navIn` en la referencia): entra deslizándose
+    desde fuera del borde izquierdo. Es más lenta que todo lo demás — 0.7s
+    contra los 0.3s del resto — porque arranca una sola vez, al abrir.
+  */
+  .lienzo-m3 .dock-entra {
+    animation: m3-entrada-de-dock 0.7s cubic-bezier(0.38, 0.49, 0, 1);
+  }
+
+  @keyframes m3-entrada-de-dock {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+  }
+
+  /*
+    Iconos de un selector de vista. Lo que distingue al activo no es el fondo
+    —la píldora es una sola superficie continua— sino el icono: pasa de
+    contorno a relleno y sube a máximo contraste. El eje `FILL` es animable
+    por ser fuente variable, así que el relleno se transforma en vez de
+    saltar; la referencia no lo anima, esto es un añadido.
+  */
+  .lienzo-m3 .icono-de-vista {
+    transition:
+      font-variation-settings 0.2s ease,
+      color 0.15s ease;
+  }
+
+  /*
+    Entrada del contenido al cambiar de sección. El desenfoque de 32px es el
+    valor real de la referencia, no una interpretación suave: el contenido
+    entra francamente borroso y se enfoca. Van separadas porque en la
+    referencia también lo están — una anima solo `filter` y la otra solo
+    `opacity`, con duraciones distintas.
+  */
+  .lienzo-m3 .entra-con-desenfoque {
+    animation: m3-entrada-desenfocada 0.3s var(--m3-curva-entrada);
+  }
+
+  .lienzo-m3 .entra-con-fundido {
+    animation: m3-entrada-fundida 0.2s ease;
+  }
+
+  /*
+    Velo de modal. El desenfoque va aquí y no en el contenido de atrás porque
+    `backdrop-filter` difumina lo que queda **debajo** de esta capa sin tocar
+    el árbol del fondo: nada que envolver, nada que reflowear, y el modal
+    —que es hijo del velo— queda nítido.
+
+    Entra con un fundido algo más largo que el de la referencia (0.25s contra
+    0.2s): con desenfoque de por medio, 200ms se siente cortado.
+  */
+  .lienzo-m3 .velo-de-modal {
+    background-color: var(--m3-velo);
+    backdrop-filter: blur(var(--m3-velo-desenfoque));
+  }
+
+  /*
+    La animación de entrada va en su propia clase, separada del aspecto del
+    velo, y solo se aplica mientras el modal abre. Es necesario: una animación
+    CSS **le gana a los estilos en línea** en las propiedades que anima
+    mientras siga activa, así que si se queda puesta, la salida —que se hace
+    con estilos en línea sobre `opacity` y `filter`— no tiene ningún efecto.
+  */
+  .lienzo-m3 .velo-entra {
+    animation: m3-entrada-de-velo 0.25s ease;
+  }
+
+  @keyframes m3-entrada-de-velo {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0);
+    }
+  }
+
+  @keyframes m3-entrada-desenfocada {
+    from {
+      filter: blur(32px);
+    }
+  }
+
+  @keyframes m3-entrada-fundida {
+    from {
+      opacity: 0;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

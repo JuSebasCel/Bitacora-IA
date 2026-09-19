@@ -1,12 +1,13 @@
-import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus'
 import type { ReactElement } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
 import { mensajeDeError } from '@/shared/errors'
-import { Button, EncabezadoDeSeccion, EstadoVacio, Esqueleto, PanelDeError } from '@/shared/ui'
+import { BotonPildora, EstadoVacioIlustrado, Esqueleto, PanelDeError, SelectorDeVista } from '@/shared/ui'
+import type { OpcionDeVista } from '@/shared/ui'
 import { BarraDeBusquedaDeMemorias, PanelDeGenerarMemoria, TarjetaDeMemoria } from '../components'
 import { CRITERIOS_POR_DEFECTO, listarMemorias } from '../filtros'
 import type { EntradaDeMemoria } from '../filtros'
@@ -26,7 +27,12 @@ import { useMemorias } from '../useMemorias'
   conviven sin pisarse.
 */
 
-const DESCRIPCION = 'Genera memorias formateadas combinando una conferencia ya procesada con una plantilla guardada.'
+type Vista = 'grilla' | 'lista'
+
+const VISTAS: readonly [OpcionDeVista<Vista>, OpcionDeVista<Vista>] = [
+  { valor: 'grilla', icono: 'grid_view', etiqueta: 'Ver en grilla' },
+  { valor: 'lista', icono: 'view_agenda', etiqueta: 'Ver en lista' },
+]
 
 function nombreDeConferencia(visibles: readonly { conferencia: { id: string; titulo: string } }[], id: string): string {
   return visibles.find((visible) => visible.conferencia.id === id)?.conferencia.titulo ?? 'Conferencia no disponible'
@@ -46,6 +52,25 @@ export function PantallaMemorias(): ReactElement {
 
   const idConferenciaPreseleccionada = searchParams.get('conferencia') ?? undefined
   const [panelAbierto, setPanelAbierto] = useState(idConferenciaPreseleccionada !== undefined)
+  const [vista, setVista] = useState<Vista>('grilla')
+
+  /*
+    "Generar memoria" vive en el dock y llega como `?nuevo=1`. En un efecto y
+    no en el valor inicial: quien pulsa la acción puede estar ya aquí, y
+    entonces la ruta no se remonta. Se borra el parámetro al abrir para que
+    recargar no reabra el panel solo.
+  */
+  useEffect(() => {
+    if (searchParams.get(PARAMETRO_DE_CREACION) === null) {
+      return
+    }
+
+    setPanelAbierto(true)
+
+    const siguiente = new URLSearchParams(searchParams)
+    siguiente.delete(PARAMETRO_DE_CREACION)
+    setSearchParams(siguiente, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const criterios = useMemo(() => leerCriteriosDeMemorias(searchParams), [searchParams])
 
@@ -80,18 +105,48 @@ export function PantallaMemorias(): ReactElement {
 
   return (
     <>
-      <EncabezadoDeSeccion titulo="Memorias" descripcion={DESCRIPCION} />
+      {/*
+        Título y controles en el mismo renglón, como la referencia. Antes el
+        título iba solo y los controles en una fila aparte debajo, lo que
+        gastaba una banda vertical entera antes de llegar al contenido.
 
-      <div className="mt-6 flex flex-col gap-6">
-        <div className="flex justify-end">
-          <Button variante="secundario" onClick={() => setPanelAbierto(true)}>
-            <PlusIcon size={14} weight="bold" aria-hidden="true" />
-            Generar memoria
-          </Button>
-        </div>
+        Y se fue la descripción: era un párrafo que se lee una vez en la vida
+        del usuario y empujaba el contenido hacia abajo en cada visita. La
+        referencia no pone texto explicativo bajo ningún título.
+      */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Memorias</h1>
 
-        <BarraDeBusquedaDeMemorias valor={criterios.busqueda} alCambiar={alBuscar} />
+        {memorias.length === 0 ? null : (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3">
+            <div className="min-w-48 flex-1 sm:max-w-96">
+              <BarraDeBusquedaDeMemorias valor={criterios.busqueda} alCambiar={alBuscar} />
+            </div>
 
+            <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={setVista} />
+
+            <BotonPildora variante="primario" icono="add" onClick={() => setPanelAbierto(true)}>
+              Generar memoria
+            </BotonPildora>
+          </div>
+        )}
+      </div>
+
+      {/*
+        La acción y la búsqueda comparten renglón: son los dos controles de la
+        pantalla y separarlos en dos filas dejaba una banda vacía entre el
+        título y el listado.
+      */}
+      {/*
+        El contenido vive dentro de un panel, no suelto sobre el fondo: es lo
+        que más distancia había con la referencia, donde cada zona de trabajo
+        es un contenedor redondeado con su propio aire.
+
+        El panel va con filete y sin relleno, y las tarjetas rellenas dentro.
+        Al revés —panel relleno con tarjetas del mismo tono— las tarjetas
+        desaparecerían contra él.
+      */}
+      <div className="mt-8 flex min-h-112 flex-col rounded-[24px] p-6 shadow-[inset_0_0_0_1px_var(--bitacora-filete)]">
         {/*
           Se espera también a las conferencias, y no solo a las memorias: la
           tarjeta muestra el nombre de la conferencia de origen, y pintarla
@@ -103,7 +158,12 @@ export function PantallaMemorias(): ReactElement {
         ) : codigoDeError !== null ? (
           <PanelDeError mensaje={mensajeDeError(codigoDeError)} />
         ) : listadas.length > 0 ? (
-          <ul aria-label="Memorias" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul
+            aria-label="Memorias"
+            className={
+              vista === 'grilla' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'flex flex-col gap-2'
+            }
+          >
             {listadas.map(({ memoria, nombreConferencia, nombrePlantilla }) => (
               <li key={memoria.id}>
                 <TarjetaDeMemoria
@@ -111,24 +171,32 @@ export function PantallaMemorias(): ReactElement {
                   nombreConferencia={nombreConferencia}
                   nombrePlantilla={nombrePlantilla}
                   alEliminar={() => void eliminar(memoria.id)}
+                  variante={vista === 'grilla' ? 'tarjeta' : 'fila'}
                 />
               </li>
             ))}
           </ul>
         ) : memorias.length > 0 && hayFiltrosAplicados ? (
-          <EstadoVacio
-            titulo="Ningún resultado con estos filtros"
-            descripcion="Ninguna de tus memorias cumple lo que buscaste. Prueba a soltar la búsqueda."
+          /*
+            Los dos vacíos son la pantalla entera, así que van ilustrados, y
+            cada uno con su icono: una búsqueda sin resultados y una cuenta
+            sin memorias no son la misma situación, y la salida tampoco.
+          */
+          <EstadoVacioIlustrado
+            icono="search_off"
+            mensaje="Ninguna de tus memorias cumple lo que buscaste"
           >
-            <Button variante="secundario" onClick={alQuitarFiltros}>
-              Quitar filtros
-            </Button>
-          </EstadoVacio>
+            <BotonPildora onClick={alQuitarFiltros}>Quitar filtros</BotonPildora>
+          </EstadoVacioIlustrado>
         ) : (
-          <EstadoVacio
-            titulo="Todavía no hay memorias generadas"
-            descripcion="Elige una conferencia procesada y una plantilla guardada para generar la primera."
-          />
+          <EstadoVacioIlustrado
+            icono="book_2"
+            mensaje="Elige una conferencia procesada y una plantilla guardada para generar tu primera memoria"
+          >
+            <BotonPildora variante="primario" icono="add" onClick={() => setPanelAbierto(true)}>
+              Generar memoria
+            </BotonPildora>
+          </EstadoVacioIlustrado>
         )}
       </div>
 

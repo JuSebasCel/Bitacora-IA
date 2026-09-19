@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router'
@@ -27,6 +28,7 @@ function SeccionApiKey(): ReactElement {
   const [valor, setValor] = useState('')
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const reducirMovimiento = useReducedMotion()
 
   async function alGuardar(): Promise<void> {
     if (enviando) return
@@ -82,7 +84,7 @@ function SeccionApiKey(): ReactElement {
             </a>{' '}
             con tu cuenta de OpenAI.
           </li>
-          <li>Pulsa «Create new secret key» y ponle un nombre, por ejemplo «Bitácora AI».</li>
+          <li>Pulsa «Create new secret key» y ponle un nombre, por ejemplo «Menti Vault».</li>
           <li>
             Copia la clave que empieza por <code className="coordenada">sk-</code> y pégala abajo — OpenAI
             solo la muestra una vez.
@@ -111,8 +113,23 @@ function SeccionApiKey(): ReactElement {
         />
       </Field>
 
-      {mensaje !== null && mensaje.esError ? <MensajeDeFormulario id="config-api-key-error">{mensaje.texto}</MensajeDeFormulario> : null}
-      {mensaje !== null && !mensaje.esError ? <p className="text-xs text-validado">{mensaje.texto}</p> : null}
+      <AnimatePresence mode="wait">
+        {mensaje === null ? null : (
+          <motion.div
+            key={mensaje.texto}
+            initial={reducirMovimiento ? false : { opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {mensaje.esError ? (
+              <MensajeDeFormulario id="config-api-key-error">{mensaje.texto}</MensajeDeFormulario>
+            ) : (
+              <p className="text-xs text-validado">{mensaje.texto}</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex gap-2">
         <Button

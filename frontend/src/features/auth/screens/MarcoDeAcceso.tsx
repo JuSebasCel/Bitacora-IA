@@ -50,7 +50,7 @@ export function MarcoDeAcceso({ idTitulo, titulo, children }: PropsMarcoDeAcceso
       >
         <div className="w-full max-w-sm">
           <motion.header variants={ELEMENTO} className="mb-7 lg:hidden">
-            <h1 className="text-3xl font-semibold tracking-tight text-texto">Bitácora AI</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-texto">Menti Vault</h1>
             <p className="mt-2 text-sm text-texto-tenue">{DESCRIPCION}</p>
           </motion.header>
 
@@ -79,7 +79,7 @@ export function MarcoDeAcceso({ idTitulo, titulo, children }: PropsMarcoDeAcceso
             variants={ELEMENTO}
             className="text-5xl leading-[1.05] font-semibold tracking-tight text-marca-texto xl:text-6xl"
           >
-            Bitácora AI
+            Menti Vault
           </motion.h1>
 
           <motion.p

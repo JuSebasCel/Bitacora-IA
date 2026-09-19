@@ -1,63 +1,91 @@
-import { BookOpenIcon } from '@phosphor-icons/react/dist/csr/BookOpen'
-import { CardsIcon } from '@phosphor-icons/react/dist/csr/Cards'
-import { LayoutIcon } from '@phosphor-icons/react/dist/csr/Layout'
-import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
-import type { Icon, IconWeight } from '@phosphor-icons/react'
-
 /*
-  Fuente de verdad de la navegación del shell. La barra lateral, el cajón móvil
-  y cualquier índice posterior se construyen a partir de esta lista: las rutas
-  no se repiten a mano en el JSX.
+  Fuente de verdad de la navegación del shell. El dock y el cajón móvil se
+  construyen a partir de estas listas: las rutas no se repiten a mano en el JSX.
+
+  **Los nombres, repensados.** "Catálogo" no decía qué contenía —sonaba a otra
+  lista de cosas, indistinguible de "Conferencias"— y además la app ya llama
+  *fichas* a esas unidades en cada pantalla ("12 fichas", "Marcar como
+  validada"). Que la etiqueta del dock no coincidiera con el nombre del objeto
+  era el problema de fondo. Los cuatro leídos juntos ahora cuentan el
+  recorrido del producto:
+
+      Conferencias  →  lo que entra, la fuente
+      Fichas        →  lo que se extrajo de ellas
+      Memorias      →  lo que se produce con eso
+      Plantillas    →  la herramienta con la que se produce
+
+  **El chat entra al dock.** Era la función más diferenciadora del producto y
+  vivía detrás de un icono sin etiqueta en la barra superior: sin nombre, sin
+  ruta y sin forma de volver a él. Sigue abriéndose como panel, pero ahora se
+  llama por su nombre y desde el mismo sitio que todo lo demás.
+
+  **Sin iconos, a propósito.** La jerarquía del dock es tipográfica. Ver
+  `.item-de-dock` en `styles/index.css`.
 */
 
+import type { IconWeight } from '@phosphor-icons/react'
+
+/*
+  El dock ya no lleva iconos, pero la barra superior sí (campana, cajón
+  móvil): estas dos constantes siguen siendo la regla de que en todo el shell
+  hay un solo peso y un solo tamaño de icono.
+*/
+export const PESO_DE_ICONO: IconWeight = 'regular'
+export const TAMANO_DE_ICONO = 18
+
 export type SeccionDeNavegacion = {
-  /** Texto visible de la sección, tal como se lee en la barra lateral. */
+  /** Texto visible, tal como se lee en el dock. */
   readonly etiqueta: string
   /** Ruta absoluta que abre la sección. */
   readonly ruta: string
-  /** Icono de la sección (familia Phosphor, un solo peso en todo el shell). */
-  readonly icono: Icon
 }
 
-/** Un solo peso de icono en todo el shell, activo o no. */
-export const PESO_DE_ICONO: IconWeight = 'regular'
-
-/** Tamaño único de los iconos de navegación, en píxeles. */
-export const TAMANO_DE_ICONO = 18
-
+/*
+  Fichas dejó de ser sección propia: se colapsó dentro de Conferencias, donde
+  ahora se navega por columnas (conferencia → fichas → detalle). Los dos
+  nombres se confundían entre sí —ambos sonaban a "lista de cosas"— y en el
+  fondo describían el mismo recorrido partido en dos pantallas. La búsqueda
+  global de fichas, que era lo único que se perdía al juntarlas, vive ahí
+  como primera entrada de la columna.
+*/
 export const SECCIONES_DE_NAVEGACION: readonly SeccionDeNavegacion[] = [
-  {
-    etiqueta: 'Conferencias',
-    ruta: '/conferencias',
-    icono: MicrophoneIcon,
-  },
-  {
-    etiqueta: 'Catálogo',
-    ruta: '/catalogo',
-    icono: CardsIcon,
-  },
-  {
-    etiqueta: 'Memorias',
-    ruta: '/memorias',
-    icono: BookOpenIcon,
-  },
-  {
-    etiqueta: 'Plantillas',
-    ruta: '/plantillas',
-    icono: LayoutIcon,
-  },
+  { etiqueta: 'Conferencias', ruta: '/conferencias' },
   /*
-    Configuración ya no vive aquí: dejó de ser una sección del recorrido de
-    trabajo (se carga, se consulta, se redacta, se maqueta) y pasó a ser
-    administración de la cuenta, alcanzable solo desde el menú del círculo de
-    cuenta en la barra superior (`MenuDeCuenta.tsx`). La ruta `/configuracion`
-    sigue existiendo en `App.tsx`; solo se quitó de este índice.
-
-    La taxonomía de temas tampoco tiene pantalla propia: se administra por
-    curaduría (aprobar/rechazar propuestas) desde la campana de notificaciones
-    de la barra superior.
+    Plantillas antes que Memorias: la plantilla es un requisito de la memoria,
+    no al revés. El orden del dock sigue el orden real del trabajo.
   */
+  { etiqueta: 'Plantillas', ruta: '/plantillas' },
+  { etiqueta: 'Memorias', ruta: '/memorias' },
 ]
+
+/*
+  Acciones de creación, en el dock y no enterradas dentro de cada pantalla.
+
+  Antes, cargar una conferencia exigía estar en Conferencias; generar una
+  memoria, estar en Memorias. Eso pesa especialmente aquí, porque cargar una
+  conferencia es la acción que desbloquea todo lo demás: sin ella, Fichas,
+  Memorias y el chat están vacíos.
+
+  Cada una navega a su sección con `?nuevo=1`, y la pantalla abre su panel al
+  leer ese parámetro. Abrir un panel no crea nada hasta que se envía, así que
+  recargar la URL es inofensivo.
+
+  Crear plantilla no está aquí a propósito: en su pantalla no abre un panel,
+  crea la plantilla en el acto y navega a su editor. Dispararlo desde una URL
+  haría que recargar creara otra plantilla cada vez.
+*/
+export type AccionDeNavegacion = {
+  readonly etiqueta: string
+  readonly ruta: string
+}
+
+export const ACCIONES_DE_NAVEGACION: readonly AccionDeNavegacion[] = [
+  { etiqueta: 'Cargar conferencia', ruta: '/conferencias?nuevo=1' },
+  { etiqueta: 'Generar memoria', ruta: '/memorias?nuevo=1' },
+]
+
+/** El parámetro que le pide a una pantalla abrir su panel de creación. */
+export const PARAMETRO_DE_CREACION = 'nuevo'
 
 /** Comprueba que la ruta sea la sección o algo colgado de ella, no solo que empiece igual. */
 function cuelgaDe(rutaActual: string, base: string): boolean {
@@ -66,13 +94,9 @@ function cuelgaDe(rutaActual: string, base: string): boolean {
 
 /*
   Qué sección está activa, por especificidad: gana la más profunda que coincida
-  con la ruta actual.
-
-  Sustituye al par `coincidenciaExacta` + `end` de NavLink que usaba F1, que
-  dejó de servir al entrar el detalle de conferencia: con `end`,
-  /conferencias/cnf-alc-01 no marcaba ninguna sección. La regla de
-  especificidad resuelve el caso general y, al ser una función pura, se prueba
-  sin montar el shell.
+  con la ruta actual. La regla resuelve el caso del detalle
+  (/conferencias/cnf-alc-01 marca Conferencias) y, al ser una función pura, se
+  prueba sin montar el shell.
 */
 export function esSeccionActiva(seccion: SeccionDeNavegacion, rutaActual: string): boolean {
   if (!cuelgaDe(rutaActual, seccion.ruta)) {

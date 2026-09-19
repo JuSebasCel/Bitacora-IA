@@ -1,9 +1,11 @@
 import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
+import { motion } from 'motion/react'
 import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
-import { Insignia } from '@/shared/ui'
+import { EstadoVacio, Insignia } from '@/shared/ui'
 import { formatearTimestamp } from '../data'
 import type { Ficha } from '../data'
+import { CONTENEDOR_DE_LISTADO, ELEMENTO_DE_FILA } from './animaciones'
 import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from './vocabulario'
 
 /*
@@ -61,19 +63,29 @@ export function ListadoDeFichas({
   */
   if (fichas.length === 0) {
     return (
-      <p className="max-w-prose text-sm leading-relaxed text-texto-tenue">
-        {ocultaPendientes
-          ? 'Esta conferencia todavía no tiene fichas validadas. Quien la compartió eligió mostrar solo las ya revisadas, así que las que siguen en revisión no aparecen aquí.'
-          : 'El procesamiento de esta conferencia terminó sin extraer ninguna ficha.'}
-      </p>
+      <EstadoVacio
+        titulo={ocultaPendientes ? 'Sin fichas validadas todavía' : 'Sin fichas'}
+        descripcion={
+          ocultaPendientes
+            ? 'Esta conferencia todavía no tiene fichas validadas. Quien la compartió eligió mostrar solo las ya revisadas, así que las que siguen en revisión no aparecen aquí.'
+            : 'El procesamiento de esta conferencia terminó sin extraer ninguna ficha.'
+        }
+      />
     )
   }
 
   return (
-    <ul aria-label="Fichas de la conferencia" className="flex flex-col gap-3">
+    <motion.ul
+      variants={CONTENEDOR_DE_LISTADO}
+      initial="oculto"
+      animate="visible"
+      aria-label="Fichas de la conferencia"
+      className="flex flex-col gap-3"
+    >
       {fichas.map((ficha) => (
-        <li
+        <motion.li
           key={ficha.id}
+          variants={ELEMENTO_DE_FILA}
           className="grid grid-cols-1 gap-3 rounded-md bg-fondo p-4 sm:grid-cols-[6rem_1fr] sm:gap-5"
         >
           <span className="coordenada text-xs text-texto-tenue">
@@ -114,8 +126,8 @@ export function ListadoDeFichas({
 
             <p className="text-xs leading-relaxed text-texto-tenue">{ficha.contextoMinimo}</p>
           </div>
-        </li>
+        </motion.li>
       ))}
-    </ul>
+    </motion.ul>
   )
 }

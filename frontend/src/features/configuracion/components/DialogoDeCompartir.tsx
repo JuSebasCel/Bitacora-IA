@@ -94,7 +94,7 @@ export function DialogoDeCompartir({
     <dialog
       ref={dialogoRef}
       onClose={alCerrar}
-      className="m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-fondo/70"
+      className="dialogo-nativo m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-scrim"
     >
       <form onSubmit={(evento) => { void alEnviar(evento) }} className="flex w-80 flex-col gap-4 p-5">
         <div className="flex items-center justify-between">
@@ -138,7 +138,12 @@ export function DialogoDeCompartir({
                 ] as const
               ).map(([clave, texto]) => (
                 <label key={clave} className="flex items-center gap-2 text-sm text-texto">
-                  <input type="checkbox" checked={privacidad[clave]} onChange={() => alternarOpcion(clave)} />
+                  <input
+                    type="checkbox"
+                    checked={privacidad[clave]}
+                    onChange={() => alternarOpcion(clave)}
+                    className="size-4 rounded-sm accent-acento"
+                  />
                   {texto}
                 </label>
               ))}

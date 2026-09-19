@@ -5,6 +5,7 @@ import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
 import { SunIcon } from '@phosphor-icons/react/dist/csr/Sun'
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import type { Icon } from '@phosphor-icons/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactElement } from 'react'
 import { Link } from 'react-router'
 import type { UsuarioSesion } from '@/features/auth/session'
@@ -37,6 +38,7 @@ export function MenuDeCuenta({
   const { clave: apiKey, cargando: cargandoApiKey } = useApiKey()
   const apiKeyFaltante = !cargandoApiKey && apiKey === null
   const nombreVisible = usuario.nombre === '' ? usuario.correo : usuario.nombre
+  const reducirMovimiento = useReducedMotion()
 
   return (
     <Popover
@@ -44,14 +46,29 @@ export function MenuDeCuenta({
       etiquetaAccesible={
         apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
       }
+      /*
+        Dos círculos concéntricos, como la referencia: un aro gris de 40px que
+        lo despega del fondo y, dentro, el disco con las iniciales. Solo con el
+        disco pequeño el avatar se leía como un punto suelto.
+      */
       boton={
         <span aria-hidden="true" className="relative inline-flex">
-          <span className="flex size-8 items-center justify-center rounded-full bg-acento text-xs font-semibold text-acento-contraste">
-            {inicialesDe(usuario.nombre, usuario.correo)}
+          <span className="flex size-12 items-center justify-center rounded-full bg-acento-tenue">
+            <span className="flex size-7 items-center justify-center rounded-full bg-acento text-[0.6875rem] font-semibold text-acento-contraste">
+              {inicialesDe(usuario.nombre, usuario.correo)}
+            </span>
           </span>
-          {apiKeyFaltante ? (
-            <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-pendiente ring-2 ring-panel" />
-          ) : null}
+          <AnimatePresence>
+            {apiKeyFaltante ? (
+              <motion.span
+                initial={reducirMovimiento ? false : { opacity: 0, scale: 0.4 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.4 }}
+                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-pendiente ring-2 ring-panel"
+              />
+            ) : null}
+          </AnimatePresence>
         </span>
       }
     >

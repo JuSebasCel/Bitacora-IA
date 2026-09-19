@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes, ReactElement } from 'react'
-import { BORDE_ERROR, unirClases } from './clases'
+import { BORDE_ERROR, CLASES_CONTROL_BASE, unirClases } from './clases'
 
 export type PropsInput = InputHTMLAttributes<HTMLInputElement> & {
   invalido?: boolean
@@ -9,10 +9,7 @@ export type PropsInput = InputHTMLAttributes<HTMLInputElement> & {
   El `placeholder` nunca sustituye a la etiqueta: la etiqueta la aporta `Field`
   (o un `aria-label` explicito de quien consuma el primitivo).
 */
-const CLASES_BASE =
-  'block w-full rounded-md border bg-panel px-3 py-2 text-sm text-texto ' +
-  'transition-colors placeholder:text-texto-tenue enabled:hover:border-acento ' +
-  'focus:border-acento disabled:cursor-not-allowed disabled:opacity-55'
+const CLASES_BASE = `${CLASES_CONTROL_BASE} placeholder:text-texto-tenue`
 
 export function Input({
   invalido = false,

@@ -79,7 +79,7 @@ export function DialogoDeCreacion({
     <dialog
       ref={dialogoRef}
       onClose={alCerrar}
-      className="m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-fondo/70"
+      className="dialogo-nativo m-auto rounded-md border border-filete-fuerte bg-panel p-0 backdrop:bg-scrim"
     >
       <form onSubmit={(evento) => { void alEnviar(evento) }} className="flex w-72 flex-col gap-4 p-5">
         <div className="flex items-center justify-between">

@@ -1,6 +1,7 @@
 import { BellIcon } from '@phosphor-icons/react/dist/csr/Bell'
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactElement } from 'react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -44,6 +45,8 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
   const { taxonomia, aprobar, rechazar } = useTaxonomia()
   const [tick, setTick] = useState(0)
   const [aviso, setAviso] = useState<{ idPropuesta: string; mensaje: string } | null>(null)
+  const [enProceso, setEnProceso] = useState<ReadonlySet<string>>(new Set())
+  const reducirMovimiento = useReducedMotion()
 
   const pendientesDeValidar = useMemo<readonly PendienteDeValidar[]>(() => {
     void tick
@@ -78,15 +81,37 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
     return taxonomia.temas.find((tema) => normalizarTexto(tema.nombre) === comparable)?.nombre ?? null
   }
 
+  /*
+    Sin esto, un doble clic en "Aprobar"/"Rechazar" disparaba dos llamadas
+    sobre la misma propuesta (el resto del proyecto sí protege esto, ver
+    `enviando` en `SeccionApiKey`) — un `Set` en vez de un booleano porque
+    varias propuestas pueden estar en vuelo a la vez, cada una independiente.
+  */
   async function manejarAprobar(idPropuesta: string): Promise<void> {
+    if (enProceso.has(idPropuesta)) return
+    setEnProceso((anterior) => new Set(anterior).add(idPropuesta))
+
     const resultado = await aprobar(idPropuesta)
 
+    setEnProceso((anterior) => {
+      const siguiente = new Set(anterior)
+      siguiente.delete(idPropuesta)
+      return siguiente
+    })
     setAviso(resultado.ok ? null : { idPropuesta, mensaje: resultado.mensaje })
   }
 
   async function manejarRechazar(idPropuesta: string): Promise<void> {
+    if (enProceso.has(idPropuesta)) return
+    setEnProceso((anterior) => new Set(anterior).add(idPropuesta))
+
     const resultado = await rechazar(idPropuesta)
 
+    setEnProceso((anterior) => {
+      const siguiente = new Set(anterior)
+      siguiente.delete(idPropuesta)
+      return siguiente
+    })
     setAviso(resultado.ok ? null : { idPropuesta, mensaje: resultado.mensaje })
   }
 
@@ -120,51 +145,64 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
               {taxonomia.propuestas.length === 0 ? null : (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-medium text-texto-tenue">Temas propuestos</p>
-                  {taxonomia.propuestas.map((propuesta) => {
-                    const choque = temaQueChoca(propuesta.nombre)
-                    const avisoDeLaPropuesta =
-                      aviso !== null && aviso.idPropuesta === propuesta.id ? aviso.mensaje : null
+                  <AnimatePresence initial={false}>
+                    {taxonomia.propuestas.map((propuesta) => {
+                      const choque = temaQueChoca(propuesta.nombre)
+                      const avisoDeLaPropuesta =
+                        aviso !== null && aviso.idPropuesta === propuesta.id ? aviso.mensaje : null
+                      const procesando = enProceso.has(propuesta.id)
 
-                    return (
-                      <div key={propuesta.id} className="rounded-md border border-filete bg-fondo p-2.5">
-                        <p className="text-sm font-medium text-texto">{propuesta.nombre}</p>
-                        <p className="text-xs text-texto-tenue">{nombreDeEvento(propuesta.idEvento)}</p>
+                      return (
+                        <motion.div
+                          key={propuesta.id}
+                          layout={!reducirMovimiento}
+                          exit={reducirMovimiento ? { opacity: 0 } : { opacity: 0, height: 0, marginTop: 0 }}
+                          transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="rounded-md border border-filete bg-fondo p-2.5">
+                            <p className="text-sm font-medium text-texto">{propuesta.nombre}</p>
+                            <p className="text-xs text-texto-tenue">{nombreDeEvento(propuesta.idEvento)}</p>
 
-                        {choque === null ? null : (
-                          <p className="mt-1 text-xs leading-relaxed text-texto">
-                            Parecido a «{choque}», que ya está en el pool.
-                          </p>
-                        )}
+                            {choque === null ? null : (
+                              <p className="mt-1 text-xs leading-relaxed text-texto">
+                                Parecido a «{choque}», que ya está en el pool.
+                              </p>
+                            )}
 
-                        {avisoDeLaPropuesta === null ? null : (
-                          <MensajeDeFormulario id={`notif-propuesta-${propuesta.id}`}>
-                            {avisoDeLaPropuesta}
-                          </MensajeDeFormulario>
-                        )}
+                            {avisoDeLaPropuesta === null ? null : (
+                              <MensajeDeFormulario id={`notif-propuesta-${propuesta.id}`}>
+                                {avisoDeLaPropuesta}
+                              </MensajeDeFormulario>
+                            )}
 
-                        <div className="mt-2 flex justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => { void manejarRechazar(propuesta.id) }}
-                            aria-label={`Rechazar la propuesta «${propuesta.nombre}»`}
-                            className={`${CLASES_DE_ACCION} border-transparent text-texto-tenue hover:border-error-borde hover:text-error`}
-                          >
-                            <XIcon size={12} weight="bold" aria-hidden="true" />
-                            Rechazar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { void manejarAprobar(propuesta.id) }}
-                            aria-label={`Aprobar la propuesta «${propuesta.nombre}»`}
-                            className={`${CLASES_DE_ACCION} border-filete-fuerte bg-panel text-texto hover:border-acento hover:text-acento`}
-                          >
-                            <CheckIcon size={12} weight="bold" aria-hidden="true" />
-                            Aprobar
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                            <div className="mt-2 flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                disabled={procesando}
+                                onClick={() => { void manejarRechazar(propuesta.id) }}
+                                aria-label={`Rechazar la propuesta «${propuesta.nombre}»`}
+                                className={`${CLASES_DE_ACCION} border-transparent text-texto-tenue hover:border-error-borde hover:text-error disabled:cursor-not-allowed disabled:opacity-55`}
+                              >
+                                <XIcon size={12} weight="bold" aria-hidden="true" />
+                                Rechazar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={procesando}
+                                onClick={() => { void manejarAprobar(propuesta.id) }}
+                                aria-label={`Aprobar la propuesta «${propuesta.nombre}»`}
+                                className={`${CLASES_DE_ACCION} border-filete-fuerte bg-panel text-texto hover:border-acento hover:text-acento disabled:cursor-not-allowed disabled:opacity-55`}
+                              >
+                                <CheckIcon size={12} weight="bold" aria-hidden="true" />
+                                Aprobar
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
                 </div>
               )}
 

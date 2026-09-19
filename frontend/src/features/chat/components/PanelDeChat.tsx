@@ -1,4 +1,5 @@
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useMemo, useRef, type ReactElement } from 'react'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
@@ -33,6 +34,7 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
 
   const panelRef = useRef<HTMLDivElement>(null)
   const alCerrarRef = useRef(alCerrar)
+  const reducirMovimiento = useReducedMotion()
 
   useEffect(() => {
     alCerrarRef.current = alCerrar
@@ -168,21 +170,28 @@ export function PanelDeChat({ abierto, alCerrar }: PropsPanelDeChat): ReactEleme
                 </div>
               ) : (
                 <ul className="flex flex-col gap-3">
-                  {chat.mensajes.map((mensaje) => (
-                    <li key={mensaje.id}>
-                      <BurbujaDeMensaje
-                        mensaje={mensaje}
-                        generando={chat.generacion?.idMensaje === mensaje.id}
-                        inicioGeneracionMs={chat.generacion?.idMensaje === mensaje.id ? chat.generacion.inicioMs : null}
-                        entradas={entradas}
-                        temas={temas}
-                        alElegirAclaracion={(alcance) => void chat.elegirAclaracion(mensaje.id, alcance)}
-                        alEditar={(idMensaje, contenido) => void chat.editarYReenviar(idMensaje, contenido)}
-                        alEtiquetar={(idMensaje, nombre) => void chat.etiquetarCitadas(idMensaje, nombre)}
-                        alTerminarGeneracion={chat.finalizarGeneracion}
-                      />
-                    </li>
-                  ))}
+                  <AnimatePresence initial={false}>
+                    {chat.mensajes.map((mensaje) => (
+                      <motion.li
+                        key={mensaje.id}
+                        initial={reducirMovimiento ? false : { opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      >
+                        <BurbujaDeMensaje
+                          mensaje={mensaje}
+                          generando={chat.generacion?.idMensaje === mensaje.id}
+                          inicioGeneracionMs={chat.generacion?.idMensaje === mensaje.id ? chat.generacion.inicioMs : null}
+                          entradas={entradas}
+                          temas={temas}
+                          alElegirAclaracion={(alcance) => void chat.elegirAclaracion(mensaje.id, alcance)}
+                          alEditar={(idMensaje, contenido) => void chat.editarYReenviar(idMensaje, contenido)}
+                          alEtiquetar={(idMensaje, nombre) => void chat.etiquetarCitadas(idMensaje, nombre)}
+                          alTerminarGeneracion={chat.finalizarGeneracion}
+                        />
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
                 </ul>
               )}
             </div>

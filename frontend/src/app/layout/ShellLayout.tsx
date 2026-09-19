@@ -105,39 +105,54 @@ export function ShellLayout() {
     }
   }, [cajonAbierto])
 
+  /*
+    Armazón de app, no de página: el contenedor mide exactamente el alto de la
+    ventana y no desborda, así que el documento nunca scrollea. El dock queda
+    quieto por construcción —sin `position: fixed` en escritorio— y lo que se
+    desplaza es el contenido, dentro de su propia caja. Es lo que separa que
+    esto se sienta una aplicación y no una página larga.
+  */
   return (
     <ProveedorDeApiKey>
-      <div className="min-h-dvh bg-fondo font-sans text-texto">
-        <BarraSuperior
-          cajonAbierto={cajonAbierto}
-          idDeNavegacion={ID_DE_NAVEGACION}
-          alternarCajon={alternarCajon}
-          refDelBotonDelCajon={refDelBotonDelCajon}
+      <div className="flex h-dvh overflow-hidden bg-fondo font-sans text-texto">
+        <PanelDeChat abierto={panelDeChatAbierto} alCerrar={() => setPanelDeChatAbierto(false)} />
+
+        <BarraLateral
+          id={ID_DE_NAVEGACION}
+          abierta={cajonAbierto}
+          alNavegar={cerrarCajon}
+          refDelCajon={refDelCajon}
           alAbrirChat={() => setPanelDeChatAbierto(true)}
         />
 
-        <PanelDeChat abierto={panelDeChatAbierto} alCerrar={() => setPanelDeChatAbierto(false)} />
+        {cajonAbierto ? (
+          <div
+            aria-hidden="true"
+            onClick={cerrarCajon}
+            className="fixed inset-0 z-20 bg-scrim md:hidden"
+          />
+        ) : null}
 
-        <div className="flex">
-          <BarraLateral
-            id={ID_DE_NAVEGACION}
-            abierta={cajonAbierto}
-            alNavegar={cerrarCajon}
-            refDelCajon={refDelCajon}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <BarraSuperior
+            cajonAbierto={cajonAbierto}
+            idDeNavegacion={ID_DE_NAVEGACION}
+            alternarCajon={alternarCajon}
+            refDelBotonDelCajon={refDelBotonDelCajon}
           />
 
-          {cajonAbierto ? (
-            <div
-              aria-hidden="true"
-              onClick={cerrarCajon}
-              className="fixed top-14 right-0 bottom-0 left-0 z-20 bg-fondo/80 md:hidden"
-            />
-          ) : null}
+          {/*
+            `flex` y `min-h-0` para que una pantalla pueda llenar el alto y
+            repartirlo entre sus columnas. Sin `min-h-0`, un hijo con su
+            propio scroll crece hasta desbordar el contenedor en vez de
+            ceñirse a él — es el fallo clásico de flexbox.
 
-          <main className="min-w-0 flex-1 px-5 py-8 md:px-8 lg:px-10">
-            <div className="mx-auto w-full max-w-5xl">
-              <Outlet />
-            </div>
+            Se fue el tope de ancho centrado: la referencia usa todo el ancho
+            disponible, y con columnas el espacio sobrante es lo que permite
+            que se vean las tres.
+          */}
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-5 py-8 md:px-8">
+            <Outlet />
           </main>
         </div>
       </div>

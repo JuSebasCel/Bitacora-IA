@@ -1,5 +1,5 @@
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/csr/EyeSlash'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Insignia, Pastilla } from '@/shared/ui'
@@ -81,6 +81,7 @@ export function FilaDeConferencia({
     .filter((visibleDeEtiqueta) => visibleDeEtiqueta.propia)
     .map((visibleDeEtiqueta) => visibleDeEtiqueta.etiqueta.id)
 
+  const reducirMovimiento = useReducedMotion()
   const { cargadaEl } = conferencia
   const [progreso, setProgreso] = useState(() =>
     cargadaEl === undefined ? 100 : progresoDe(cargadaEl, Date.now()),
@@ -170,21 +171,29 @@ export function FilaDeConferencia({
           </span>
         </div>
 
-        {enProcesamiento ? (
-          <div
-            role="progressbar"
-            aria-label={`Procesando «${conferencia.titulo}»`}
-            aria-valuenow={progreso}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            className="h-1 w-full max-w-48 overflow-hidden rounded-full bg-fondo"
-          >
-            <div
-              className="h-full rounded-full bg-acento transition-[width] duration-300 ease-linear"
-              style={{ width: `${progreso}%` }}
-            />
-          </div>
-        ) : null}
+        <AnimatePresence>
+          {enProcesamiento ? (
+            <motion.div
+              exit={reducirMovimiento ? { opacity: 0 } : { opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div
+                role="progressbar"
+                aria-label={`Procesando «${conferencia.titulo}»`}
+                aria-valuenow={progreso}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-1 w-full max-w-48 overflow-hidden rounded-full bg-fondo"
+              >
+                <div
+                  className="h-full rounded-full bg-acento transition-[width] duration-300 ease-linear"
+                  style={{ width: `${progreso}%` }}
+                />
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         {/*
           Las pastillas van en un div y no en una lista anidada: el listado de

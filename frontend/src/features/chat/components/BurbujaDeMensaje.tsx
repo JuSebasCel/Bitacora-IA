@@ -65,7 +65,7 @@ export function BurbujaDeMensaje({
   if (mensaje.rol === 'usuario') {
     if (editando) {
       return (
-        <div className="ml-auto flex max-w-[85%] flex-col gap-2 rounded-md bg-panel p-3">
+        <div className="ml-auto flex max-w-[85%] flex-col gap-2 rounded-md bg-acento-tenue p-3">
           <textarea
             value={valorEditado}
             onChange={(evento) => setValorEditado(evento.target.value)}
@@ -103,7 +103,7 @@ export function BurbujaDeMensaje({
         >
           <PencilSimpleIcon size={14} weight="regular" aria-hidden="true" />
         </button>
-        <p className="rounded-md bg-panel p-3 text-sm whitespace-pre-line text-texto">{mensaje.contenido}</p>
+        <p className="rounded-md bg-acento-tenue p-3 text-sm whitespace-pre-line text-texto">{mensaje.contenido}</p>
       </div>
     )
   }

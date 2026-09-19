@@ -1,42 +1,54 @@
-import type { RefObject } from 'react'
+import type { ReactElement, RefObject } from 'react'
 import { Link, useLocation } from 'react-router'
-import {
-  PESO_DE_ICONO,
-  SECCIONES_DE_NAVEGACION,
-  TAMANO_DE_ICONO,
-  esSeccionActiva,
-} from './navegacion'
+import { useSession } from '@/features/auth/session'
+import { MenuDeCuenta } from './MenuDeCuenta'
+import { ACCIONES_DE_NAVEGACION, SECCIONES_DE_NAVEGACION, esSeccionActiva } from './navegacion'
 
 type PropiedadesBarraLateral = {
   /** Identificador que el botón del cajón referencia con aria-controls. */
   id: string
-  /** Solo aplica bajo 768px: sobre ese ancho la barra está siempre visible. */
+  /** Solo aplica bajo 768px: sobre ese ancho el dock está siempre visible. */
   abierta: boolean
   /** Se invoca al elegir una sección, para cerrar el cajón en pantallas angostas. */
   alNavegar: () => void
-  /** El shell la enfoca al abrir el cajón y recorre lo enfocable de dentro. */
+  /** El shell lo enfoca al abrir el cajón y recorre lo enfocable de dentro. */
   refDelCajon: RefObject<HTMLElement | null>
-}
-
-const CLASES_DE_ENLACE =
-  'flex items-center gap-3 border-l-2 py-2 pr-3 pl-4 text-sm transition-colors'
-
-function clasesDelEnlace(activo: boolean): string {
-  if (activo) {
-    return `${CLASES_DE_ENLACE} border-acento bg-acento-tenue font-medium text-acento`
-  }
-
-  return `${CLASES_DE_ENLACE} border-transparent text-texto-tenue hover:border-filete-fuerte hover:text-texto`
+  /** El chat es una sección del dock pero se abre como panel, no como ruta. */
+  alAbrirChat: () => void
 }
 
 /*
-  Índice de secciones del shell. En escritorio es una columna fija a la
-  izquierda; bajo 768px se comporta como cajón, oculto salvo que `abierta` sea
-  true. La lista sale siempre de SECCIONES_DE_NAVEGACION.
+  Dock de Menti Vault.
+
+  Es tipografía y nada más: sin iconos, sin pastillas, sin color. El ítem
+  activo no se marca con un fondo — crece de 24 a 28px y sube de peso, y el
+  `line-height` se queda clavado en 24px para que la fila siga midiendo 40px
+  y la columna no salte al cambiar de sección. Todo el movimiento vive en
+  `.item-de-dock` (`styles/index.css`).
+
+  Tres bloques, en orden de uso: a dónde ir, qué crear, y el chat aparte
+  porque no es un destino sino una consulta sobre todo lo demás.
 */
-export function BarraLateral({ id, abierta, alNavegar, refDelCajon }: PropiedadesBarraLateral) {
+
+/* 40px de alto, 8px de padding, line-height clavado en 24px. */
+const FILA = 'item-de-dock flex h-10 w-full items-center px-2 text-left leading-6'
+
+function clasesDeItem(activo: boolean): string {
+  return activo
+    ? `${FILA} text-[28px] font-semibold text-nav-activo`
+    : `${FILA} text-2xl font-normal text-nav-tenue`
+}
+
+export function BarraLateral({
+  id,
+  abierta,
+  alNavegar,
+  refDelCajon,
+  alAbrirChat,
+}: PropiedadesBarraLateral): ReactElement {
   const visibilidad = abierta ? 'flex' : 'hidden md:flex'
   const ubicacion = useLocation()
+  const { usuario, cerrarSesion } = useSession()
 
   return (
     <nav
@@ -44,42 +56,76 @@ export function BarraLateral({ id, abierta, alNavegar, refDelCajon }: Propiedade
       id={id}
       /* Enfocable por programa, nunca por tabulación: recibe el foco al abrir el cajón. */
       tabIndex={-1}
-      aria-label="Secciones de Bitácora AI"
-      className={`${visibilidad} fixed top-14 bottom-0 left-0 z-30 w-64 shrink-0 flex-col overflow-y-auto border-r border-filete bg-panel pt-4 pb-6 focus:outline-none md:sticky md:top-14 md:bottom-auto md:z-auto md:h-[calc(100dvh-3.5rem)] md:w-56`}
+      aria-label="Secciones de Menti Vault"
+      /* El filete de la derecha separa el dock del contenido sin pesar: es el mismo `filete` del sistema. */
+      className={`${visibilidad} dock-entra fixed inset-y-0 left-0 z-30 w-70 shrink-0 flex-col overflow-y-auto border-r border-filete bg-fondo p-4 focus:outline-none md:sticky md:z-auto md:h-dvh`}
     >
-      <p className="coordenada px-4 pb-3 text-[0.6875rem] tracking-[0.14em] text-texto-tenue uppercase">
-        Índice
-      </p>
-      <ul className="flex flex-col border-t border-filete">
-        {/*
-          Link y no NavLink: NavLink decide por su cuenta el aria-current a
-          partir de `end`, y la regla que necesita el shell es de especificidad
-          entre secciones, no de coincidencia exacta. Ver `esSeccionActiva`.
-        */}
-        {SECCIONES_DE_NAVEGACION.map((seccion) => {
-          const Icono = seccion.icono
-          const activa = esSeccionActiva(seccion, ubicacion.pathname)
+      {/*
+        La cuenta vive aquí, no en una barra superior. Esa barra solo repetía
+        el nombre de la sección —que el dock y el título de la pantalla ya
+        decían— para sostener un par de controles.
 
-          return (
-            <li key={seccion.ruta}>
-              <Link
-                to={seccion.ruta}
-                onClick={alNavegar}
-                aria-current={activa ? 'page' : undefined}
-                className={clasesDelEnlace(activa)}
-              >
-                <Icono
-                  size={TAMANO_DE_ICONO}
-                  weight={PESO_DE_ICONO}
-                  aria-hidden="true"
-                  className={activa ? 'text-acento' : 'text-texto-tenue'}
-                />
-                <span className="truncate">{seccion.etiqueta}</span>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
+        La campana de notificaciones se quitó por decisión de diseño. Ojo con
+        la consecuencia: era el único acceso a la curaduría de temas
+        propuestos (`NotificacionesDropdown`), así que ahora mismo no hay
+        forma de aprobarlos ni rechazarlos desde la interfaz. El componente
+        sigue existiendo y hay que devolverle una puerta.
+      */}
+      {usuario === null ? null : (
+        <div className="flex h-14 items-center">
+          <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} />
+        </div>
+      )}
+
+      {/*
+        Sin el nombre del producto: el avatar ya ancla la identidad arriba, y
+        repetir la marca en cada pantalla no orienta a nadie que ya está
+        dentro. La referencia tampoco lo pone.
+      */}
+      <div className="mt-2 flex flex-col">
+        {SECCIONES_DE_NAVEGACION.map((seccion) => (
+          <Link
+            key={seccion.ruta}
+            to={seccion.ruta}
+            onClick={alNavegar}
+            aria-current={esSeccionActiva(seccion, ubicacion.pathname) ? 'page' : undefined}
+            className={clasesDeItem(esSeccionActiva(seccion, ubicacion.pathname))}
+          >
+            {seccion.etiqueta}
+          </Link>
+        ))}
+
+        {/*
+          El chat cierra el bloque de secciones porque se usa como una de
+          ellas, aunque técnicamente abra un panel. Nunca queda "activo": no
+          es un lugar donde se esté, es algo que se consulta.
+        */}
+        <button
+          type="button"
+          onClick={() => {
+            alNavegar()
+            alAbrirChat()
+          }}
+          className={clasesDeItem(false)}
+        >
+          Chat
+        </button>
+      </div>
+
+      <p className="mt-6 flex h-10 items-center px-2 text-base leading-6 text-nav-tenue">Acciones</p>
+
+      <div className="flex flex-col">
+        {ACCIONES_DE_NAVEGACION.map((accion) => (
+          <Link
+            key={accion.ruta}
+            to={accion.ruta}
+            onClick={alNavegar}
+            className={`${FILA} text-2xl font-normal text-nav-tenue`}
+          >
+            {accion.etiqueta}
+          </Link>
+        ))}
+      </div>
     </nav>
   )
 }

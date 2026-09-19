@@ -116,7 +116,7 @@ describe('PantallaMemorias', () => {
     montar()
 
     expect(screen.getByLabelText('Cargando las memorias')).toBeInTheDocument()
-    expect(screen.queryByText(/todavía no hay memorias generadas/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/generar tu primera memoria/i)).not.toBeInTheDocument()
   })
 
   it('si la lectura falla, lo dice en vez de invitar a generar la primera memoria', async () => {
@@ -125,7 +125,7 @@ describe('PantallaMemorias', () => {
     montar()
 
     expect(await screen.findByText(/no pudimos conectarnos/i)).toBeInTheDocument()
-    expect(screen.queryByText(/todavía no hay memorias generadas/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/generar tu primera memoria/i)).not.toBeInTheDocument()
   })
 
   it('«Generar memoria» abre el panel', async () => {
@@ -163,7 +163,7 @@ describe('PantallaMemorias', () => {
 
     montar()
 
-    expect(await screen.findByText(/todavía no hay memorias generadas/i)).toBeInTheDocument()
+    expect(await screen.findByText(/generar tu primera memoria/i)).toBeInTheDocument()
   })
 
   /*
@@ -198,8 +198,8 @@ describe('PantallaMemorias', () => {
 
     await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'palabra-inexistente')
 
-    expect(await screen.findByText(/ningún resultado con estos filtros/i)).toBeInTheDocument()
-    expect(screen.queryByText(/todavía no hay memorias generadas/i)).not.toBeInTheDocument()
+    expect(await screen.findByText(/cumple lo que buscaste/i)).toBeInTheDocument()
+    expect(screen.queryByText(/generar tu primera memoria/i)).not.toBeInTheDocument()
 
     await usuario.click(screen.getByRole('button', { name: /quitar filtros/i }))
 

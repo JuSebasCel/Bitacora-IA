@@ -100,41 +100,93 @@ describe('ShellLayout', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-  it('lista las cuatro secciones de navegación en el orden definido, sin Configuración', () => {
+  it('lista las tres secciones de navegación en el orden definido, sin Configuración', () => {
     montarShell()
 
     const enlaces = within(barraDeNavegacion()).getAllByRole('link')
+    const secciones = enlaces.slice(0, 3)
 
-    expect(enlaces).toHaveLength(4)
-    expect(enlaces.map((enlace) => enlace.textContent?.trim())).toEqual([
+    expect(secciones.map((enlace) => enlace.textContent?.trim())).toEqual([
       'Conferencias',
-      'Catálogo',
-      'Memorias',
       'Plantillas',
+      'Memorias',
     ])
-    expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual([
+    expect(secciones.map((enlace) => enlace.getAttribute('href'))).toEqual([
       '/conferencias',
-      '/catalogo',
-      '/memorias',
       '/plantillas',
+      '/memorias',
     ])
+    expect(enlaces.some((enlace) => enlace.getAttribute('href') === '/configuracion')).toBe(false)
   })
 
-  it('la barra superior nombra la sección activa junto al nombre del producto', () => {
-    montarShell('/catalogo')
+  /*
+    Las acciones de creación viven en el dock y no enterradas dentro de cada
+    pantalla: cargar una conferencia es lo que desbloquea todo lo demás, y
+    exigía llegar antes a Conferencias.
+  */
+  it('ofrece las acciones de creación desde el dock, apuntando a su sección', () => {
+    montarShell()
 
-    const encabezado = screen.getByRole('banner')
-    expect(within(encabezado).getByText('Catálogo')).toBeInTheDocument()
+    const dock = barraDeNavegacion()
+
+    expect(within(dock).getByRole('link', { name: 'Cargar conferencia' })).toHaveAttribute(
+      'href',
+      '/conferencias?nuevo=1',
+    )
+    expect(within(dock).getByRole('link', { name: 'Generar memoria' })).toHaveAttribute(
+      'href',
+      '/memorias?nuevo=1',
+    )
+  })
+
+  /* El chat era un icono sin etiqueta en la barra superior; ahora se llama por su nombre. */
+  it('abre el chat desde el dock', async () => {
+    const usuario = userEvent.setup()
+    montarShell()
+
+    await usuario.click(within(barraDeNavegacion()).getByRole('button', { name: 'Chat' }))
+
+    expect(screen.getByRole('dialog', { name: /chat/i })).toBeInTheDocument()
+  })
+
+  /*
+    La barra superior nombraba la sección activa, que el dock ya marca y el
+    título de la pantalla ya dice: la misma palabra tres veces para sostener
+    la cuenta y las notificaciones. Esos dos controles se mudaron al dock y la
+    barra quedó solo como manija del cajón en móvil.
+  */
+  it('no repite el nombre de la sección fuera del dock', () => {
+    montarShell('/memorias')
+
+    const encabezado = screen.queryByRole('banner')
+    expect(encabezado === null || within(encabezado).queryByText('Memorias') === null).toBe(true)
+  })
+
+  it('la cuenta vive en el dock', () => {
+    montarShell()
+
+    expect(within(barraDeNavegacion()).getByRole('button', { name: /cuenta de/i })).toBeInTheDocument()
+  })
+
+  /*
+    La campana se quitó por diseño, y con ella el único acceso a la curaduría
+    de temas propuestos. Esta prueba fija ese hecho para que quede registrado
+    en la suite y no se descubra como sorpresa más adelante.
+  */
+  it('ya no expone la campana de notificaciones en ninguna parte', () => {
+    montarShell()
+
+    expect(screen.queryByRole('button', { name: /notificaciones/i })).not.toBeInTheDocument()
   })
 
   it('marca con aria-current="page" solo la sección de la ruta actual', () => {
-    montarShell('/catalogo')
+    montarShell('/memorias')
 
     const enlaces = within(barraDeNavegacion()).getAllByRole('link')
     const activos = enlaces.filter((enlace) => enlace.getAttribute('aria-current') === 'page')
 
     expect(activos).toHaveLength(1)
-    expect(activos[0]).toHaveTextContent('Catálogo')
+    expect(activos[0]).toHaveTextContent('Memorias')
   })
 
   /*
@@ -370,17 +422,17 @@ describe('ShellLayout', () => {
 })
 
 describe('SECCIONES_DE_NAVEGACION', () => {
-  it('define cuatro secciones con ruta única e icono, sin Configuración', () => {
-    expect(SECCIONES_DE_NAVEGACION).toHaveLength(4)
+  /* El dock dejó de llevar iconos: la jerarquía es tipográfica, así que ya no se exige uno. */
+  it('define tres secciones con ruta única, sin Configuración', () => {
+    expect(SECCIONES_DE_NAVEGACION).toHaveLength(3)
     expect(SECCIONES_DE_NAVEGACION.some((seccion) => seccion.ruta === '/configuracion')).toBe(false)
 
     const rutas = SECCIONES_DE_NAVEGACION.map((seccion) => seccion.ruta)
-    expect(new Set(rutas).size).toBe(4)
+    expect(new Set(rutas).size).toBe(3)
 
     for (const seccion of SECCIONES_DE_NAVEGACION) {
       expect(seccion.etiqueta.trim().length).toBeGreaterThan(0)
       expect(seccion.ruta.startsWith('/')).toBe(true)
-      expect(seccion.icono).toBeDefined()
     }
   })
 })

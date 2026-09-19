@@ -29,8 +29,8 @@ function activasEn(rutaActual: string): string[] {
 
 describe('esSeccionActiva', () => {
   it('marca la sección cuya ruta coincide exactamente', () => {
-    expect(activasEn('/catalogo')).toEqual(['Catálogo'])
     expect(activasEn('/conferencias')).toEqual(['Conferencias'])
+    expect(activasEn('/memorias')).toEqual(['Memorias'])
   })
 
   /*

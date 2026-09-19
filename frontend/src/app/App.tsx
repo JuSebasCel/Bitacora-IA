@@ -5,12 +5,13 @@ import { SessionProvider } from '@/features/auth/session'
 import { ShellLayout } from '@/app/layout'
 import { RutaProtegida } from '@/app/RutaProtegida'
 import { RutaPublica } from '@/app/RutaPublica'
-import { PantallaCatalogo } from '@/features/catalogo/screens'
 import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
 import { PantallaConfiguracion } from '@/features/configuracion/screens'
 import { PantallaDetalleMemoria, PantallaMemorias } from '@/features/memorias/screens'
 import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/plantillas/screens'
 import { ProveedorDeTema } from '@/shared/tema'
+import { PantallaDiseno } from '@/dev/diseno/PantallaDiseno'
+import { PantallaArchivoDePrueba } from '@/dev/diseno/PantallaArchivoDePrueba'
 
 /*
   Mapa de rutas de la aplicación.
@@ -42,7 +43,13 @@ export function App(): ReactElement {
               <Route index element={<Navigate to="/conferencias" replace />} />
               <Route path="/conferencias" element={<PantallaConferencias />} />
               <Route path="/conferencias/:idConferencia" element={<PantallaDetalleConferencia />} />
-              <Route path="/catalogo" element={<PantallaCatalogo />} />
+              {/*
+                El catálogo se colapsó dentro de Conferencias. La ruta se
+                conserva como redirección y no se borra: hay enlaces viejos y
+                marcadores apuntando aquí, y un 404 sería peor que llevar a
+                donde ahora vive su contenido.
+              */}
+              <Route path="/catalogo" element={<Navigate to="/conferencias" replace />} />
               <Route path="/memorias" element={<PantallaMemorias />} />
               <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
               <Route path="/plantillas" element={<PantallaPlantillas />} />
@@ -50,6 +57,17 @@ export function App(): ReactElement {
               <Route path="/configuracion" element={<PantallaConfiguracion />} />
             </Route>
           </Route>
+
+          {/*
+            Sandbox de revisión de diseño (ver PantallaDiseno.tsx): sin sesión,
+            sin shell, sin enlace en ninguna navegación — se entra a mano
+            tipeando la URL. Vive fuera de RutaPublica/RutaProtegida a
+            propósito, para que no dependa de si hay sesión abierta o no.
+          */}
+          <Route path="/_diseno" element={<PantallaDiseno />} />
+
+          {/* Vista previa del archivo con los fixtures, para juzgarlo con contenido. */}
+          <Route path="/_archivo" element={<PantallaArchivoDePrueba />} />
 
           <Route path="*" element={<Navigate to="/conferencias" replace />} />
         </Routes>

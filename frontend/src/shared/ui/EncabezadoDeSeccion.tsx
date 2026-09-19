@@ -19,9 +19,17 @@ export function EncabezadoDeSeccion({
   descripcion,
 }: PropsEncabezadoDeSeccion): ReactElement {
   return (
-    <section className="border-t border-filete-fuerte pt-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-texto sm:text-3xl">{titulo}</h1>
-      <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-texto-tenue">{descripcion}</p>
+    /*
+      El título va en la tipografía de títulos y la descripción en la de
+      texto: ese contraste entre familias es lo que separa encabezado de
+      contenido sin depender solo del tamaño.
+
+      Se fue la línea superior: era chrome que no decía nada. El título ya
+      abre la pantalla por sí solo.
+    */
+    <section>
+      <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">{titulo}</h1>
+      <p className="mt-3 max-w-prose text-base leading-relaxed text-texto-tenue">{descripcion}</p>
     </section>
   )
 }

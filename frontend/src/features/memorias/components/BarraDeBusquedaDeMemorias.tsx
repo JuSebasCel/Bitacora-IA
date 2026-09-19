@@ -1,5 +1,3 @@
-import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
-import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import type { ReactElement } from 'react'
 
 /*
@@ -21,12 +19,17 @@ export function BarraDeBusquedaDeMemorias({ valor, alCambiar }: PropsBarraDeBusq
         Buscar por memoria, conferencia o plantilla
       </label>
 
-      <MagnifyingGlassIcon
-        size={16}
-        weight="regular"
+      {/*
+        Píldora del sistema: 40px de alto sobre `acento-tenue`, la misma
+        superficie y el mismo alto que los botones de su renglón, para que la
+        fila de controles se lea como una sola pieza.
+      */}
+      <span
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-texto-tenue"
-      />
+        className="material-symbols-rounded icono-contorno pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-lg text-texto-tenue"
+      >
+        search
+      </span>
 
       <input
         id="memorias-buscar"
@@ -34,7 +37,7 @@ export function BarraDeBusquedaDeMemorias({ valor, alCambiar }: PropsBarraDeBusq
         value={valor}
         onChange={(evento) => alCambiar(evento.target.value)}
         placeholder="Buscar por memoria, conferencia o plantilla"
-        className="block w-full rounded-md bg-fondo py-1.5 pr-9 pl-9 text-sm text-texto transition-colors placeholder:text-texto-tenue hover:bg-fondo focus:bg-panel focus:shadow-sm [&::-webkit-search-cancel-button]:hidden"
+        className="block h-10 w-full rounded-full bg-acento-tenue pr-11 pl-11 text-base text-texto transition-colors placeholder:text-texto-tenue focus:outline-none [&::-webkit-search-cancel-button]:hidden"
       />
 
       {valor.length === 0 ? null : (
@@ -42,9 +45,11 @@ export function BarraDeBusquedaDeMemorias({ valor, alCambiar }: PropsBarraDeBusq
           type="button"
           onClick={() => alCambiar('')}
           aria-label="Borrar la búsqueda"
-          className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1 text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-acento"
+          className="absolute top-1/2 right-3 -translate-y-1/2 flex size-6 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:text-texto"
         >
-          <XIcon size={12} weight="bold" aria-hidden="true" />
+          <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+            close
+          </span>
         </button>
       )}
     </div>

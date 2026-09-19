@@ -1,5 +1,5 @@
 import type { ReactElement, SelectHTMLAttributes } from 'react'
-import { BORDE_ERROR, unirClases } from './clases'
+import { BORDE_ERROR, CLASES_CONTROL_BASE, unirClases } from './clases'
 
 export type OpcionDeSelect = {
   readonly valor: string
@@ -22,10 +22,7 @@ export type PropsSelect = SelectHTMLAttributes<HTMLSelectElement> & {
   Acepta `invalido` con la misma forma que `Input`, para que `Field` pueda
   clonarlo sin distinguir entre los dos.
 */
-const CLASES_BASE =
-  'block w-full appearance-none rounded-md border bg-panel px-3 py-2 text-sm text-texto ' +
-  'transition-colors enabled:cursor-pointer enabled:hover:border-acento focus:border-acento ' +
-  'disabled:cursor-not-allowed disabled:opacity-55'
+const CLASES_BASE = `${CLASES_CONTROL_BASE} appearance-none enabled:cursor-pointer`
 
 export function Select({
   invalido = false,

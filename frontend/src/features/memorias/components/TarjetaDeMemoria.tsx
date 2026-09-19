@@ -1,5 +1,3 @@
-import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
-import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash'
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -12,14 +10,18 @@ export type PropsTarjetaDeMemoria = {
   nombreConferencia: string
   nombrePlantilla: string
   alEliminar: () => void
+  /**
+   * `tarjeta` apila los datos en una grilla; `fila` los pone en una línea
+   * para poder barrer muchos de un vistazo. Es la misma información: cambia
+   * cuánto espacio vertical ocupa cada una.
+   */
+  variante?: 'tarjeta' | 'fila'
 }
 
 /*
-  Tarjeta del listado de memorias. Mismo lenguaje de "registro vivo" que
-  `FilaDeConferencia.tsx`: la superficie (`bg-panel`) ya separa cada tarjeta
-  en reposo, y el hover no inventa el contraste desde cero, solo lo acentúa
-  — sombra, barra de acento a la izquierda y el título pasa al color de
-  acento.
+  Tarjeta del listado de memorias. La superficie (`bg-panel`) ya separa cada
+  tarjeta en reposo, sin sombra: en este sistema la separación la da el tono,
+  no una elevación. El hover solo lleva el título al color de acento.
 
   La barra de "generando" vive aquí, no en el panel que la creó: al enviar
   el panel, la memoria queda guardada y su tarjeta aparece de inmediato en
@@ -32,7 +34,9 @@ export function TarjetaDeMemoria({
   nombreConferencia,
   nombrePlantilla,
   alEliminar,
+  variante = 'tarjeta',
 }: PropsTarjetaDeMemoria): ReactElement {
+  const esFila = variante === 'fila'
   const [progreso, setProgreso] = useState(() => progresoDeGeneracion(memoria.generadaEl, Date.now()))
 
   useEffect(() => {
@@ -56,29 +60,56 @@ export function TarjetaDeMemoria({
   }
 
   return (
-    <div className="group relative flex flex-col gap-3 rounded-md bg-panel p-4 shadow-sm transition-shadow hover:shadow-md">
-      <span
-        aria-hidden="true"
-        className="absolute top-3 bottom-3 left-0 w-0.5 scale-y-0 rounded-full bg-acento transition-transform duration-150 group-hover:scale-y-100"
-      />
-
-      <Link to={`/memorias/${memoria.id}`} className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-acento-tenue text-acento">
-            <FileTextIcon size={15} weight="bold" aria-hidden="true" />
+    /*
+      Radio de 24px y superficie llena, sin sombra: en el sistema nuevo la
+      separación la da el tono de la superficie, no una elevación. Y con más
+      aire dentro (p-6), que es lo que hace que la tarjeta se lea como un
+      objeto y no como una fila apretada.
+    */
+    /*
+      Se fue la barra de acento del borde izquierdo: con la tarjeta ya
+      redondeada a 24px, una línea recta pegada al canto se veía como un
+      resto del sistema anterior. El hover se marca en el título, que es lo
+      que se va a pulsar.
+    */
+    <div
+      className={`group relative rounded-[24px] bg-panel ${
+        esFila ? 'flex items-center gap-4 py-3 pr-14 pl-4' : 'flex flex-col gap-3 p-6'
+      }`}
+    >
+      <Link
+        to={`/memorias/${memoria.id}`}
+        className={esFila ? 'flex min-w-0 flex-1 items-center gap-4' : 'flex flex-col gap-3'}
+      >
+        <div className={esFila ? 'flex min-w-0 flex-1 items-center gap-3' : 'flex items-center gap-3'}>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ilustracion text-2xl">
+            <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-ilustracion-texto">
+              description
+            </span>
           </span>
-          <span className="truncate text-sm font-medium text-texto transition-colors group-hover:text-acento">
+          <span className="font-titulo truncate text-lg font-semibold text-texto transition-colors group-hover:text-acento">
             {memoria.nombre}
           </span>
         </div>
 
-        <div className="flex flex-col gap-0.5 text-xs text-texto-tenue">
+        {/*
+          La fecha dejó de ir en monoespaciada: `.coordenada` existe para
+          coordenadas de trazabilidad —minutos exactos de un audio— donde los
+          dígitos tabulares se alinean columna a columna. Una fecha suelta en
+          una tarjeta no gana nada con eso, y sí desentona.
+        */}
+        <div
+          className={`text-sm text-texto-tenue ${
+            esFila ? 'hidden min-w-0 shrink-0 items-center gap-3 sm:flex' : 'flex flex-col gap-0.5'
+          }`}
+        >
           <span className="truncate">{nombreConferencia}</span>
+          {esFila ? <span aria-hidden="true">·</span> : null}
           <span className="truncate">{nombrePlantilla}</span>
-          {generando ? null : <span className="coordenada">{formatearFecha(memoria.generadaEl.slice(0, 10))}</span>}
+          {generando ? null : <span className="shrink-0">{formatearFecha(memoria.generadaEl.slice(0, 10))}</span>}
         </div>
 
-        {generando ? (
+        {generando && !esFila ? (
           <div className="flex flex-col gap-1.5 pt-0.5">
             <div
               role="progressbar"
@@ -102,9 +133,13 @@ export function TarjetaDeMemoria({
         type="button"
         onClick={alPulsarEliminar}
         aria-label={`Eliminar «${memoria.nombre}»`}
-        className="absolute top-3 right-3 z-10 rounded-md bg-panel p-1.5 text-texto-tenue opacity-0 transition-colors hover:bg-fondo hover:text-error focus-visible:opacity-100 group-hover:opacity-100"
+        className={`absolute right-4 z-10 flex size-9 cursor-pointer items-center justify-center rounded-full text-lg text-texto-tenue opacity-0 transition-colors hover:text-error focus-visible:opacity-100 group-hover:opacity-100 ${
+          esFila ? 'top-1/2 -translate-y-1/2' : 'top-4'
+        }`}
       >
-        <TrashIcon size={15} weight="regular" aria-hidden="true" />
+        <span aria-hidden="true" className="material-symbols-rounded icono-contorno">
+          delete
+        </span>
       </button>
     </div>
   )

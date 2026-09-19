@@ -78,14 +78,16 @@ describe('Redacción de la pantalla de conferencias', () => {
 
   it('no usa lenguaje de obra en curso', async () => {
     montar()
-    await screen.findByRole('list', { name: 'Conferencias' })
+    /* El explorador ya no es una lista: se espera a la primera fila de la columna de eventos. */
+    await screen.findByRole('button', { name: /Todos los eventos/ })
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })
 
   it('no usa el guion largo en ningún texto visible', async () => {
     montar()
-    await screen.findByRole('list', { name: 'Conferencias' })
+    /* El explorador ya no es una lista: se espera a la primera fila de la columna de eventos. */
+    await screen.findByRole('button', { name: /Todos los eventos/ })
 
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })
