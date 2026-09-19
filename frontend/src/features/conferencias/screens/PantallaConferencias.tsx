@@ -7,9 +7,9 @@ import { useTemas } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import { ModalDeCarga, useConferenciasVisibles } from '../components'
 import type { ResultadoCreacion } from '../components'
-import { escribirCriterios, leerCriterios, listarConferencias } from '../query'
+import { ModalDeCompartir } from '@/features/configuracion/components'
+import { escribirCriterios, leerCriterios, listarConferencias, privacidadEfectiva } from '../query'
 import type { CriteriosDeListado } from '../query'
-import { actualizarEstadoDeValidacion } from '../repositorio/repositorio'
 import { useEtiquetas } from '../tags'
 import { PantallaArchivo } from './PantallaArchivo'
 
@@ -39,6 +39,7 @@ export function PantallaConferencias(): ReactElement {
   const { espacio, visiblesDe, crear, asignar, quitar, eliminar } = useEtiquetas(idUsuario)
   const [params, setParams] = useSearchParams()
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
+  const [compartirAbierto, setCompartirAbierto] = useState(false)
 
   /*
     El modal de carga crece desde el botón de la cabecera. También cuando lo
@@ -46,6 +47,7 @@ export function PantallaConferencias(): ReactElement {
     se lee igual de bien venga de donde venga.
   */
   const botonDeCarga = useRef<HTMLElement>(null)
+  const botonDeCompartir = useRef<HTMLElement>(null)
   const marco = useRef<HTMLDivElement>(null)
 
   const idsDeEtiqueta = useMemo(() => espacio.etiquetas.map((etiqueta) => etiqueta.id), [espacio.etiquetas])
@@ -137,15 +139,6 @@ export function PantallaConferencias(): ReactElement {
         cargando={carga === 'cargando'}
         error={error}
         alCargarConferencia={() => setPanelDeCargaAbierto(true)}
-        /*
-          Quién puede validar lo decide la política de RLS; si la rechaza, la
-          ficha se queda como estaba. Cuando la acepta, se vuelven a pedir.
-        */
-        alValidar={(idFicha) => {
-          void actualizarEstadoDeValidacion(idFicha, 'validada').then((respuesta) => {
-            if (respuesta.ok) recargar()
-          })
-        }}
         criterios={criterios}
         etiquetas={espacio.etiquetas}
         etiquetasDe={visiblesDe}
@@ -156,6 +149,27 @@ export function PantallaConferencias(): ReactElement {
         alAlternarAsignacion={alAlternarAsignacion}
         alEliminarEtiqueta={(idEtiqueta) => void eliminar(idEtiqueta)}
         refDelBotonDeCarga={botonDeCarga}
+        refDelBotonDeCompartir={botonDeCompartir}
+        alCompartir={() => setCompartirAbierto(true)}
+      />
+
+      {/*
+        Solo se ofrecen las que de verdad se pueden pasar: las propias siempre,
+        y las ajenas únicamente si quien las compartió lo permitió. Ofrecer el
+        resto sería dejar que Postgres diga que no después de elegirlas.
+      */}
+      <ModalDeCompartir
+        abierto={compartirAbierto}
+        alCerrar={() => setCompartirAbierto(false)}
+        idUsuario={idUsuario}
+        anclaEn={botonDeCompartir}
+        limites={marco}
+        conferencias={visibles
+          .filter(
+            (visible) =>
+              visible.procedencia === 'propia' || privacidadEfectiva(visible).permitirRecompartir,
+          )
+          .map((visible) => visible.conferencia)}
       />
 
       <ModalDeCarga

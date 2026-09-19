@@ -15,8 +15,8 @@ import type { ResultadoCreacion } from '../components'
 import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
-import type { Etiqueta, EstadoDeValidacion, Ficha } from '../data'
-import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo, privacidadEfectiva } from '../query'
+import type { Etiqueta, Ficha } from '../data'
+import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo } from '../query'
 import type { ConferenciaVisible, CriteriosDeListado, FichaDelCatalogo, FiltroDeEstado, Segmento } from '../query'
 import type { EtiquetaVisible } from '../tags'
 
@@ -56,25 +56,19 @@ type Eje = 'conferencias' | 'temas'
 /* Sobre qué busca el buscador. Sin texto escrito da igual, y no se muestra. */
 type Ambito = 'seleccion' | 'todo'
 
-const ICONO_POR_VALIDACION: Record<EstadoDeValidacion, string> = {
-  validada: 'check_circle',
-  pendiente: 'pending',
-  automatica: 'auto_awesome',
-}
-
 /*
-  Qué significa cada estado, dicho con palabras.
+  Todas las fichas se ven igual.
 
-  El destello de "automática" era el que más confundía: no quiere decir "la
-  hizo la IA" —todas las hace la IA— sino que el clasificador quedó lo bastante
-  seguro como para no mandarla a revisar. El backend nunca marca `validada` por
-  su cuenta, y esa es justo la distinción que hace citable a una ficha.
+  El estado de validación sale de la interfaz por decisión del usuario: se
+  confía en el análisis y no se le pide a nadie que confirme ficha por ficha.
+  El campo sigue en la base de datos y el backend lo sigue escribiendo, así
+  que devolverlo es volver a pintarlo, no volver a calcularlo.
+
+  Ojo con lo que esto implica y está escrito en `analisis/clasificacion.py`:
+  las citas textuales y los datos de impacto tienen umbral inalcanzable
+  precisamente porque nadie más atrapa una cita mal transcrita.
 */
-const EXPLICACION_DE_VALIDACION: Record<EstadoDeValidacion, string> = {
-  validada: 'Revisada y confirmada por una persona.',
-  pendiente: 'Sin revisar todavía: conviene comprobarla antes de citarla.',
-  automatica: 'Aceptada sin revisión porque el análisis quedó muy seguro de la clasificación.',
-}
+const ICONO_DE_FICHA = 'format_quote'
 
 const VISTAS: readonly [OpcionDeVista<Vista>, OpcionDeVista<Vista>] = [
   { valor: 'columnas', icono: 'view_column', etiqueta: 'Ver en columnas' },
@@ -339,7 +333,6 @@ export type PropsPantallaArchivo = {
   cargando: boolean
   error: string | null
   alCargarConferencia: () => void
-  alValidar: (idFicha: string) => void
   criterios: CriteriosDeListado
   /** Las etiquetas propias, que son las únicas que se pueden poner y quitar. */
   etiquetas: readonly Etiqueta[]
@@ -348,6 +341,8 @@ export type PropsPantallaArchivo = {
   hayConferenciasSinFiltrar: boolean
   /** Se cuelga del botón de cargar, que es de donde crece el modal de carga. */
   refDelBotonDeCarga?: RefObject<HTMLElement | null>
+  refDelBotonDeCompartir?: RefObject<HTMLElement | null>
+  alCompartir?: () => void
   alCambiarCriterios: (cambio: Partial<CriteriosDeListado>) => void
   alAlternarEtiquetaDelFiltro: (idEtiqueta: string) => void
   alCrearEtiqueta: (nombre: string) => Promise<ResultadoCreacion>
@@ -362,12 +357,13 @@ export function PantallaArchivo({
   cargando,
   error,
   alCargarConferencia,
-  alValidar,
   criterios,
   etiquetas,
   etiquetasDe,
   hayConferenciasSinFiltrar,
   refDelBotonDeCarga,
+  refDelBotonDeCompartir,
+  alCompartir,
   alCambiarCriterios,
   alAlternarEtiquetaDelFiltro,
   alCrearEtiqueta,
@@ -487,13 +483,6 @@ export function PantallaArchivo({
 
   const activa: FichaDelCatalogo | undefined = fichasListadas.find((e) => e.ficha.id === idFicha)
 
-  const visibleDeLaFicha =
-    activa === undefined ? undefined : visibles.find((v) => v.conferencia.id === activa.conferencia.id)
-
-  const puedeValidar =
-    visibleDeLaFicha !== undefined &&
-    (visibleDeLaFicha.procedencia === 'propia' || privacidadEfectiva(visibleDeLaFicha).permitirValidarFichas)
-
   /* En columnas, la de eventos se aparta al bajar al tercer nivel. En completa se ocultan todas menos la del nivel. */
   const enCompleta = vista === 'completa'
   const nivelActual: 'navegacion' | 'fichas' | 'detalle' =
@@ -540,7 +529,7 @@ export function PantallaArchivo({
     migas.push({
       clave: 'ficha',
       etiqueta: activa.ficha.fragmento,
-      icono: ICONO_POR_VALIDACION[activa.ficha.estadoDeValidacion],
+      icono: ICONO_DE_FICHA,
     })
   }
 
@@ -709,7 +698,7 @@ export function PantallaArchivo({
         fichasListadas.map((entrada) => (
           <Fila
             key={entrada.ficha.id}
-            icono={ICONO_POR_VALIDACION[entrada.ficha.estadoDeValidacion]}
+            icono={ICONO_DE_FICHA}
             /* Buscando en todo el archivo hace falta saber de dónde sale cada resultado. */
             secundario={
               buscandoEnTodo
@@ -778,42 +767,12 @@ export function PantallaArchivo({
               </span>
             </div>
 
-            <section className="flex flex-col gap-2 rounded-[20px] bg-panel p-5">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-texto-tenue">
-                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
-                  more_horiz
-                </span>
-                Lo que se dijo alrededor
-              </h3>
-              <p className="text-base leading-relaxed text-texto">{activa.ficha.contextoMinimo}</p>
-            </section>
-
-            {/*
-              El estado se explica con palabras en vez de con una insignia de
-              color: "automática" no significaba nada por sí sola, y el icono
-              de destello en la lista tampoco decía qué estaba señalando.
-            */}
-            <p className="flex items-start gap-2 text-sm text-texto-tenue">
-              <span
-                aria-hidden="true"
-                className="material-symbols-rounded icono-contorno mt-px shrink-0 text-base"
-              >
-                {ICONO_POR_VALIDACION[activa.ficha.estadoDeValidacion]}
-              </span>
-              {EXPLICACION_DE_VALIDACION[activa.ficha.estadoDeValidacion]}
-            </p>
           </article>
         )}
       </div>
 
       {activa === undefined ? null : (
         <div className="flex flex-col pt-4">
-          {puedeValidar && activa.ficha.estadoDeValidacion !== 'validada' ? (
-            <AccionDeColumna icono="check_circle" onClick={() => alValidar(activa.ficha.id)}>
-              Marcar como validada
-            </AccionDeColumna>
-          ) : null}
-
           {/*
             "Ir a la conferencia" no navega fuera: lleva el propio explorador a
             esa charla. Antes salía a otra ruta y se perdía todo el recorrido,
@@ -905,6 +864,21 @@ export function PantallaArchivo({
                 <span className="rounded-full bg-acento-contraste px-1.5 text-sm text-acento">{filtrosActivos}</span>
               )}
             </button>
+
+            {/* Compartir vive en la cabecera porque se comparten varias a la vez, no la que estés mirando. */}
+            {alCompartir === undefined || archivoVacio ? null : (
+              <button
+                ref={refDelBotonDeCompartir as RefObject<HTMLButtonElement | null>}
+                type="button"
+                onClick={alCompartir}
+                className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto-tenue transition-colors hover:text-texto"
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                  ios_share
+                </span>
+                Compartir
+              </button>
+            )}
 
             <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={setVista} />
 

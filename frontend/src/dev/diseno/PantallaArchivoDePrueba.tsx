@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
+import { ModalDeCompartir } from '@/features/configuracion/components'
 import { ModalDeCarga } from '@/features/conferencias/components'
 import type { ResultadoCreacion } from '@/features/conferencias/components'
 import {
@@ -52,8 +53,8 @@ const VISIBLES: readonly ConferenciaVisible[] = CONFERENCIAS_DE_EJEMPLO.map(
 )
 
 export function PantallaArchivoDePrueba(): ReactElement {
-  const [validadas, setValidadas] = useState<readonly string[]>([])
   const [cargaAbierta, setCargaAbierta] = useState(false)
+  const [compartirAbierto, setCompartirAbierto] = useState(false)
   const [criterios, setCriterios] = useState<CriteriosDeListado>(CRITERIOS_POR_DEFECTO)
   const [etiquetas, setEtiquetas] = useState<readonly Etiqueta[]>(
     ESPACIO_DE_PRUEBA?.etiquetas ?? [],
@@ -62,16 +63,7 @@ export function PantallaArchivoDePrueba(): ReactElement {
     ESPACIO_DE_PRUEBA?.asignaciones ?? [],
   )
 
-  /* La validación se simula en memoria: aquí no hay Supabase al que pedirle nada. */
-  const fichas = useMemo(
-    () =>
-      FICHAS_DE_EJEMPLO.map((ficha) =>
-        validadas.includes(ficha.id)
-          ? { ...ficha, estadoDeValidacion: 'validada' as const }
-          : ficha,
-      ),
-    [validadas],
-  )
+  const fichas = FICHAS_DE_EJEMPLO
 
   const listadas = useMemo(
     () => listarConferencias({ visibles: VISIBLES, criterios, asignaciones, fichas }),
@@ -120,8 +112,8 @@ export function PantallaArchivoDePrueba(): ReactElement {
           cargando={false}
           error={null}
           alCargarConferencia={() => setCargaAbierta(true)}
-          alValidar={(idFicha) => setValidadas((anteriores) => [...anteriores, idFicha])}
-          criterios={criterios}
+        alCompartir={() => setCompartirAbierto(true)}
+            criterios={criterios}
           etiquetas={etiquetas}
           etiquetasDe={etiquetasDe}
           hayConferenciasSinFiltrar={VISIBLES.length > 0}
@@ -154,6 +146,13 @@ export function PantallaArchivoDePrueba(): ReactElement {
                 : [...anteriores, { idEtiqueta, idConferencia }],
             )
           }
+        />
+
+        <ModalDeCompartir
+          abierto={compartirAbierto}
+          alCerrar={() => setCompartirAbierto(false)}
+          idUsuario={ID_DE_PRUEBA}
+          conferencias={CONFERENCIAS_DE_EJEMPLO}
         />
 
         <ModalDeCarga
