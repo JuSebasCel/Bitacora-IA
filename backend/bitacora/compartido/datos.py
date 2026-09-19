@@ -101,6 +101,14 @@ def crear_cliente(configuracion: Configuracion, token: str) -> ClienteSupabase:
     Se importa el SDK dentro de la función para que los módulos puros y sus
     pruebas no tengan que cargar `supabase` ni su cadena de dependencias.
 
+    `ClientOptions` se importa del paquete y no de `supabase.lib.client_options`.
+    Parecen lo mismo y no lo son: ese módulo define `ClientOptions` (la base) y
+    `SyncClientOptions`, y `create_client` —que es síncrono— necesita la
+    segunda. El paquete reexporta justamente esa. Con la base, la creación del
+    cliente muere en `AttributeError: 'ClientOptions' object has no attribute
+    'storage'`, y lo hace en tiempo de ejecución contra Supabase real: la suite
+    no lo veía porque ahí el SDK está mockeado.
+
     El token va tanto en la cabecera del cliente como en `postgrest.auth`: la
     cabecera cubre Storage y las llamadas RPC, y `postgrest.auth` cubre las
     consultas a tablas. Poner solo una de las dos deja la mitad de las
@@ -108,8 +116,7 @@ def crear_cliente(configuracion: Configuracion, token: str) -> ClienteSupabase:
     fallo que se manifiesta como "no hay datos" y no como "no tienes permiso",
     y por eso cuesta tanto de diagnosticar.
     """
-    from supabase import create_client
-    from supabase.lib.client_options import ClientOptions
+    from supabase import ClientOptions, create_client
 
     cliente = create_client(
         configuracion.supabase_url,
