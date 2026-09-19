@@ -54,11 +54,19 @@ las líneas de las que sale el fragmento. Nunca los estimes.
 "y" para unir dos cosas distintas, son dos unidades.
 4. `tema` debe ser uno de los temas de la lista que se te da, copiado exacto. \
 Solo si ninguno describe la unidad, propones uno nuevo y explicas en \
-`justificacion_del_tema` por qué ninguno de los de la lista servía.
-5. `confianza` es tu certeza real sobre la clasificación (tipo y tema), de 0 a \
+`justificacion_del_tema` por qué ninguno de los de la lista servía. La lista \
+puede llegar vacía: entonces los propones todos tú.
+5. Un tema es una CATEGORÍA AMPLIA bajo la que caben muchas charlas distintas, \
+no el asunto concreto de esta. "Inteligencia artificial", "Salud pública" o \
+"Educación" son temas; "Sesgos en modelos de predicción de deserción \
+estudiantil" no lo es — eso es el título de una charla. Antes de proponer uno \
+nuevo, mira si alguno de la lista lo engloba, y úsalo si es así: es mejor un \
+tema amplio compartido por veinte charlas que veinte temas de una charla cada \
+uno. Escríbelo en singular y con mayúscula inicial.
+6. `confianza` es tu certeza real sobre la clasificación (tipo y tema), de 0 a \
 1. No la infles: una confianza honesta y baja manda la ficha a revisión \
 humana, que es donde debe ir.
-6. Saludos, agradecimientos, logística del evento y preguntas del público sin \
+7. Saludos, agradecimientos, logística del evento y preguntas del público sin \
 contenido propio no son unidades. Prefiere devolver pocas y buenas.
 
 Devuelves un objeto JSON con una única clave `fichas`, cuyo valor es la lista \

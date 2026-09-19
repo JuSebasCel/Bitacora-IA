@@ -97,18 +97,43 @@ def test_los_literales_coinciden_con_las_uniones_del_frontend(
 
 def test_las_columnas_de_ficha_existen_en_la_tabla() -> None:
     """
-    `asdict(Ficha)` se inserta tal cual: un nombre de campo que no sea una
-    columna real hace fallar el insert de la conferencia entera, y sería un
-    fallo tardío, en segundo plano, después de haber pagado la transcripción.
+    Lo que se inserta es `fila_de_ficha`, no `asdict`: un nombre de campo que
+    no sea una columna real hace fallar el insert de la conferencia entera, y
+    seria un fallo tardio, en segundo plano, despues de haber pagado la
+    transcripcion.
+
+    Los campos de transporte quedan fuera de la comprobacion, pero se exige
+    que esten declarados en `CAMPOS_QUE_NO_SON_COLUMNAS`: asi agregar uno
+    obliga a decirlo, en vez de descubrirlo cuando Postgres rechace la fila.
     """
     from dataclasses import fields
 
-    from bitacora.conferencias.tipos import Ficha
+    from bitacora.conferencias.tipos import CAMPOS_QUE_NO_SON_COLUMNAS, Ficha, fila_de_ficha
 
     sql = _sql_del_esquema()
     definicion = sql[sql.index("create table fichas") : sql.index("create index fichas_")]
 
     for campo in fields(Ficha):
+        if campo.name in CAMPOS_QUE_NO_SON_COLUMNAS:
+            continue
+
         assert re.search(rf"^\s+{campo.name}\s", definicion, re.MULTILINE), (
             f"`fichas` no tiene la columna {campo.name}"
         )
+
+    ficha = Ficha(
+        id_conferencia="c",
+        fragmento="f",
+        hablante="h",
+        segundo_inicio=0,
+        segundo_fin=1,
+        id_tema="t",
+        tipo_de_unidad="cita-textual",
+        estado_de_validacion="pendiente",
+        confianza_automatica=0.5,
+        contexto_minimo="ctx",
+        nombre_de_tema_nuevo="Inteligencia artificial",
+    )
+
+    assert CAMPOS_QUE_NO_SON_COLUMNAS.isdisjoint(fila_de_ficha(ficha))
+

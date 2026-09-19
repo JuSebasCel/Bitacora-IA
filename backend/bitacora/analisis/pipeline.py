@@ -14,7 +14,7 @@ request), así que `conferencias.estado` ES la barra de progreso.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Protocol, Sequence
 
 from bitacora.analisis.chunking import Ventana, agrupar_en_ventanas, renderizar_ventana
@@ -78,10 +78,18 @@ def _segmentos_de_la_fuente(
 
 
 def _tema_de_respaldo(conferencia: Conferencia, temas: Sequence[Tema]) -> str:
+    """
+    Cadena vacía cuando no hay nada a lo que caer.
+
+    Con la taxonomía vacía —el estado normal de una cuenta nueva— no existe
+    ningún tema de respaldo, y eso ya no es un problema: una ficha sin tema
+    reconocido viaja con el nombre que propuso el análisis y se resuelve
+    después, cuando ese tema ya se creó.
+    """
     if conferencia.id_tema_principal:
         return conferencia.id_tema_principal
 
-    return temas[0].id
+    return temas[0].id if temas else ""
 
 
 def _analizar_ventanas(
@@ -115,6 +123,37 @@ def _analizar_ventanas(
     return deduplicar(fichas), deduplicar_propuestas(propuestas)
 
 
+def _resolver_temas_nuevos(
+    fichas: Sequence[Ficha],
+    vocabulario: Sequence[Tema],
+    id_de_respaldo: str,
+) -> tuple[Ficha, ...]:
+    """
+    Cambia el nombre del tema por su id, ya que el tema existe.
+
+    Una ficha que se queda sin id se descarta en vez de guardarse mal: pasa
+    solo si el tema no se pudo crear, y meterla bajo un tema cualquiera sería
+    peor que perderla — quedaría archivada donde nadie la busca y nadie sabría
+    que está mal.
+    """
+    por_nombre = {tema.nombre.strip().casefold(): tema.id for tema in vocabulario}
+    resueltas: list[Ficha] = []
+
+    for ficha in fichas:
+        if not ficha.nombre_de_tema_nuevo:
+            resueltas.append(ficha)
+            continue
+
+        id_tema = por_nombre.get(ficha.nombre_de_tema_nuevo.strip().casefold()) or id_de_respaldo
+
+        if not id_tema:
+            continue
+
+        resueltas.append(replace(ficha, id_tema=id_tema, nombre_de_tema_nuevo=""))
+
+    return tuple(resueltas)
+
+
 def procesar_conferencia(
     id_conferencia: str,
     repositorio: RepositorioDeConferencias,
@@ -135,9 +174,15 @@ def procesar_conferencia(
     if conferencia.estado not in ESTADOS_PROCESABLES:
         raise ErrorDeBitacora("PROC_ESTADO_NO_PROCESABLE", conferencia.estado)
 
+    """
+    Un pool vacío es un punto de partida válido, no un error.
+
+    Antes esto moría en `PROC_SIN_TEMAS_DISPONIBLES`, y era un punto muerto:
+    procesar exigía temas, los temas salían de curar propuestas, y las
+    propuestas salían de procesar. Nadie podía empezar. Ahora el análisis
+    clasifica contra lo que haya —aunque sea nada— y crea lo que le falte.
+    """
     temas = repositorio.listar_temas()
-    if not temas:
-        raise ErrorDeBitacora("PROC_SIN_TEMAS_DISPONIBLES")
 
     repositorio.marcar_estado(id_conferencia, "procesando")
 
@@ -153,8 +198,26 @@ def procesar_conferencia(
 
         duracion = max(conferencia.duracion_en_segundos, duracion_de(segmentos))
 
+        """
+        Los temas que el análisis inventó se crean AHORA, antes de guardar las
+        fichas, porque `fichas.id_tema` es NOT NULL con clave foránea: una
+        ficha cuyo tema todavía no existe no se puede insertar.
+
+        Es también lo que hace que la taxonomía crezca sola. Antes estas fichas
+        caían al tema de respaldo —quedaban archivadas bajo algo que no era lo
+        suyo— y el tema real se iba a una cola de curaduría que nadie miraba.
+        """
+        creados = repositorio.crear_temas(
+            [ficha.nombre_de_tema_nuevo for ficha in fichas if ficha.nombre_de_tema_nuevo]
+        )
+        vocabulario = (*temas, *creados)
+        fichas = _resolver_temas_nuevos(fichas, vocabulario, _tema_de_respaldo(conferencia, vocabulario))
+
+        if not fichas:
+            raise ErrorDeBitacora("PROC_SIN_FICHAS")
+
         repositorio.guardar_resultado_del_analisis(
-            id_conferencia, fichas, resumen_de(fichas, temas), duracion
+            id_conferencia, fichas, resumen_de(fichas, vocabulario), duracion
         )
         """
         Las propuestas de tema se registran DESPUÉS de guardar las fichas: si

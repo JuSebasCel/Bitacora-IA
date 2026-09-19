@@ -237,11 +237,16 @@ def validar_propuestas(
                 segundo_inicio=inicio,
                 segundo_fin=fin,
                 id_tema=tema.id if tema is not None else contexto.id_tema_de_respaldo,
+                # Si el tema no existía, la ficha viaja con su nombre y sin
+                # id: el pipeline lo crea y la resuelve antes de guardar. Antes
+                # caía al tema de respaldo, que la archivaba bajo algo que no
+                # era lo suyo solo porque el vocabulario no lo cubría aún.
+                nombre_de_tema_nuevo="" if tema is not None else nombre_de_tema,
                 tipo_de_unidad=tipo_de_unidad,
                 estado_de_validacion=estado_inicial(
                     tipo_de_unidad,
                     confianza,
-                    ventana.estimada or tema is None,
+                    ventana.estimada,
                 ),
                 confianza_automatica=round(confianza, 2),
                 contexto_minimo=contexto_de(ventana, inicio, fin),

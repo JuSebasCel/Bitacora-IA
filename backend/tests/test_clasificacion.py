@@ -183,29 +183,30 @@ def test_una_coordenada_ilegible_cae_al_inicio_de_la_ventana(ventana, contexto) 
     assert resultado.fichas[0].segundo_inicio == 100
 
 
-def test_un_tema_fuera_del_pool_va_a_curaduria_y_la_ficha_queda_pendiente(
+def test_un_tema_que_no_esta_en_el_pool_viaja_con_su_nombre_para_crearse(
     ventana, contexto
 ) -> None:
     """
-    La ficha no se pierde: cae al tema de respaldo y queda a revisión, mientras
-    la propuesta viaja a `temas_propuestos`. Reclasificarla después es cambiar
-    una columna, no reprocesar la charla.
+    La ficha ya no cae al tema de respaldo: sale con el nombre del tema que el
+    analisis quiso usar y sin id, y el pipeline lo crea y la resuelve antes de
+    guardar. Archivarla bajo otro tema era dejarla donde nadie la busca solo
+    porque el vocabulario aun no la cubria.
     """
     resultado = validar_propuestas(
-        [propuesta(tema="Discriminación algorítmica", confianza=1.0)], ventana, contexto
+        [propuesta(tema="Inteligencia artificial", confianza=1.0)], ventana, contexto
     )
 
-    assert resultado.fichas[0].id_tema == "tem-datos"
-    assert resultado.fichas[0].estado_de_validacion == "pendiente"
-    assert [p.nombre for p in resultado.temas_propuestos] == ["Discriminación algorítmica"]
+    assert resultado.fichas[0].nombre_de_tema_nuevo == "Inteligencia artificial"
+    assert [p.nombre for p in resultado.temas_propuestos] == ["Inteligencia artificial"]
     assert resultado.temas_propuestos[0].justificacion != ""
 
 
-def test_un_tema_fuera_del_pool_nunca_se_inserta_como_tema(ventana, contexto) -> None:
-    """El pool solo crece por curaduría: la migración lo dice y esto lo sostiene."""
-    resultado = validar_propuestas([propuesta(tema="Tema inexistente")], ventana, contexto)
+def test_un_tema_del_pool_no_deja_nombre_pendiente(ventana, contexto) -> None:
+    """Lo contrario del anterior: si el tema ya existe, se usa su id y no queda nada por crear."""
+    resultado = validar_propuestas([propuesta()], ventana, contexto)
 
-    assert all(ficha.id_tema in {t.id for t in contexto.temas} for ficha in resultado.fichas)
+    assert resultado.fichas[0].id_tema == "tem-sesgos"
+    assert resultado.fichas[0].nombre_de_tema_nuevo == ""
 
 
 def test_la_confianza_se_recorta_al_rango_valido(ventana, contexto) -> None:

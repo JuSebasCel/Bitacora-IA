@@ -109,11 +109,48 @@ class Ficha:
     estado_de_validacion: str
     confianza_automatica: float
     contexto_minimo: str
+    """
+    Nombre del tema que el análisis quiso usar cuando todavía no existía.
+
+    No es una columna: la ficha nace antes de que el tema exista, porque el
+    id solo aparece al crearlo. El pipeline crea los temas que falten, resuelve
+    estas fichas contra ellos y deja el campo vacío antes de guardar. Que llegue
+    con contenido a la escritura significa que quedó un tema sin crear.
+    """
+    nombre_de_tema_nuevo: str = ""
+
+
+"""
+Campos de `Ficha` que viajan con ella pero no son columnas de `fichas`.
+
+`asdict(ficha)` se inserta tal cual, asi que cualquier campo de transporte
+tiene que salir antes de escribir. Vive aqui, junto al tipo, para que quien
+agregue otro campo asi lo anote en el mismo sitio en que lo declara.
+"""
+CAMPOS_QUE_NO_SON_COLUMNAS = frozenset({"nombre_de_tema_nuevo"})
+
+
+def fila_de_ficha(ficha: Ficha) -> dict[str, object]:
+    """La ficha como fila de `fichas`, sin sus campos de transporte."""
+    from dataclasses import asdict
+
+    return {
+        clave: valor
+        for clave, valor in asdict(ficha).items()
+        if clave not in CAMPOS_QUE_NO_SON_COLUMNAS
+    }
 
 
 @dataclass(frozen=True)
 class PropuestaDeTema:
-    """Tema que el análisis quiso usar y no está en el pool: va a curaduría, no a `temas`."""
+    """
+    Tema que el análisis creó porque ninguno de los existentes encajaba.
+
+    Sigue registrándose para que la curaduría pueda revisar lo que el análisis
+    decidió por su cuenta —fusionar dos que significan lo mismo, renombrar uno
+    demasiado específico—. Lo que ya no hace es bloquear: el tema se crea y la
+    ficha lo usa en el momento.
+    """
 
     nombre: str
     justificacion: str

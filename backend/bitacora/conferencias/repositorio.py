@@ -16,12 +16,11 @@ una forma de averiguar qué subió otra persona.
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Any, Protocol, Sequence
 
 from bitacora.compartido.datos import ClienteSupabase, traducir_fallo_de_datos
 from bitacora.compartido.errores import ErrorDeBitacora
-from bitacora.conferencias.tipos import Conferencia, Ficha, PropuestaDeTema, Tema
+from bitacora.conferencias.tipos import Conferencia, Ficha, PropuestaDeTema, Tema, fila_de_ficha
 
 BUCKET_DE_AUDIO = "audio-conferencias"
 
@@ -44,6 +43,8 @@ class RepositorioDeConferencias(Protocol):
     def registrar_temas_propuestos(
         self, id_evento: str | None, propuestas: Sequence[PropuestaDeTema]
     ) -> None: ...
+
+    def crear_temas(self, nombres: Sequence[str]) -> tuple[Tema, ...]: ...
 
     def descargar_fuente(self, conferencia: Conferencia) -> tuple[str, bytes]: ...
 
@@ -111,6 +112,44 @@ class RepositorioSupabase:
             Tema(id=str(fila["id"]), nombre=str(fila.get("nombre") or "")) for fila in filas
         )
 
+    def crear_temas(self, nombres: Sequence[str]) -> tuple[Tema, ...]:
+        """
+        Da de alta temas nuevos y devuelve los definitivos, con su id.
+
+        El vocabulario lo construye el análisis: cuando ninguno de los temas
+        existentes describe lo que acaba de encontrar, crea uno. Por eso esto
+        escribe en `temas` y no en `temas_propuestos` — la curaduría queda para
+        revisar lo que se creó, no como puerta previa que deja una base vacía
+        sin poder analizar nada nunca.
+
+        `upsert` sobre `nombre`, que es único: dos ventanas de la misma charla
+        pueden proponer el mismo tema, y dos charlas procesándose a la vez
+        también. El choque no es un error, es el caso normal, y resolverlo
+        devolviendo la fila que ya estaba es justo lo que se quiere.
+        """
+        limpios = [nombre.strip() for nombre in nombres if nombre.strip() != ""]
+
+        if not limpios:
+            return ()
+
+        try:
+            respuesta = (
+                self._cliente.table("temas")
+                .upsert(
+                    [{"nombre": nombre} for nombre in dict.fromkeys(limpios)],
+                    on_conflict="nombre",
+                )
+                .execute()
+            )
+        except Exception as fallo:  # noqa: BLE001
+            raise traducir_fallo_de_datos(fallo) from fallo
+
+        filas = getattr(respuesta, "data", None) or []
+
+        return tuple(
+            Tema(id=str(fila["id"]), nombre=str(fila.get("nombre") or "")) for fila in filas
+        )
+
     def marcar_estado(self, id_conferencia: str, estado: str) -> None:
         try:
             self._cliente.table("conferencias").update({"estado": estado}).eq(
@@ -144,7 +183,7 @@ class RepositorioSupabase:
 
             if fichas:
                 self._cliente.table("fichas").insert(
-                    [asdict(ficha) for ficha in fichas]
+                    [fila_de_ficha(ficha) for ficha in fichas]
                 ).execute()
 
             self._cliente.table("conferencias").update(

@@ -80,6 +80,7 @@ class RepositorioFalso:
         self.duracion_guardada = 0
         self.propuestas_registradas: tuple[PropuestaDeTema, ...] = ()
         self.evento_de_las_propuestas: str | None = None
+        self.temas_creados: tuple[str, ...] = ()
         self.fallos: dict[str, str] = {}
 
     def _quizas_fallar(self, operacion: str) -> None:
@@ -98,6 +99,32 @@ class RepositorioFalso:
         self._quizas_fallar("listar_temas")
 
         return self.temas
+
+    def crear_temas(self, nombres: Sequence[str]) -> tuple[Tema, ...]:
+        """
+        Da de alta lo que no estuviera ya, como el upsert de verdad.
+
+        Devolver tambien los que ya existian es lo que permite al pipeline
+        resolver una ficha contra un tema que otra ventana acababa de crear.
+        """
+        self._quizas_fallar("crear_temas")
+
+        limpios = [n.strip() for n in nombres if n.strip()]
+        self.temas_creados = tuple(dict.fromkeys(limpios))
+
+        existentes = {t.nombre.casefold(): t for t in self.temas}
+        creados: list[Tema] = []
+
+        for nombre in self.temas_creados:
+            if nombre.casefold() in existentes:
+                creados.append(existentes[nombre.casefold()])
+                continue
+
+            tema = Tema(id=f"tem-nuevo-{len(existentes) + len(creados)}", nombre=nombre)
+            creados.append(tema)
+            self.temas = (*self.temas, tema)
+
+        return tuple(creados)
 
     def marcar_estado(self, id_conferencia: str, estado: str) -> None:
         self.estados.append(estado)
