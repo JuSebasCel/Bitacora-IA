@@ -6,7 +6,6 @@ import {
   BotonPildora,
   EstadoVacioIlustrado,
   Esqueleto,
-  Insignia,
   Modal,
   PanelDeError,
   SelectorDeVista,
@@ -14,7 +13,7 @@ import {
 import type { OpcionDeVista } from '@/shared/ui'
 import type { ResultadoCreacion } from '../components'
 import { SelectorDeEtiquetas } from '../components'
-import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from '../components/vocabulario'
+import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Etiqueta, EstadoDeValidacion, Ficha } from '../data'
 import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo, privacidadEfectiva } from '../query'
@@ -61,6 +60,20 @@ const ICONO_POR_VALIDACION: Record<EstadoDeValidacion, string> = {
   validada: 'check_circle',
   pendiente: 'pending',
   automatica: 'auto_awesome',
+}
+
+/*
+  Qué significa cada estado, dicho con palabras.
+
+  El destello de "automática" era el que más confundía: no quiere decir "la
+  hizo la IA" —todas las hace la IA— sino que el clasificador quedó lo bastante
+  seguro como para no mandarla a revisar. El backend nunca marca `validada` por
+  su cuenta, y esa es justo la distinción que hace citable a una ficha.
+*/
+const EXPLICACION_DE_VALIDACION: Record<EstadoDeValidacion, string> = {
+  validada: 'Revisada y confirmada por una persona.',
+  pendiente: 'Sin revisar todavía: conviene comprobarla antes de citarla.',
+  automatica: 'Aceptada sin revisión porque el análisis quedó muy seguro de la clasificación.',
 }
 
 const VISTAS: readonly [OpcionDeVista<Vista>, OpcionDeVista<Vista>] = [
@@ -723,37 +736,72 @@ export function PantallaArchivo({
             <EstadoVacioIlustrado icono="description" mensaje="Selecciona una ficha para ver lo que dice" />
           </div>
         ) : (
+          /*
+            El detalle era una ficha técnica: la cita suelta arriba y cinco
+            filas de `rótulo: valor` debajo, todas del mismo peso. Eso pone la
+            coordenada y el tipo al mismo nivel que lo único que importa, que
+            es lo que la persona dijo.
+
+            Ahora lo dice en el orden en que se lee: la cita, quién la dijo y
+            en qué minuto, y solo después la clasificación. El contexto deja de
+            ser un párrafo tenue que parecía continuación de la cita y pasa a
+            estar rotulado y sobre su propia superficie: es lo que rodeaba a la
+            frase cuando se dijo, no más frase.
+          */
           <article className="flex flex-col gap-6">
-            <p className="text-xl leading-relaxed text-texto">{activa.ficha.fragmento}</p>
+            <blockquote className="flex flex-col gap-3">
+              <p className="font-titulo text-[22px] leading-snug text-texto">
+                «{activa.ficha.fragmento}»
+              </p>
 
-            <p className="text-base leading-relaxed text-texto-tenue">{activa.ficha.contextoMinimo}</p>
+              {/*
+                Quién lo dijo estaba en los datos y no se enseñaba en ninguna
+                parte. En un panel no tiene por qué ser el ponente de la
+                charla, y sin este renglón la cita se le atribuía al ponente
+                por omisión.
+              */}
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-texto-tenue">
+                <span className="text-texto">{activa.ficha.hablante}</span>
+                <span aria-hidden="true">·</span>
+                <span className="coordenada">{formatearTimestamp(activa.ficha.segundoInicio)}</span>
+                <span aria-hidden="true">·</span>
+                <span className="min-w-0 truncate">{activa.conferencia.titulo}</span>
+              </p>
+            </blockquote>
 
-            <dl className="flex flex-col gap-3 border-t border-filete pt-5 text-base">
-              <div className="flex items-center gap-3">
-                <dt className="w-28 shrink-0 text-texto-tenue">Estado</dt>
-                <dd>
-                  <Insignia tono={TONO_POR_VALIDACION[activa.ficha.estadoDeValidacion]}>
-                    {VALIDACION_EN_SINGULAR[activa.ficha.estadoDeValidacion]}
-                  </Insignia>
-                </dd>
-              </div>
-              <div className="flex items-center gap-3">
-                <dt className="w-28 shrink-0 text-texto-tenue">Tipo</dt>
-                <dd className="text-texto">{TIPO_EN_SINGULAR[activa.ficha.tipoDeUnidad]}</dd>
-              </div>
-              <div className="flex items-center gap-3">
-                <dt className="w-28 shrink-0 text-texto-tenue">Minuto</dt>
-                <dd className="coordenada text-texto">{formatearTimestamp(activa.ficha.segundoInicio)}</dd>
-              </div>
-              <div className="flex items-center gap-3">
-                <dt className="w-28 shrink-0 text-texto-tenue">Tema</dt>
-                <dd className="text-texto">{nombreDeTema(temas, activa.ficha.idTema)}</dd>
-              </div>
-              <div className="flex min-w-0 items-center gap-3">
-                <dt className="w-28 shrink-0 text-texto-tenue">Conferencia</dt>
-                <dd className="truncate text-texto">{activa.conferencia.titulo}</dd>
-              </div>
-            </dl>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
+                {TIPO_EN_SINGULAR[activa.ficha.tipoDeUnidad]}
+              </span>
+              <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
+                {nombreDeTema(temas, activa.ficha.idTema)}
+              </span>
+            </div>
+
+            <section className="flex flex-col gap-2 rounded-[20px] bg-panel p-5">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-texto-tenue">
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+                  more_horiz
+                </span>
+                Lo que se dijo alrededor
+              </h3>
+              <p className="text-base leading-relaxed text-texto">{activa.ficha.contextoMinimo}</p>
+            </section>
+
+            {/*
+              El estado se explica con palabras en vez de con una insignia de
+              color: "automática" no significaba nada por sí sola, y el icono
+              de destello en la lista tampoco decía qué estaba señalando.
+            */}
+            <p className="flex items-start gap-2 text-sm text-texto-tenue">
+              <span
+                aria-hidden="true"
+                className="material-symbols-rounded icono-contorno mt-px shrink-0 text-base"
+              >
+                {ICONO_POR_VALIDACION[activa.ficha.estadoDeValidacion]}
+              </span>
+              {EXPLICACION_DE_VALIDACION[activa.ficha.estadoDeValidacion]}
+            </p>
           </article>
         )}
       </div>
