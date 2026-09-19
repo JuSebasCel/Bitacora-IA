@@ -26,8 +26,10 @@ type PropiedadesBarraLateral = {
   y la columna no salte al cambiar de sección. Todo el movimiento vive en
   `.item-de-dock` (`styles/index.css`).
 
-  Tres bloques, en orden de uso: a dónde ir, qué crear, y el chat aparte
-  porque no es un destino sino una consulta sobre todo lo demás.
+  Dos bloques: a dónde ir, y qué hacer. El chat vive en el segundo junto a
+  las acciones de crear, porque no es un destino sino algo que se hace sobre
+  todo lo demás; tenerlo entre las secciones lo hacía parecer una pantalla
+  más a la que se navega.
 */
 
 /* 40px de alto, 8px de padding, line-height clavado en 24px. */
@@ -94,22 +96,6 @@ export function BarraLateral({
             {seccion.etiqueta}
           </Link>
         ))}
-
-        {/*
-          El chat cierra el bloque de secciones porque se usa como una de
-          ellas, aunque técnicamente abra un panel. Nunca queda "activo": no
-          es un lugar donde se esté, es algo que se consulta.
-        */}
-        <button
-          type="button"
-          onClick={() => {
-            alNavegar()
-            alAbrirChat()
-          }}
-          className={clasesDeItem(false)}
-        >
-          Chat
-        </button>
       </div>
 
       <p className="mt-6 flex h-10 items-center px-2 text-base leading-6 text-nav-tenue">Acciones</p>
@@ -125,6 +111,23 @@ export function BarraLateral({
             {accion.etiqueta}
           </Link>
         ))}
+
+        {/*
+          El chat cierra este bloque y no el de secciones: no es un sitio
+          donde se esté, es algo que se hace sobre todo lo demás. Por eso
+          tampoco queda nunca "activo" — sigue siendo un botón que abre un
+          panel, no una ruta.
+        */}
+        <button
+          type="button"
+          onClick={() => {
+            alNavegar()
+            alAbrirChat()
+          }}
+          className={clasesDeItem(false)}
+        >
+          Chat
+        </button>
       </div>
     </nav>
   )

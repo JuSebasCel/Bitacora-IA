@@ -224,9 +224,14 @@ export function Modal({
         aria-modal="true"
         aria-label={titulo}
         tabIndex={-1}
-        className={`${cerrando ? '' : 'entra-con-desenfoque'} ${ANCHO[ancho]} max-w-full rounded-[32px] bg-panel focus:outline-none`}
+        /*
+          `max-h-full` con el cuerpo desplazable: un formulario largo dentro
+          de un modal centrado se salía por abajo de la pantalla y su botón de
+          envío quedaba fuera de alcance. La cabecera no se desplaza.
+        */
+        className={`${cerrando ? '' : 'entra-con-desenfoque'} ${ANCHO[ancho]} flex max-h-full max-w-full flex-col rounded-[32px] bg-panel focus:outline-none`}
       >
-        <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+        <div className="flex shrink-0 items-center gap-3 px-5 pt-5 pb-3">
           <button
             type="button"
             onClick={alCerrar}
@@ -240,7 +245,9 @@ export function Modal({
           <h2 className="font-titulo text-[28px] leading-tight font-semibold text-texto">{titulo}</h2>
         </div>
 
-        <div className="flex flex-col gap-4 px-8 pt-2 pb-8">{children}</div>
+        <div className="sin-barra-de-scroll flex min-h-0 flex-col gap-4 overflow-y-auto px-8 pt-2 pb-8">
+          {children}
+        </div>
       </div>
     </div>
   )

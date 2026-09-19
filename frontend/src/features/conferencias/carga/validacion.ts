@@ -10,16 +10,6 @@ import type { FuenteDeConferencia } from '../data'
   Supabase Storage puede sostener de verdad.
 */
 
-export type DatosDeCarga = {
-  readonly titulo: string
-  /** Id del ponente elegido en el directorio compartido, no texto libre. */
-  readonly idPonente: string
-  /** Id del evento elegido en el directorio compartido, no texto libre. */
-  readonly idEvento: string
-  readonly fechaDelEvento: string
-  readonly fuente: FuenteDeConferencia
-}
-
 export type ResultadoDeCarga = { readonly ok: true } | { readonly ok: false; readonly codigo: CodigoError }
 
 export const EXTENSIONES_POR_FUENTE: Record<FuenteDeConferencia, readonly string[]> = {
@@ -30,21 +20,6 @@ export const EXTENSIONES_POR_FUENTE: Record<FuenteDeConferencia, readonly string
 export const TAMANO_MAXIMO_POR_FUENTE: Record<FuenteDeConferencia, number> = {
   audio: 300 * 1024 * 1024,
   transcripcion: 20 * 1024 * 1024,
-}
-
-/*
-  Un único código para "falta algo", no uno por campo: igual que
-  AUTH_CAMPO_REQUERIDO en el acceso, no importa cuál de los cuatro esté vacío,
-  la acción que sigue es la misma (completarlo).
-*/
-export function validarDatos(datos: DatosDeCarga): ResultadoDeCarga {
-  const campos = [datos.titulo, datos.idPonente, datos.idEvento, datos.fechaDelEvento]
-
-  if (campos.some((campo) => campo.trim() === '')) {
-    return { ok: false, codigo: 'CARGA_CAMPO_REQUERIDO' }
-  }
-
-  return { ok: true }
 }
 
 export function validarArchivo(archivo: File | null, fuente: FuenteDeConferencia): ResultadoDeCarga {

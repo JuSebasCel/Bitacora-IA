@@ -1,19 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  EXTENSIONES_POR_FUENTE,
-  TAMANO_MAXIMO_POR_FUENTE,
-  validarArchivo,
-  validarDatos,
-} from './validacion'
-import type { DatosDeCarga } from './validacion'
-
-const DATOS_VALIDOS: DatosDeCarga = {
-  titulo: 'Series de tiempo aplicadas a la demanda de transporte urbano',
-  idPonente: 'pon-evt-ccdn-tomas-iriarte-villalba',
-  idEvento: 'evt-ccdn',
-  fechaDelEvento: '2026-05-14',
-  fuente: 'audio',
-}
+import { EXTENSIONES_POR_FUENTE, TAMANO_MAXIMO_POR_FUENTE, validarArchivo } from './validacion'
 
 /*
   Construye un archivo con el tamaño exacto que pide la prueba sin reservar esa
@@ -27,27 +13,6 @@ function archivoDe(nombre: string, bytes: number, tipo = ''): File {
   Object.defineProperty(archivo, 'size', { value: bytes })
   return archivo
 }
-
-describe('validarDatos', () => {
-  it('acepta los cuatro campos completos', () => {
-    expect(validarDatos(DATOS_VALIDOS)).toEqual({ ok: true })
-  })
-
-  it.each(['titulo', 'idPonente', 'idEvento', 'fechaDelEvento'] as const)(
-    'rechaza cuando %s está vacío',
-    (campo) => {
-      const resultado = validarDatos({ ...DATOS_VALIDOS, [campo]: '' })
-
-      expect(resultado).toEqual({ ok: false, codigo: 'CARGA_CAMPO_REQUERIDO' })
-    },
-  )
-
-  it('rechaza un campo que solo tiene espacios', () => {
-    const resultado = validarDatos({ ...DATOS_VALIDOS, titulo: '   ' })
-
-    expect(resultado).toEqual({ ok: false, codigo: 'CARGA_CAMPO_REQUERIDO' })
-  })
-})
 
 describe('validarArchivo', () => {
   it('rechaza cuando no se eligió ningún archivo', () => {

@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
+import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
+import { ModalDeCarga } from '@/features/conferencias/components'
+import type { ResultadoCreacion } from '@/features/conferencias/components'
 import {
   CONFERENCIAS_DE_EJEMPLO,
   ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO,
@@ -39,17 +42,22 @@ import { TEMAS_DE_EJEMPLO } from '@/features/taxonomia/data'
 const ID_DE_PRUEBA = 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178'
 const ESPACIO_DE_PRUEBA = ESPACIOS_DE_ETIQUETAS_DE_EJEMPLO[ID_DE_PRUEBA]
 
-const VISIBLES: readonly ConferenciaVisible[] = CONFERENCIAS_DE_EJEMPLO.map((conferencia, indice) => ({
-  conferencia,
-  /* Una de cada tres llega compartida, para que "Propias" y "Compartidas" no den lo mismo. */
-  procedencia: indice % 3 === 2 ? 'compartida' : 'propia',
-  comparticion: null,
-}))
+const VISIBLES: readonly ConferenciaVisible[] = CONFERENCIAS_DE_EJEMPLO.map(
+  (conferencia, indice) => ({
+    conferencia,
+    /* Una de cada tres llega compartida, para que "Propias" y "Compartidas" no den lo mismo. */
+    procedencia: indice % 3 === 2 ? 'compartida' : 'propia',
+    comparticion: null,
+  }),
+)
 
 export function PantallaArchivoDePrueba(): ReactElement {
   const [validadas, setValidadas] = useState<readonly string[]>([])
+  const [cargaAbierta, setCargaAbierta] = useState(false)
   const [criterios, setCriterios] = useState<CriteriosDeListado>(CRITERIOS_POR_DEFECTO)
-  const [etiquetas, setEtiquetas] = useState<readonly Etiqueta[]>(ESPACIO_DE_PRUEBA?.etiquetas ?? [])
+  const [etiquetas, setEtiquetas] = useState<readonly Etiqueta[]>(
+    ESPACIO_DE_PRUEBA?.etiquetas ?? [],
+  )
   const [asignaciones, setAsignaciones] = useState<readonly AsignacionDeEtiqueta[]>(
     ESPACIO_DE_PRUEBA?.asignaciones ?? [],
   )
@@ -58,7 +66,9 @@ export function PantallaArchivoDePrueba(): ReactElement {
   const fichas = useMemo(
     () =>
       FICHAS_DE_EJEMPLO.map((ficha) =>
-        validadas.includes(ficha.id) ? { ...ficha, estadoDeValidacion: 'validada' as const } : ficha,
+        validadas.includes(ficha.id)
+          ? { ...ficha, estadoDeValidacion: 'validada' as const }
+          : ficha,
       ),
     [validadas],
   )
@@ -67,6 +77,24 @@ export function PantallaArchivoDePrueba(): ReactElement {
     () => listarConferencias({ visibles: VISIBLES, criterios, asignaciones, fichas }),
     [criterios, asignaciones, fichas],
   )
+
+  /* La comparte el filtro y el modal de carga: crear una etiqueta es lo mismo desde los dos. */
+  function crearEtiqueta(nombre: string): Promise<ResultadoCreacion> {
+    const limpio = nombre.trim()
+
+    if (etiquetas.some((etiqueta) => etiqueta.nombre.toLowerCase() === limpio.toLowerCase())) {
+      return Promise.resolve({ ok: false, mensaje: 'Ya tienes una etiqueta con ese nombre.' })
+    }
+
+    const etiqueta: Etiqueta = {
+      id: `etq-prueba-${limpio}`,
+      nombre: limpio,
+      idPropietario: ID_DE_PRUEBA,
+    }
+    setEtiquetas((anteriores) => [...anteriores, etiqueta])
+
+    return Promise.resolve({ ok: true, etiqueta })
+  }
 
   function etiquetasDe(idConferencia: string): readonly EtiquetaVisible[] {
     return asignaciones
@@ -78,58 +106,64 @@ export function PantallaArchivoDePrueba(): ReactElement {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-fondo p-8 font-sans text-texto">
-      <PantallaArchivo
-        visibles={listadas}
-        fichas={fichas}
-        temas={TEMAS_DE_EJEMPLO}
-        cargando={false}
-        error={null}
-        alCargarConferencia={() => undefined}
-        alValidar={(idFicha) => setValidadas((anteriores) => [...anteriores, idFicha])}
-        criterios={criterios}
-        etiquetas={etiquetas}
-        etiquetasDe={etiquetasDe}
-        hayConferenciasSinFiltrar={VISIBLES.length > 0}
-        alCambiarCriterios={(cambio) => setCriterios((anteriores) => ({ ...anteriores, ...cambio }))}
-        alAlternarEtiquetaDelFiltro={(idEtiqueta) =>
-          setCriterios((anteriores) => ({
-            ...anteriores,
-            etiquetas: anteriores.etiquetas.includes(idEtiqueta)
-              ? anteriores.etiquetas.filter((id) => id !== idEtiqueta)
-              : [...anteriores.etiquetas, idEtiqueta],
-          }))
-        }
-        alCrearEtiqueta={(nombre) => {
-          const limpio = nombre.trim()
-
-          if (etiquetas.some((etiqueta) => etiqueta.nombre.toLowerCase() === limpio.toLowerCase())) {
-            return Promise.resolve({ ok: false, mensaje: 'Ya tienes una etiqueta con ese nombre.' })
+    /*
+      `ProveedorDeApiKey` porque el modal de carga pregunta por la clave para
+      avisar si falta, y el proveedor vive normalmente en el shell — del que
+      esta vista previa cuelga fuera.
+    */
+    <ProveedorDeApiKey>
+      <div className="flex h-dvh flex-col overflow-hidden bg-fondo p-8 font-sans text-texto">
+        <PantallaArchivo
+          visibles={listadas}
+          fichas={fichas}
+          temas={TEMAS_DE_EJEMPLO}
+          cargando={false}
+          error={null}
+          alCargarConferencia={() => setCargaAbierta(true)}
+          alValidar={(idFicha) => setValidadas((anteriores) => [...anteriores, idFicha])}
+          criterios={criterios}
+          etiquetas={etiquetas}
+          etiquetasDe={etiquetasDe}
+          hayConferenciasSinFiltrar={VISIBLES.length > 0}
+          alCambiarCriterios={(cambio) =>
+            setCriterios((anteriores) => ({ ...anteriores, ...cambio }))
           }
-
-          const etiqueta: Etiqueta = {
-            id: `etq-prueba-${limpio}`,
-            nombre: limpio,
-            idPropietario: ID_DE_PRUEBA,
+          alAlternarEtiquetaDelFiltro={(idEtiqueta) =>
+            setCriterios((anteriores) => ({
+              ...anteriores,
+              etiquetas: anteriores.etiquetas.includes(idEtiqueta)
+                ? anteriores.etiquetas.filter((id) => id !== idEtiqueta)
+                : [...anteriores.etiquetas, idEtiqueta],
+            }))
           }
-          setEtiquetas((anteriores) => [...anteriores, etiqueta])
-
-          return Promise.resolve({ ok: true, etiqueta })
-        }}
-        alAlternarAsignacion={(idEtiqueta, idConferencia) =>
-          setAsignaciones((anteriores) =>
-            anteriores.some(
-              (asignacion) =>
-                asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia,
+          alCrearEtiqueta={crearEtiqueta}
+          alAlternarAsignacion={(idEtiqueta, idConferencia) =>
+            setAsignaciones((anteriores) =>
+              anteriores.some(
+                (asignacion) =>
+                  asignacion.idEtiqueta === idEtiqueta &&
+                  asignacion.idConferencia === idConferencia,
+              )
+                ? anteriores.filter(
+                    (asignacion) =>
+                      !(
+                        asignacion.idEtiqueta === idEtiqueta &&
+                        asignacion.idConferencia === idConferencia
+                      ),
+                  )
+                : [...anteriores, { idEtiqueta, idConferencia }],
             )
-              ? anteriores.filter(
-                  (asignacion) =>
-                    !(asignacion.idEtiqueta === idEtiqueta && asignacion.idConferencia === idConferencia),
-                )
-              : [...anteriores, { idEtiqueta, idConferencia }],
-          )
-        }
-      />
-    </div>
+          }
+        />
+
+        <ModalDeCarga
+          abierto={cargaAbierta}
+          alCerrar={() => setCargaAbierta(false)}
+          etiquetas={etiquetas}
+          alCrearEtiqueta={crearEtiqueta}
+          alCargar={() => setCargaAbierta(false)}
+        />
+      </div>
+    </ProveedorDeApiKey>
   )
 }

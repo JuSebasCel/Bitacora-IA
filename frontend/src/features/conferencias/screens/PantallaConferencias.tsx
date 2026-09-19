@@ -5,7 +5,7 @@ import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
 import { useSession } from '@/features/auth/session'
 import { useTemas } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
-import { PanelDeCarga, useConferenciasVisibles } from '../components'
+import { ModalDeCarga, useConferenciasVisibles } from '../components'
 import type { ResultadoCreacion } from '../components'
 import { escribirCriterios, leerCriterios, listarConferencias } from '../query'
 import type { CriteriosDeListado } from '../query'
@@ -148,12 +148,22 @@ export function PantallaConferencias(): ReactElement {
         alAlternarAsignacion={alAlternarAsignacion}
       />
 
-      <PanelDeCarga
+      <ModalDeCarga
         abierto={panelDeCargaAbierto}
         alCerrar={() => setPanelDeCargaAbierto(false)}
-        alCargar={() => {
+        etiquetas={espacio.etiquetas}
+        alCrearEtiqueta={alCrearEtiqueta}
+        /*
+          Las etiquetas elegidas al cargar se asignan aquí y no dentro del
+          modal: antes de guardar no hay conferencia a la que pegarlas, así
+          que solo pueden ponerse cuando la fila ya existe.
+        */
+        alCargar={(conferencia, idsDeEtiqueta) => {
           setPanelDeCargaAbierto(false)
-          recargar()
+
+          void Promise.all(idsDeEtiqueta.map((idEtiqueta) => asignar(idEtiqueta, conferencia.id))).then(
+            recargar,
+          )
         }}
       />
     </div>

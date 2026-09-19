@@ -73,12 +73,18 @@ function panelDeCuenta(): HTMLElement {
   return panel
 }
 
+/*
+  El último elemento que recibe foco dentro del dock, sea enlace o botón. No
+  se busca "el último enlace" porque el dock cierra con Chat, que es un botón
+  y no una ruta: dar por hecho que el último era un enlace ataba la prueba al
+  orden concreto de los ítems.
+*/
 function ultimoEnlaceDeNavegacion(): HTMLElement {
-  const enlaces = within(barraDeNavegacion()).getAllByRole('link')
-  const ultimo = enlaces.at(-1)
+  const enfocables = barraDeNavegacion().querySelectorAll<HTMLElement>('a[href], button')
+  const ultimo = enfocables[enfocables.length - 1]
 
   if (ultimo === undefined) {
-    throw new Error('la barra de navegación no tiene enlaces')
+    throw new Error('la barra de navegación no tiene nada enfocable')
   }
 
   return ultimo

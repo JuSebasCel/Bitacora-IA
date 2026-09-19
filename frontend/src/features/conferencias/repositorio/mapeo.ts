@@ -203,6 +203,8 @@ export type ConferenciaParaInsertar = {
   readonly fechaDelEvento: string
   readonly idDueno: string
   readonly fuente: FuenteDeConferencia
+  /** Leída del propio archivo cuando es audio; 0 en transcripción. */
+  readonly duracionEnSegundos?: number
 }
 
 export function filaParaInsertar(conferencia: ConferenciaParaInsertar): Record<string, unknown> {
@@ -223,7 +225,7 @@ export function filaParaInsertar(conferencia: ConferenciaParaInsertar): Record<s
     estado: 'en-cola',
     fuente: conferencia.fuente,
     resumen: '',
-    duracion_en_segundos: 0,
+    duracion_en_segundos: conferencia.duracionEnSegundos ?? 0,
     cargada_el: new Date().toISOString(),
   }
 }
