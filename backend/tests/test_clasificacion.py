@@ -37,8 +37,8 @@ from bitacora.conferencias.tipos import (
 def ventana() -> Ventana:
     return Ventana(
         segmentos=(
-            Segmento(inicio=100, fin=130, texto="El sesgo aparece antes", hablante="Ana Ruiz"),
-            Segmento(inicio=130, fin=160, texto="No siempre, depende", hablante="Luis Paz"),
+            Segmento(inicio=100, fin=130, texto="El sesgo aparece mucho antes de entrenar el modelo", hablante="Ana Ruiz"),
+            Segmento(inicio=130, fin=160, texto="No siempre es asi, depende de como se recogieron los datos", hablante="Luis Paz"),
         )
     )
 
@@ -55,7 +55,7 @@ def contexto(temas) -> ContextoDeClasificacion:
 
 def propuesta(**cambios) -> dict:
     base = {
-        "fragmento": "El sesgo aparece antes",
+        "fragmento": "El sesgo aparece mucho antes de entrenar el modelo",
         "tipo_de_unidad": "postura",
         "tema": "Sesgos algorítmicos",
         "segundo_inicio": 100,
@@ -223,7 +223,7 @@ def test_la_confianza_se_recorta_al_rango_valido(ventana, contexto) -> None:
 def test_el_hablante_sale_del_segmento_y_no_del_ponente_principal(ventana, contexto) -> None:
     """En un panel, atribuir todo al ponente principal es el error que la validación caza."""
     resultado = validar_propuestas(
-        [propuesta(fragmento="No siempre, depende", segundo_inicio=140, segundo_fin=155, hablante="")],
+        [propuesta(fragmento="No siempre es asi, depende de como se recogieron los datos", segundo_inicio=140, segundo_fin=155, hablante="")],
         ventana,
         contexto,
     )
@@ -276,14 +276,19 @@ def ficha(fragmento: str, inicio: int, confianza: float = 0.5) -> Ficha:
 
 
 def test_la_misma_unidad_vista_en_dos_ventanas_queda_una_sola_vez() -> None:
-    resultado = deduplicar([ficha("El sesgo aparece antes", 100), ficha("el sesgo APARECE antes", 102)])
+    resultado = deduplicar(
+        [
+            ficha("El sesgo aparece mucho antes de entrenar el modelo", 100),
+            ficha("el sesgo APARECE mucho antes de ENTRENAR el modelo", 102),
+        ]
+    )
 
     assert len(resultado) == 1
 
 
 def test_al_deduplicar_gana_la_lectura_con_mas_confianza() -> None:
     resultado = deduplicar(
-        [ficha("El sesgo aparece antes", 100, 0.4), ficha("El sesgo aparece antes", 101, 0.9)]
+        [ficha("El sesgo aparece mucho antes de entrenar el modelo", 100, 0.4), ficha("El sesgo aparece mucho antes de entrenar el modelo", 101, 0.9)]
     )
 
     assert resultado[0].confianza_automatica == 0.9

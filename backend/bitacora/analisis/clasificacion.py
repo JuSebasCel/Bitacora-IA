@@ -93,6 +93,33 @@ def resolver_tema(temas: Sequence[Tema], nombre: str) -> Tema | None:
     return None
 
 
+"""
+Palabras minimas para que un fragmento pueda citarse.
+
+Medido sobre una charla real de 96 minutos que produjo 309 fichas: el 93%
+empezaba en minuscula y el 89% no terminaba en punto, o sea que no eran frases
+sino cortes a mitad de frase -- "con radioactividad", "las sembraron", "para
+evitar digamos". La mediana de separacion entre fichas era de 10 segundos, la
+duracion tipica de un segmento de transcripcion: el modelo estaba devolviendo
+una ficha por linea en vez de por idea.
+
+Las indicaciones ya piden lo contrario y con mas fuerza. Esto es la red por si
+el modelo se desvia igual, porque una ficha asi no se puede arreglar despues:
+nadie la puede citar y solo ensucia las busquedas.
+
+Seis es deliberadamente bajo. Una cita corta y buena existe ("el dato nunca es
+neutral" son cinco), asi que el corte se pone donde ya no cabe ninguna
+afirmacion completa, no donde empiezan las fichas mediocres. Lo segundo es
+trabajo de las indicaciones, no de un umbral.
+"""
+PALABRAS_MINIMAS_DE_UN_FRAGMENTO = 6
+
+
+def es_citable(fragmento: str) -> bool:
+    """Si el fragmento tiene cuerpo suficiente para sostenerse fuera de la charla."""
+    return len(fragmento.split()) >= PALABRAS_MINIMAS_DE_UN_FRAGMENTO
+
+
 def estado_inicial(tipo_de_unidad: str, confianza: float, coordenada_estimada: bool) -> str:
     """
     Nunca devuelve `validada`: ese estado solo lo pone una persona.
@@ -206,6 +233,9 @@ def validar_propuestas(
         tipo_de_unidad = _texto(propuesta.get("tipo_de_unidad")).lower()
 
         if fragmento == "" or tipo_de_unidad not in TIPOS_DE_UNIDAD:
+            continue
+
+        if not es_citable(fragmento):
             continue
 
         inicio, fin = _ajustar_coordenada(

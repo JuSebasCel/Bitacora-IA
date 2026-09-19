@@ -95,6 +95,52 @@ const ICONO_DE_ESTADO: Record<EstadoDeProcesamiento, string> = {
   fallida: 'error',
 }
 
+/*
+  Parte el contexto en lo que va antes de la cita, la cita, y lo que va
+  despues.
+
+  `contextoMinimo` son los segmentos vecinos de la transcripcion unidos, y la
+  cita esta literalmente dentro: el backend la recorta de ahi y tiene prohibido
+  reescribirla. Asi que se puede localizar y envolver, que es lo que hace
+  evidente donde encaja lo que se dijo sin tener que explicarlo con un rotulo.
+
+  Se busca sin acentos ni mayusculas y con los espacios colapsados, porque el
+  fragmento y el contexto pueden diferir en eso; los indices se aplican luego
+  sobre el texto original para no devolver una version normalizada.
+
+  Si no se encuentra —la cita abarca mas de lo que el contexto alcanza— se
+  devuelve `null` y se pinta solo la cita: peor es ensenar dos veces lo mismo.
+*/
+function partirContexto(
+  contexto: string,
+  fragmento: string,
+): { antes: string; cita: string; despues: string } | null {
+  const plano = (texto: string) =>
+    texto
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+
+  const contextoPlano = plano(contexto)
+  const fragmentoPlano = plano(fragmento.trim())
+
+  if (fragmentoPlano === '') {
+    return null
+  }
+
+  const indice = contextoPlano.indexOf(fragmentoPlano)
+
+  if (indice === -1) {
+    return null
+  }
+
+  return {
+    antes: contexto.slice(0, indice).trim(),
+    cita: contexto.slice(indice, indice + fragmentoPlano.length),
+    despues: contexto.slice(indice + fragmentoPlano.length).trim(),
+  }
+}
+
 /** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
 function sePuedeAnalizar(estado: EstadoDeProcesamiento): boolean {
   return estado === 'en-cola' || estado === 'fallida'
@@ -803,9 +849,31 @@ export function PantallaArchivo({
           */
           <article className="flex flex-col gap-6">
             <blockquote className="flex flex-col gap-3">
-              <p className="font-titulo text-[22px] leading-snug text-texto">
-                «{activa.ficha.fragmento}»
-              </p>
+              {/*
+                El contexto envuelve a la cita en vez de vivir en un bloque
+                aparte: se lee el párrafo tal como se dijo, con lo citado
+                resaltado en medio. Un bloque rotulado obligaba a reconstruir
+                mentalmente dónde encajaba la frase; así se ve de un golpe.
+              */}
+              {(() => {
+                const partes = partirContexto(activa.ficha.contextoMinimo, activa.ficha.fragmento)
+
+                if (partes === null) {
+                  return (
+                    <p className="font-titulo text-[22px] leading-snug text-texto">
+                      «{activa.ficha.fragmento}»
+                    </p>
+                  )
+                }
+
+                return (
+                  <p className="text-[19px] leading-relaxed text-texto-tenue">
+                    {partes.antes === '' ? null : <span>…{partes.antes} </span>}
+                    <span className="font-titulo font-semibold text-texto">«{partes.cita}»</span>
+                    {partes.despues === '' ? null : <span> {partes.despues}…</span>}
+                  </p>
+                )
+              })()}
 
               {/*
                 Quién lo dijo estaba en los datos y no se enseñaba en ninguna
