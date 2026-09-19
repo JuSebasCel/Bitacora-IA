@@ -10,6 +10,7 @@ import type { ResultadoCreacion } from '../components'
 import { ModalDeCompartir } from '@/features/configuracion/components'
 import { escribirCriterios, leerCriterios, listarConferencias, privacidadEfectiva } from '../query'
 import type { CriteriosDeListado } from '../query'
+import { solicitarProcesamiento } from '../repositorio'
 import { useEtiquetas } from '../tags'
 import { PantallaArchivo } from './PantallaArchivo'
 
@@ -64,6 +65,27 @@ export function PantallaConferencias(): ReactElement {
       }),
     [visibles, criterios, espacio.asignaciones, fichas],
   )
+
+  /*
+    El análisis corre en el backend y esta pantalla no tiene forma de
+    enterarse: la petición responde 202 y sigue por detrás, y lo único
+    observable es `conferencias.estado`. Así que mientras haya algo en vuelo se
+    vuelve a preguntar cada diez segundos, y en cuanto no queda nada el
+    intervalo se apaga solo — sin esto había que recargar a mano para ver si
+    la charla ya tenía fichas.
+  */
+  const hayAlgoEnVuelo = visibles.some(
+    (visible) => visible.conferencia.estado === 'en-cola' || visible.conferencia.estado === 'procesando',
+  )
+
+  useEffect(() => {
+    if (!hayAlgoEnVuelo) {
+      return
+    }
+
+    const intervalo = setInterval(recargar, 10_000)
+    return () => clearInterval(intervalo)
+  }, [hayAlgoEnVuelo, recargar])
 
   /*
     "Cargar conferencia" vive en el dock y llega como `?nuevo=1`. Va en un
@@ -148,6 +170,14 @@ export function PantallaConferencias(): ReactElement {
         alCrearEtiqueta={alCrearEtiqueta}
         alAlternarAsignacion={alAlternarAsignacion}
         alEliminarEtiqueta={(idEtiqueta) => void eliminar(idEtiqueta)}
+        /*
+          Se recarga en cuanto el backend acepta: la fila pasa a `procesando` y
+          la fila de la conferencia lo dice, que es la única señal de que algo
+          empezó a moverse.
+        */
+        alAnalizar={(idConferencia) => {
+          void solicitarProcesamiento(idConferencia).then(recargar)
+        }}
         refDelBotonDeCarga={botonDeCarga}
         refDelBotonDeCompartir={botonDeCompartir}
         alCompartir={() => setCompartirAbierto(true)}

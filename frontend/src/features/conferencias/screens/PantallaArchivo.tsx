@@ -15,7 +15,7 @@ import type { ResultadoCreacion } from '../components'
 import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
-import type { Etiqueta, Ficha } from '../data'
+import type { Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
 import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo } from '../query'
 import type { ConferenciaVisible, CriteriosDeListado, FichaDelCatalogo, FiltroDeEstado, Segmento } from '../query'
 import type { EtiquetaVisible } from '../tags'
@@ -69,6 +69,36 @@ type Ambito = 'seleccion' | 'todo'
   precisamente porque nadie más atrapa una cita mal transcrita.
 */
 const ICONO_DE_FICHA = 'format_quote'
+
+/*
+  El estado del análisis, dicho en la propia fila.
+
+  Faltaba del todo: una conferencia recién cargada aparecía con su evento y su
+  ponente y cero fichas, sin nada que distinguiera "todavía no la han
+  analizado" de "la analizaron y no encontró nada". Son situaciones muy
+  distintas y solo una se arregla esperando.
+
+  `procesada` no dice nada: es el caso normal y anunciarlo sería ruido en cada
+  fila. Lo que se anuncia es lo que no ha terminado.
+*/
+const ESTADO_DEL_ANALISIS: Record<EstadoDeProcesamiento, string | null> = {
+  'en-cola': 'En cola, sin analizar',
+  procesando: 'Analizando…',
+  procesada: null,
+  fallida: 'El análisis falló',
+}
+
+const ICONO_DE_ESTADO: Record<EstadoDeProcesamiento, string> = {
+  'en-cola': 'schedule',
+  procesando: 'autorenew',
+  procesada: 'check',
+  fallida: 'error',
+}
+
+/** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
+function sePuedeAnalizar(estado: EstadoDeProcesamiento): boolean {
+  return estado === 'en-cola' || estado === 'fallida'
+}
 
 const VISTAS: readonly [OpcionDeVista<Vista>, OpcionDeVista<Vista>] = [
   { valor: 'columnas', icono: 'view_column', etiqueta: 'Ver en columnas' },
@@ -348,6 +378,8 @@ export type PropsPantallaArchivo = {
   alCrearEtiqueta: (nombre: string) => Promise<ResultadoCreacion>
   alAlternarAsignacion: (idEtiqueta: string, idConferencia: string) => void
   alEliminarEtiqueta?: (idEtiqueta: string) => void
+  /** Vuelve a pedirle al backend que analice esa conferencia. */
+  alAnalizar?: (idConferencia: string) => void
 }
 
 export function PantallaArchivo({
@@ -369,6 +401,7 @@ export function PantallaArchivo({
   alCrearEtiqueta,
   alAlternarAsignacion,
   alEliminarEtiqueta,
+  alAnalizar,
 }: PropsPantallaArchivo): ReactElement {
   const [evento, setEvento] = useState<string>(TODOS_EVENTOS)
   const [eje, setEje] = useState<Eje>('conferencias')
@@ -394,6 +427,11 @@ export function PantallaArchivo({
 
   /* Solo hay conferencia concreta sobre la que etiquetar si el eje es el de conferencias. */
   const idConferenciaSeleccionada = eje === 'conferencias' && rama !== null && rama !== TODOS ? rama : null
+
+  const conferenciaSeleccionada =
+    idConferenciaSeleccionada === null
+      ? undefined
+      : visibles.find((v) => v.conferencia.id === idConferenciaSeleccionada)
 
   const etiquetasPropiasDeLaSeleccionada = useMemo(
     () =>
@@ -636,8 +674,12 @@ export function PantallaArchivo({
             <Fila
               key={v.conferencia.id}
               icono="mic"
-              secundario={`${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`}
+              secundario={
+                ESTADO_DEL_ANALISIS[v.conferencia.estado] ??
+                `${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`
+              }
               etiquetas={etiquetasDe(v.conferencia.id)}
+              {...(v.conferencia.estado === 'procesada' ? {} : { icono: ICONO_DE_ESTADO[v.conferencia.estado] })}
               activa={rama === v.conferencia.id}
               onClick={() => {
                 setRama(v.conferencia.id)
@@ -662,6 +704,24 @@ export function PantallaArchivo({
             único sitio donde la acción tiene un sujeto claro. En la fila no
             caben: la fila entera ya es un botón.
           */}
+          {/*
+            Sin esto, una conferencia que se quedó en cola —porque el backend
+            estaba caído cuando se cargó— no tenía forma de arrancar desde la
+            interfaz: se quedaba así para siempre sin que nadie supiera por qué.
+          */}
+          {conferenciaSeleccionada !== undefined &&
+          alAnalizar !== undefined &&
+          sePuedeAnalizar(conferenciaSeleccionada.conferencia.estado) ? (
+            <AccionDeColumna
+              icono="auto_awesome"
+              onClick={() => alAnalizar(conferenciaSeleccionada.conferencia.id)}
+            >
+              {conferenciaSeleccionada.conferencia.estado === 'fallida'
+                ? 'Reintentar el análisis'
+                : 'Analizar ahora'}
+            </AccionDeColumna>
+          ) : null}
+
           {idConferenciaSeleccionada === null ? null : (
             <AccionDeColumna
               ref={botonDeEtiquetas}
