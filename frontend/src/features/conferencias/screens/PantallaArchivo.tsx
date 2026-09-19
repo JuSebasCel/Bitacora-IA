@@ -7,6 +7,8 @@ import {
   EstadoVacioIlustrado,
   Esqueleto,
   Modal,
+  ModalDeConfirmacion,
+  SelectorDeFecha,
   PanelDeError,
   SelectorDeVista,
 } from '@/shared/ui'
@@ -69,6 +71,9 @@ type Ambito = 'seleccion' | 'todo'
   precisamente porque nadie más atrapa una cita mal transcrita.
 */
 const ICONO_DE_FICHA = 'format_quote'
+
+const CAMPO_DE_TEXTO =
+  'h-12 w-full rounded-2xl bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-2 focus:outline-offset-2 focus:outline-acento'
 
 /*
   El estado del análisis, dicho en la propia fila.
@@ -429,6 +434,8 @@ export type PropsPantallaArchivo = {
   alEliminarEtiqueta?: (idEtiqueta: string) => void
   /** Vuelve a pedirle al backend que analice esa conferencia. */
   alAnalizar?: (idConferencia: string) => void
+  alRenombrarConferencia?: (idConferencia: string, cambio: { titulo: string; ponente: string; fechaDelEvento: string }) => void
+  alEliminarConferencia?: (idConferencia: string) => void
 }
 
 export function PantallaArchivo({
@@ -451,6 +458,8 @@ export function PantallaArchivo({
   alAlternarAsignacion,
   alEliminarEtiqueta,
   alAnalizar,
+  alRenombrarConferencia,
+  alEliminarConferencia,
 }: PropsPantallaArchivo): ReactElement {
   const [evento, setEvento] = useState<string>(TODOS_EVENTOS)
   const [eje, setEje] = useState<Eje>('conferencias')
@@ -462,11 +471,16 @@ export function PantallaArchivo({
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [asignadorAbierto, setAsignadorAbierto] = useState(false)
+  const [edicionAbierta, setEdicionAbierta] = useState(false)
+  const [borradoAbierto, setBorradoAbierto] = useState(false)
+  const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '' })
   const [vista, setVista] = useState<Vista>('columnas')
 
   const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
   const botonDeFiltros = useRef<HTMLButtonElement>(null)
   const botonDeEtiquetas = useRef<HTMLButtonElement>(null)
+  const botonDeEdicion = useRef<HTMLButtonElement>(null)
+  const botonDeBorrado = useRef<HTMLButtonElement>(null)
   const marco = useRef<HTMLDivElement>(null)
 
   /* Sin conferencias no hay recorrido que ofrecer: ni eventos, ni temas, ni fichas. */
@@ -771,6 +785,31 @@ export function PantallaArchivo({
                 : 'Analizar ahora'}
             </AccionDeColumna>
           ) : null}
+
+          {conferenciaSeleccionada === undefined || alRenombrarConferencia === undefined ? null : (
+            <AccionDeColumna
+              ref={botonDeEdicion}
+              icono="edit"
+              onClick={() => {
+                setEdicion({
+                  titulo: conferenciaSeleccionada.conferencia.titulo,
+                  ponente: conferenciaSeleccionada.conferencia.ponente,
+                  fechaDelEvento: conferenciaSeleccionada.conferencia.fechaDelEvento,
+                })
+                setEdicionAbierta(true)
+              }}
+            >
+              Corregir los datos
+            </AccionDeColumna>
+          )}
+
+          {conferenciaSeleccionada === undefined ||
+          alEliminarConferencia === undefined ||
+          conferenciaSeleccionada.procedencia !== 'propia' ? null : (
+            <AccionDeColumna ref={botonDeBorrado} icono="delete" onClick={() => setBorradoAbierto(true)}>
+              Borrar la conferencia
+            </AccionDeColumna>
+          )}
 
           {idConferenciaSeleccionada === null ? null : (
             <AccionDeColumna
@@ -1209,6 +1248,80 @@ export function PantallaArchivo({
           </button>
         )}
       </Modal>
+
+      {/* Corregir lo que se escribio mal al cargar. El evento no se toca aqui: cambiarlo movería la charla de sitio. */}
+      <Modal
+        abierto={edicionAbierta}
+        alCerrar={() => setEdicionAbierta(false)}
+        titulo="Corregir los datos"
+        ancho="angosto"
+        anclaje="disparador"
+        anclaEn={botonDeEdicion}
+        limites={marco}
+      >
+        <div className="flex flex-col gap-3">
+          <input
+            value={edicion.titulo}
+            onChange={(cambio) => setEdicion((a) => ({ ...a, titulo: cambio.target.value }))}
+            aria-label="Título de la conferencia"
+            placeholder="Título"
+            className={CAMPO_DE_TEXTO}
+          />
+          <input
+            value={edicion.ponente}
+            onChange={(cambio) => setEdicion((a) => ({ ...a, ponente: cambio.target.value }))}
+            aria-label="Ponente"
+            placeholder="Ponente"
+            className={CAMPO_DE_TEXTO}
+          />
+          <SelectorDeFecha
+            etiquetaAccesible="Fecha del evento"
+            vacio="Fecha del evento"
+            valor={edicion.fechaDelEvento === '' ? null : edicion.fechaDelEvento}
+            alElegir={(iso) => setEdicion((a) => ({ ...a, fechaDelEvento: iso }))}
+          />
+        </div>
+
+        <button
+          type="button"
+          disabled={edicion.titulo.trim() === '' || edicion.ponente.trim() === ''}
+          onClick={() => {
+            if (idConferenciaSeleccionada !== null) {
+              alRenombrarConferencia?.(idConferenciaSeleccionada, edicion)
+            }
+            setEdicionAbierta(false)
+          }}
+          className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-40"
+        >
+          Guardar
+        </button>
+      </Modal>
+
+      <ModalDeConfirmacion
+        abierto={borradoAbierto}
+        alCerrar={() => setBorradoAbierto(false)}
+        titulo="Borrar la conferencia"
+        accion="Borrar"
+        anclaEn={botonDeBorrado}
+        limites={marco}
+        consecuencias={[
+          `Se pierden sus ${porEvento.filter((e) => e.conferencia.id === idConferenciaSeleccionada).length} fichas y habría que volver a analizarla desde cero.`,
+          'Se borra el audio o la transcripción que subiste.',
+          'Quien la tuviera compartida deja de verla.',
+        ]}
+        alConfirmar={() => {
+          if (idConferenciaSeleccionada !== null) {
+            alEliminarConferencia?.(idConferenciaSeleccionada)
+          }
+          setBorradoAbierto(false)
+          setRama(null)
+          setIdFicha(null)
+        }}
+      >
+        <p className="text-base text-texto">
+          «{conferenciaSeleccionada?.conferencia.titulo ?? ''}»
+        </p>
+      </ModalDeConfirmacion>
 
       {/* Poner y quitar etiquetas sobre la conferencia elegida. */}
       <Modal

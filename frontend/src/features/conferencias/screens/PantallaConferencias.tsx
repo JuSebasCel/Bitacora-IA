@@ -10,7 +10,7 @@ import type { ResultadoCreacion } from '../components'
 import { ModalDeCompartir } from '@/features/configuracion/components'
 import { escribirCriterios, leerCriterios, listarConferencias, privacidadEfectiva } from '../query'
 import type { CriteriosDeListado } from '../query'
-import { solicitarProcesamiento } from '../repositorio'
+import { actualizarConferencia, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
 import { useEtiquetas } from '../tags'
 import { PantallaArchivo } from './PantallaArchivo'
 
@@ -177,6 +177,23 @@ export function PantallaConferencias(): ReactElement {
         */
         alAnalizar={(idConferencia) => {
           void solicitarProcesamiento(idConferencia).then(recargar)
+        }}
+        alRenombrarConferencia={(idConferencia, cambio) => {
+          void actualizarConferencia(idConferencia, cambio).then(recargar)
+        }}
+        /*
+          El dueño va como parámetro y no se deduce de la sesión: el audio
+          cuelga de su carpeta, y una conferencia compartida la borraría de la
+          carpeta equivocada. Solo se ofrece sobre las propias, de todas formas.
+        */
+        alEliminarConferencia={(idConferencia) => {
+          const visible = visibles.find((v) => v.conferencia.id === idConferencia)
+
+          if (visible === undefined) {
+            return
+          }
+
+          void eliminarConferencia(idConferencia, visible.conferencia.idDueno).then(recargar)
         }}
         refDelBotonDeCarga={botonDeCarga}
         refDelBotonDeCompartir={botonDeCompartir}

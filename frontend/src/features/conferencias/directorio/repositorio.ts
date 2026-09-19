@@ -72,3 +72,59 @@ export async function crearPonenteRemoto(
 
   return fila.ok ? { ok: true, datos: mapearPonente(fila.datos) } : fila
 }
+
+export async function renombrarEventoRemoto(
+  idEvento: string,
+  nombre: string,
+): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase
+    .from('eventos')
+    .update({ nombre: nombre.trim() })
+    .eq('id', idEvento)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DIR_EVENTO_YA_EXISTE' }))
+}
+
+export async function renombrarPonenteRemoto(
+  idPonente: string,
+  nombre: string,
+): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase
+    .from('ponentes')
+    .update({ nombre: nombre.trim() })
+    .eq('id', idPonente)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DIR_PONENTE_YA_EXISTE' }))
+}
+
+/*
+  Borra un evento del directorio, y con él sus ponentes (`on delete cascade`).
+
+  **No toca ninguna conferencia.** `conferencias.evento` es el nombre como
+  texto denormalizado, no una clave foránea: así lo decidió la migración
+  —el directorio es una fuente de sugerencias, no una relación estricta—.
+  Quitar un evento de aquí retira la sugerencia para futuras cargas; las
+  charlas ya cargadas conservan el nombre con el que se guardaron.
+
+  Es importante decirlo en la confirmación: alguien que borra "Biotecnología"
+  esperando que desaparezcan sus charlas se llevaría una sorpresa al revés.
+*/
+export async function eliminarEventoRemoto(idEvento: string): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase.from('eventos').delete().eq('id', idEvento)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
+}
+
+export async function eliminarPonenteRemoto(idPonente: string): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase.from('ponentes').delete().eq('id', idPonente)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
+}

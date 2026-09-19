@@ -249,3 +249,66 @@ export async function solicitarProcesamiento(
 
   return respuesta.ok ? { ok: true, datos: null } : respuesta
 }
+
+/** Campos que se pueden corregir de una conferencia ya cargada. */
+export type CambioDeConferencia = {
+  readonly titulo?: string
+  readonly ponente?: string
+  readonly fechaDelEvento?: string
+}
+
+export async function actualizarConferencia(
+  idConferencia: string,
+  cambio: CambioDeConferencia,
+): Promise<ResultadoDeConsulta<null>> {
+  const fila: Record<string, unknown> = {}
+
+  if (cambio.titulo !== undefined) fila.titulo = cambio.titulo.trim()
+  if (cambio.ponente !== undefined) fila.ponente = cambio.ponente.trim()
+  if (cambio.fechaDelEvento !== undefined) fila.fecha_del_evento = cambio.fechaDelEvento
+
+  if (Object.keys(fila).length === 0) {
+    return { ok: true, datos: null }
+  }
+
+  const { error } = await supabase.from('conferencias').update(fila).eq('id', idConferencia)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
+}
+
+/*
+  Borra la conferencia entera: fichas, comparticiones, etiquetas y audio.
+
+  Las tres tablas caen solas por `on delete cascade`, así que basta con borrar
+  la fila. Lo que no cae es el audio: Storage no sabe nada de claves foráneas,
+  y sin este paso el archivo se quedaría ocupando espacio para siempre sin
+  nadie que supiera a qué pertenecía.
+
+  El audio se borra ANTES que la fila. Al revés, si el borrado de la fila
+  funciona y el del archivo falla, se pierde el único dato —el id— con el que
+  encontrar la carpeta huérfana. En este orden, un fallo a mitad deja la
+  conferencia intacta y se puede reintentar.
+
+  Se borra la carpeta entera y no un nombre concreto porque el nombre del
+  archivo no se guarda en ninguna parte: se listan los objetos y se quitan.
+*/
+export async function eliminarConferencia(
+  idConferencia: string,
+  idDueno: string,
+): Promise<ResultadoDeConsulta<null>> {
+  const carpeta = `${idDueno}/${idConferencia}`
+  const almacen = supabase.storage.from(BUCKET_DE_AUDIO)
+  const { data: objetos } = await almacen.list(carpeta)
+
+  if (objetos !== null && objetos.length > 0) {
+    await almacen.remove(objetos.map((objeto) => `${carpeta}/${objeto.name}`))
+  }
+
+  const { error } = await supabase.from('conferencias').delete().eq('id', idConferencia)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
+}
