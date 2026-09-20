@@ -172,10 +172,18 @@ export function ShellLayout() {
               type="button"
               onClick={() => setDockPlegado(false)}
               aria-label="Mostrar el panel lateral"
-              className="dock-entra fixed top-4 left-4 z-30 hidden size-10 cursor-pointer items-center justify-center rounded-full bg-panel text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete)] transition-colors hover:text-texto md:flex"
+              /*
+                Pegado al borde izquierdo y centrado en vertical, no en la
+                esquina: arriba se montaba encima del titulo de la pantalla
+                —tapaba la C de "Conferencias"— y no habia forma de quitarlo
+                de ahi sin mover el titulo. En el centro del borde no hay nada
+                con lo que competir, y se lee como la pestana que devuelve el
+                panel en vez de como un boton suelto sobre el contenido.
+              */
+              className="dock-entra fixed top-1/2 left-0 z-30 hidden h-16 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-2xl bg-panel text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete)] transition-colors hover:w-8 hover:text-texto md:flex"
             >
-              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
-                left_panel_open
+              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                chevron_right
               </span>
             </button>
           ) : null}

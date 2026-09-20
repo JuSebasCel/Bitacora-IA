@@ -80,7 +80,14 @@ export function BarraLateral({
         plegada ? 'overflow-hidden border-transparent p-0' : 'overflow-y-auto p-4'
       }`}
     >
-      <div className="flex w-[calc(17.5rem-2rem)] min-w-0 flex-1 flex-col">
+      {/*
+        `min-width` y no `width`: al plegarse el dock va a ancho cero, y sin un
+        minimo el contenido se re-partiria linea a linea durante la transicion
+        en vez de recortarse. Se fija como minimo y no como ancho exacto porque
+        el ancho exacto tampoco descontaba el filete de 1px del borde derecho,
+        y ese pixel de mas sacaba una barra de scroll horizontal en el dock.
+      */}
+      <div className="flex w-full min-w-[calc(17.5rem-2rem-1px)] flex-1 flex-col">
         {/*
         La cuenta vive aquí, no en una barra superior. Esa barra solo repetía
         el nombre de la sección —que el dock y el título de la pantalla ya
@@ -89,32 +96,38 @@ export function BarraLateral({
         La campana volvió, pero solo con lo que pide una respuesta: las
         conferencias que te compartieron y lo que contestaron a las tuyas.
       */}
-        <div className="flex items-start gap-1">
-          {usuario === null ? null : (
-            <div className="min-w-0 flex-1">
-              <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} />
-            </div>
-          )}
+        {/*
+          Los iconos van en su propio renglon, encima de la cuenta.
 
-          {/*
-            Vuelve la campana. Se quito en el rediseno y con ella el unico
-            acceso a la curaduria de temas; ahora ademas es donde llegan las
-            invitaciones a conferencias compartidas, que sin un sitio donde
-            aparecer no se podrian ni aceptar.
-          */}
+          Compartiendo fila con ella le dejaban unos 104px al nombre y lo
+          cortaban en "Sebastia...", teniendo el dock 280px. Arriba ocupan una
+          franja que igual estaba vacia y la cuenta se queda con todo el ancho.
+        */}
+        <div className="flex h-10 items-center justify-between">
           {usuario === null ? null : <CampanaDeAvisos idUsuario={usuario.id} />}
 
           <button
             type="button"
             onClick={alPlegar}
             aria-label="Ocultar el panel lateral"
-            className="mt-2 hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto md:flex"
+            className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto md:flex"
           >
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
               left_panel_close
             </span>
           </button>
         </div>
+
+        {/*
+          La cuenta sobre su propia superficie: el bloque gris la separa de la
+          navegacion, que es tipografia suelta sobre el fondo. Sin el, el
+          nombre y el correo se leian como un item mas de la lista.
+        */}
+        {usuario === null ? null : (
+          <div className="mt-1 rounded-[20px] bg-panel p-1">
+            <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} />
+          </div>
+        )}
 
         {/*
         Sin el nombre del producto: el avatar ya ancla la identidad arriba, y

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactElement, ReactNode, RefObject } from 'react'
 
 /*
@@ -216,7 +217,17 @@ export function Modal({
   /* Al cerrar se quitan las clases de entrada: sus animaciones mandarían sobre los estilos en línea. */
   const cerrando = !abierto
 
-  return (
+  /*
+    El modal se dibuja en un portal sobre `document.body`.
+
+    `position: fixed` no basta: un antepasado con `position: sticky`, un
+    `transform` o un `filter` crea contexto de apilamiento y atrapa dentro a
+    sus descendientes fijos. El dock es `sticky`, asi que la campana —que vive
+    dentro de el— pintaba su velo confinado al dock: el resto de la pantalla
+    se veia nitido y las pastillas de tema y conferencia atravesaban el
+    desenfoque. Con el portal, el velo no tiene antepasados que lo encierren.
+  */
+  return createPortal(
     <div
       ref={veloRef}
       onClick={(evento) => {
@@ -257,6 +268,7 @@ export function Modal({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
