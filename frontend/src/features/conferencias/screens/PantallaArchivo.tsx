@@ -1525,7 +1525,10 @@ export function PantallaArchivo({
         abierto={literalAbierta}
         alCerrar={() => setLiteralAbierta(false)}
         titulo="Cómo se dijo"
-        ancho="angosto"
+        /* Ancho, no angosto: son dos textos que se comparan, y en una columna
+           de 440px la literal quedaba como una cinta altisima que obligaba a
+           desplazarse para llegar a lo que se compara con ella. */
+        ancho="normal"
         anclaEn={botonDeLiteral}
         limites={marco}
       >
