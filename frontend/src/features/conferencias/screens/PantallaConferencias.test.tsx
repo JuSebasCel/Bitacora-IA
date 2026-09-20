@@ -245,7 +245,17 @@ describe('PantallaConferencias, etiquetas', () => {
       }),
     )
 
-    await userEvent.click(await screen.findByRole('button', { name: /Etiquetas de esta conferencia/ }))
+    /*
+      Las acciones de la conferencia viven ahora detras de "Opciones": sueltas
+      en el pie usaban el mismo molde que las fichas y el pie parecia la
+      continuacion de la lista.
+    */
+    await userEvent.click(await screen.findByRole('button', { name: /Opciones de la conferencia/ }))
+    await userEvent.click(
+      await within(await screen.findByRole('dialog', { name: 'Opciones' })).findByRole('button', {
+        name: /Etiquetas/,
+      }),
+    )
 
     const asignador = await screen.findByRole('dialog', { name: 'Etiquetas' })
     const casilla = within(asignador).getByRole('checkbox', { name: 'revisión 2026' })

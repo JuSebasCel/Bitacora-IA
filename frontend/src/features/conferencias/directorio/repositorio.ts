@@ -73,27 +73,71 @@ export async function crearPonenteRemoto(
   return fila.ok ? { ok: true, datos: mapearPonente(fila.datos) } : fila
 }
 
+/*
+  Renombrar un evento cambia tambien el de sus conferencias.
+
+  `conferencias.evento` guarda el NOMBRE como texto denormalizado, no una clave
+  foranea: asi lo decidio la migracion, porque el directorio es una fuente de
+  sugerencias y no una relacion estricta. La consecuencia es que renombrar solo
+  la fila de `eventos` dejaria el directorio diciendo una cosa y el archivo
+  otra: las charlas ya cargadas seguirian agrupadas bajo el nombre viejo, y
+  apareceria un evento fantasma en la columna que nadie podria renombrar.
+
+  Son dos escrituras sin transaccion. El orden importa: primero las
+  conferencias y luego el directorio. Al reves, un fallo a mitad dejaria el
+  directorio renombrado y las charlas huerfanas bajo un nombre que ya no
+  existe; en este orden, un fallo deja el directorio como estaba y reintentar
+  arregla el desfase.
+*/
 export async function renombrarEventoRemoto(
   idEvento: string,
+  nombreAnterior: string,
   nombre: string,
 ): Promise<ResultadoDeConsulta<null>> {
-  const { error } = await supabase
-    .from('eventos')
-    .update({ nombre: nombre.trim() })
-    .eq('id', idEvento)
+  const limpio = nombre.trim()
+
+  const enConferencias = await supabase
+    .from('conferencias')
+    .update({ evento: limpio })
+    .eq('evento', nombreAnterior)
+
+  if (enConferencias.error !== null) {
+    return resultadoDe({ data: null, error: enConferencias.error }, () => ({
+      ok: false,
+      codigo: 'DATOS_SIN_PERMISO',
+    }))
+  }
+
+  const { error } = await supabase.from('eventos').update({ nombre: limpio }).eq('id', idEvento)
 
   return error === null
     ? { ok: true, datos: null }
     : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DIR_EVENTO_YA_EXISTE' }))
 }
 
+/** Mismo criterio que el evento: `conferencias.ponente` tambien es texto denormalizado. */
 export async function renombrarPonenteRemoto(
   idPonente: string,
+  nombreAnterior: string,
   nombre: string,
 ): Promise<ResultadoDeConsulta<null>> {
+  const limpio = nombre.trim()
+
+  const enConferencias = await supabase
+    .from('conferencias')
+    .update({ ponente: limpio })
+    .eq('ponente', nombreAnterior)
+
+  if (enConferencias.error !== null) {
+    return resultadoDe({ data: null, error: enConferencias.error }, () => ({
+      ok: false,
+      codigo: 'DATOS_SIN_PERMISO',
+    }))
+  }
+
   const { error } = await supabase
     .from('ponentes')
-    .update({ nombre: nombre.trim() })
+    .update({ nombre: limpio })
     .eq('id', idPonente)
 
   return error === null

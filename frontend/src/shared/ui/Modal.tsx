@@ -147,7 +147,15 @@ export function Modal({
 
     const ventana = ventanaRef.current
     const velo = veloRef.current
-    const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    /*
+      `matchMedia` puede no existir —jsdom no lo trae, y algun navegador
+      empotrado tampoco—. Sin esta guarda, cerrar el modal reventaba con
+      `window.matchMedia is not a function` en vez de simplemente animar.
+      Ante la duda se anima: es el comportamiento por defecto del sistema.
+    */
+    const sinMovimiento =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const duracion = sinMovimiento ? 0 : DURACION
 
     if (!sinMovimiento && ventana !== null) {

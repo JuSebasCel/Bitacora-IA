@@ -471,6 +471,7 @@ export function PantallaArchivo({
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [asignadorAbierto, setAsignadorAbierto] = useState(false)
+  const [opcionesAbiertas, setOpcionesAbiertas] = useState(false)
   const [edicionAbierta, setEdicionAbierta] = useState(false)
   const [borradoAbierto, setBorradoAbierto] = useState(false)
   const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '' })
@@ -479,6 +480,7 @@ export function PantallaArchivo({
   const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
   const botonDeFiltros = useRef<HTMLButtonElement>(null)
   const botonDeEtiquetas = useRef<HTMLButtonElement>(null)
+  const botonDeOpciones = useRef<HTMLButtonElement>(null)
   const botonDeEdicion = useRef<HTMLButtonElement>(null)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
   const marco = useRef<HTMLDivElement>(null)
@@ -764,62 +766,38 @@ export function PantallaArchivo({
       pie={
         <>
           {/*
-            Las etiquetas se ponen desde la conferencia elegida, que es el
-            único sitio donde la acción tiene un sujeto claro. En la fila no
-            caben: la fila entera ya es un botón.
+            Todo lo que se le hace a la conferencia vive detras de un solo
+            boton, y no como cuatro filas sueltas.
+
+            Sueltas usaban el mismo molde que las fichas —icono, radio 16,
+            ancho completo— y el pie parecia la continuacion de la lista: se
+            leia "Borrar la conferencia" como si fuera una ficha mas. Aqui el
+            boton es de otra forma (pastilla con superficie propia, separada
+            por un filete) y las acciones viven dentro de un modal, donde ya
+            no compiten con nada.
+
+            "Volver" se queda fuera porque no es una opcion de la conferencia:
+            es navegacion, y esa si pertenece al recorrido de las columnas.
           */}
-          {/*
-            Sin esto, una conferencia que se quedó en cola —porque el backend
-            estaba caído cuando se cargó— no tenía forma de arrancar desde la
-            interfaz: se quedaba así para siempre sin que nadie supiera por qué.
-          */}
-          {conferenciaSeleccionada !== undefined &&
-          alAnalizar !== undefined &&
-          sePuedeAnalizar(conferenciaSeleccionada.conferencia.estado) ? (
-            <AccionDeColumna
-              icono="auto_awesome"
-              onClick={() => alAnalizar(conferenciaSeleccionada.conferencia.id)}
-            >
-              {conferenciaSeleccionada.conferencia.estado === 'fallida'
-                ? 'Reintentar el análisis'
-                : 'Analizar ahora'}
-            </AccionDeColumna>
-          ) : null}
-
-          {conferenciaSeleccionada === undefined || alRenombrarConferencia === undefined ? null : (
-            <AccionDeColumna
-              ref={botonDeEdicion}
-              icono="edit"
-              onClick={() => {
-                setEdicion({
-                  titulo: conferenciaSeleccionada.conferencia.titulo,
-                  ponente: conferenciaSeleccionada.conferencia.ponente,
-                  fechaDelEvento: conferenciaSeleccionada.conferencia.fechaDelEvento,
-                })
-                setEdicionAbierta(true)
-              }}
-            >
-              Corregir los datos
-            </AccionDeColumna>
-          )}
-
-          {conferenciaSeleccionada === undefined ||
-          alEliminarConferencia === undefined ||
-          conferenciaSeleccionada.procedencia !== 'propia' ? null : (
-            <AccionDeColumna ref={botonDeBorrado} icono="delete" onClick={() => setBorradoAbierto(true)}>
-              Borrar la conferencia
-            </AccionDeColumna>
-          )}
-
-          {idConferenciaSeleccionada === null ? null : (
-            <AccionDeColumna
-              ref={botonDeEtiquetas}
-              icono="label"
-              insignia={etiquetasPropiasDeLaSeleccionada.length}
-              onClick={() => setAsignadorAbierto(true)}
-            >
-              Etiquetas de esta conferencia
-            </AccionDeColumna>
+          {conferenciaSeleccionada === undefined ? null : (
+            <div className="mb-2 border-b border-filete pb-2">
+              <button
+                ref={botonDeOpciones}
+                type="button"
+                onClick={() => setOpcionesAbiertas(true)}
+                className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-full bg-fondo px-4 text-sm text-texto-tenue transition-colors hover:text-texto"
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                  tune
+                </span>
+                Opciones de la conferencia
+                {etiquetasPropiasDeLaSeleccionada.length === 0 ? null : (
+                  <span className="ml-auto rounded-full bg-acento-tenue px-2 text-xs">
+                    {etiquetasPropiasDeLaSeleccionada.length} etiquetas
+                  </span>
+                )}
+              </button>
+            </div>
           )}
 
           {/* Buscando en todo el archivo no hay rama a la que volver: lo que cierra el paso es limpiar. */}
@@ -1247,6 +1225,90 @@ export function PantallaArchivo({
             Quitar los filtros
           </button>
         )}
+      </Modal>
+
+      {/*
+        Las acciones de la conferencia, agrupadas. Dentro de un modal ya no
+        compiten visualmente con las fichas, asi que aqui si pueden usar el
+        molde de fila completa sin confundirse con nada.
+      */}
+      <Modal
+        abierto={opcionesAbiertas}
+        alCerrar={() => setOpcionesAbiertas(false)}
+        titulo="Opciones"
+        ancho="angosto"
+        anclaje="disparador"
+        anclaEn={botonDeOpciones}
+        limites={marco}
+      >
+        <p className="-mt-2 px-1 text-sm text-texto-tenue">
+          {conferenciaSeleccionada?.conferencia.titulo ?? ''}
+        </p>
+
+        <div className="flex flex-col">
+          {conferenciaSeleccionada !== undefined &&
+          alAnalizar !== undefined &&
+          sePuedeAnalizar(conferenciaSeleccionada.conferencia.estado) ? (
+            <AccionDeColumna
+              icono="auto_awesome"
+              onClick={() => {
+                alAnalizar(conferenciaSeleccionada.conferencia.id)
+                setOpcionesAbiertas(false)
+              }}
+            >
+              {conferenciaSeleccionada.conferencia.estado === 'fallida'
+                ? 'Reintentar el analisis'
+                : 'Analizar ahora'}
+            </AccionDeColumna>
+          ) : null}
+
+          {idConferenciaSeleccionada === null ? null : (
+            <AccionDeColumna
+              ref={botonDeEtiquetas}
+              icono="label"
+              insignia={etiquetasPropiasDeLaSeleccionada.length}
+              onClick={() => {
+                setOpcionesAbiertas(false)
+                setAsignadorAbierto(true)
+              }}
+            >
+              Etiquetas
+            </AccionDeColumna>
+          )}
+
+          {conferenciaSeleccionada === undefined || alRenombrarConferencia === undefined ? null : (
+            <AccionDeColumna
+              ref={botonDeEdicion}
+              icono="edit"
+              onClick={() => {
+                setEdicion({
+                  titulo: conferenciaSeleccionada.conferencia.titulo,
+                  ponente: conferenciaSeleccionada.conferencia.ponente,
+                  fechaDelEvento: conferenciaSeleccionada.conferencia.fechaDelEvento,
+                })
+                setOpcionesAbiertas(false)
+                setEdicionAbierta(true)
+              }}
+            >
+              Corregir los datos
+            </AccionDeColumna>
+          )}
+
+          {conferenciaSeleccionada === undefined ||
+          alEliminarConferencia === undefined ||
+          conferenciaSeleccionada.procedencia !== 'propia' ? null : (
+            <AccionDeColumna
+              ref={botonDeBorrado}
+              icono="delete"
+              onClick={() => {
+                setOpcionesAbiertas(false)
+                setBorradoAbierto(true)
+              }}
+            >
+              Borrar la conferencia
+            </AccionDeColumna>
+          )}
+        </div>
       </Modal>
 
       {/* Corregir lo que se escribio mal al cargar. El evento no se toca aqui: cambiarlo movería la charla de sitio. */}
