@@ -25,6 +25,7 @@ from bitacora.analisis.clasificacion import (
     resumen_de,
     validar_propuestas,
 )
+from bitacora.analisis.condensacion import Condensador, condensar_fichas
 from bitacora.analisis.modelo import AnalizadorDeDiscurso
 from bitacora.compartido.errores import ErrorDeBitacora
 from bitacora.conferencias.repositorio import RepositorioDeConferencias
@@ -203,6 +204,7 @@ def procesar_conferencia(
     repositorio: RepositorioDeConferencias,
     transcribir: Transcriptor,
     analizar: AnalizadorDeDiscurso,
+    condensar: Condensador | None = None,
 ) -> ResultadoDelProcesamiento:
     """
     Marca `fallida` ante cualquier fallo posterior a `procesando`, y solo ahí.
@@ -258,6 +260,14 @@ def procesar_conferencia(
         """
         fichas = _mejores(fichas, _cuantas_caben(conferencia.maximo_de_fichas, duracion))
 
+        """
+        Condensar va aqui: despues de recortar, sobre las que sobreviven.
+        Antes del recorte se pagarian condensaciones de fichas que se iban a
+        descartar igual.
+        """
+        if condensar is not None:
+            fichas = condensar_fichas(fichas, condensar)
+
         creados = repositorio.crear_temas(
             [ficha.nombre_de_tema_nuevo for ficha in fichas if ficha.nombre_de_tema_nuevo]
         )
@@ -301,6 +311,7 @@ def procesar_sin_propagar(
     transcribir: Transcriptor,
     analizar: AnalizadorDeDiscurso,
     registrar: Callable[[str, str], None],
+    condensar: Condensador | None = None,
 ) -> None:
     """
     Envoltorio para correr en segundo plano, donde no hay a quién propagarle.
@@ -311,7 +322,7 @@ def procesar_sin_propagar(
     interfaz ya sabe traducir a `CONF_PROCESAMIENTO_FALLIDO`.
     """
     try:
-        procesar_conferencia(id_conferencia, repositorio, transcribir, analizar)
+        procesar_conferencia(id_conferencia, repositorio, transcribir, analizar, condensar)
     except ErrorDeBitacora as error:
         registrar(id_conferencia, error.codigo)
     except Exception as fallo:  # noqa: BLE001

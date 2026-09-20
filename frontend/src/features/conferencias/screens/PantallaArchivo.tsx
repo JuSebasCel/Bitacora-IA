@@ -18,7 +18,7 @@ import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
-import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo } from '../query'
+import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo, fueCondensada, textoDeFicha } from '../query'
 import type { ConferenciaVisible, CriteriosDeListado, FichaDelCatalogo, FiltroDeEstado, Segmento } from '../query'
 import type { EtiquetaVisible } from '../tags'
 
@@ -144,6 +144,33 @@ function partirContexto(
     cita: contexto.slice(indice, indice + fragmentoPlano.length),
     despues: contexto.slice(indice + fragmentoPlano.length).trim(),
   }
+}
+
+/*
+  La cita literal, envuelta en lo que se dijo alrededor.
+
+  Se saco del detalle a su propio componente cuando el modal de "como se dijo"
+  paso a necesitar exactamente lo mismo: el parrafo tal como se dijo, con lo
+  citado resaltado en medio. Duplicarlo habria dejado dos sitios donde arreglar
+  el mismo resalte.
+
+  Si el contexto no alcanza a contener la cita se pinta solo la cita: peor es
+  ensenar dos veces lo mismo.
+*/
+function CitaEnContexto({ contexto, fragmento }: { contexto: string; fragmento: string }): ReactElement {
+  const partes = partirContexto(contexto, fragmento)
+
+  if (partes === null) {
+    return <p className="font-titulo text-[22px] leading-snug text-texto">«{fragmento}»</p>
+  }
+
+  return (
+    <p className="text-[19px] leading-relaxed text-texto-tenue">
+      {partes.antes === '' ? null : <span>…{partes.antes} </span>}
+      <span className="font-titulo font-semibold text-texto">«{partes.cita}»</span>
+      {partes.despues === '' ? null : <span> {partes.despues}…</span>}
+    </p>
+  )
 }
 
 /** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
@@ -475,6 +502,7 @@ export function PantallaArchivo({
   const [edicionAbierta, setEdicionAbierta] = useState(false)
   const [borradoAbierto, setBorradoAbierto] = useState(false)
   const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '' })
+  const [literalAbierta, setLiteralAbierta] = useState(false)
   const [vista, setVista] = useState<Vista>('columnas')
 
   const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
@@ -483,6 +511,7 @@ export function PantallaArchivo({
   const botonDeOpciones = useRef<HTMLButtonElement>(null)
   const botonDeEdicion = useRef<HTMLButtonElement>(null)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
+  const botonDeLiteral = useRef<HTMLButtonElement>(null)
   const marco = useRef<HTMLDivElement>(null)
 
   /* Sin conferencias no hay recorrido que ofrecer: ni eventos, ni temas, ni fichas. */
@@ -573,7 +602,14 @@ export function PantallaArchivo({
 
     return base.filter(
       (e) =>
+        /*
+          Se busca en las dos versiones. Quien recuerda la frase tal como se
+          dijo la escribe literal; quien recuerda lo que leyó escribe lo
+          condensado. Buscar solo en una deja la mitad de las búsquedas sin
+          resultado por un motivo que nadie puede adivinar desde fuera.
+        */
         e.ficha.fragmento.toLowerCase().includes(textoBuscado) ||
+        e.ficha.condensado.toLowerCase().includes(textoBuscado) ||
         e.conferencia.titulo.toLowerCase().includes(textoBuscado) ||
         nombreDeTema(temas, e.ficha.idTema).toLowerCase().includes(textoBuscado),
     )
@@ -631,7 +667,7 @@ export function PantallaArchivo({
   if (activa !== undefined) {
     migas.push({
       clave: 'ficha',
-      etiqueta: activa.ficha.fragmento,
+      etiqueta: textoDeFicha(activa.ficha),
       icono: ICONO_DE_FICHA,
     })
   }
@@ -837,7 +873,7 @@ export function PantallaArchivo({
             activa={entrada.ficha.id === idFicha}
             onClick={() => setIdFicha(entrada.ficha.id)}
           >
-            {entrada.ficha.fragmento}
+            {textoDeFicha(entrada.ficha)}
           </Fila>
         ))
       )}
@@ -872,25 +908,18 @@ export function PantallaArchivo({
                 resaltado en medio. Un bloque rotulado obligaba a reconstruir
                 mentalmente dónde encajaba la frase; así se ve de un golpe.
               */}
-              {(() => {
-                const partes = partirContexto(activa.ficha.contextoMinimo, activa.ficha.fragmento)
-
-                if (partes === null) {
-                  return (
-                    <p className="font-titulo text-[22px] leading-snug text-texto">
-                      «{activa.ficha.fragmento}»
-                    </p>
-                  )
-                }
-
-                return (
-                  <p className="text-[19px] leading-relaxed text-texto-tenue">
-                    {partes.antes === '' ? null : <span>…{partes.antes} </span>}
-                    <span className="font-titulo font-semibold text-texto">«{partes.cita}»</span>
-                    {partes.despues === '' ? null : <span> {partes.despues}…</span>}
-                  </p>
-                )
-              })()}
+              {/*
+                Con condensado se lee el condensado, y sin comillas: no es una
+                cita, es la idea escrita para leerse. Ponerle «» seria afirmar
+                que alguien dijo exactamente eso, que es precisamente lo que no
+                pasa — y es el motivo por el que la literal sigue a un clic en
+                vez de haberse perdido.
+              */}
+              {fueCondensada(activa.ficha) ? (
+                <p className="font-titulo text-[22px] leading-snug text-texto">{activa.ficha.condensado}</p>
+              ) : (
+                <CitaEnContexto contexto={activa.ficha.contextoMinimo} fragmento={activa.ficha.fragmento} />
+              )}
 
               {/*
                 Quién lo dijo estaba en los datos y no se enseñaba en ninguna
@@ -914,6 +943,25 @@ export function PantallaArchivo({
               <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
                 {nombreDeTema(temas, activa.ficha.idTema)}
               </span>
+
+              {/*
+                Solo aparece cuando hay dos versiones que comparar. En una
+                ficha que ya se entendia leida, el analisis no la reescribio y
+                el boton abriria un modal con el mismo texto dos veces.
+              */}
+              {fueCondensada(activa.ficha) ? (
+                <button
+                  ref={botonDeLiteral}
+                  type="button"
+                  onClick={() => setLiteralAbierta(true)}
+                  className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-acento-tenue px-3 text-sm text-texto-tenue transition-colors hover:text-texto"
+                >
+                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+                    format_quote
+                  </span>
+                  Cómo se dijo
+                </button>
+              ) : null}
             </div>
 
           </article>
@@ -1407,6 +1455,49 @@ export function PantallaArchivo({
           {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
           vacio="Todavía no tienes etiquetas. Crea la primera aquí abajo."
         />
+      </Modal>
+
+      {/*
+        Lo literal frente a lo condensado, en un modal centrado que crece desde
+        el propio boton.
+
+        Va en este orden y no al reves: primero lo que se dijo, y despues lo
+        que se lee. Quien abre esto viene a comprobar que el condensado no le
+        anadio nada, y para eso hace falta leer el original antes que la
+        version. Lo literal conserva las comillas y su contexto alrededor; lo
+        condensado no lleva comillas porque nadie lo dijo asi.
+      */}
+      <Modal
+        abierto={literalAbierta}
+        alCerrar={() => setLiteralAbierta(false)}
+        titulo="Cómo se dijo"
+        ancho="angosto"
+        anclaEn={botonDeLiteral}
+        limites={marco}
+      >
+        {activa === undefined ? null : (
+          <div className="flex flex-col gap-5">
+            <section className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium text-texto-tenue">Tal como se dijo</h3>
+              <div className="rounded-[20px] bg-acento-tenue p-4">
+                <CitaEnContexto contexto={activa.ficha.contextoMinimo} fragmento={activa.ficha.fragmento} />
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium text-texto-tenue">Cómo se lee aquí</h3>
+              <div className="rounded-[20px] bg-acento-tenue p-4">
+                <p className="text-[19px] leading-relaxed text-texto">{activa.ficha.condensado}</p>
+              </div>
+            </section>
+
+            <p className="text-sm leading-relaxed text-texto-tenue">
+              La versión de arriba es la que se cita: el análisis tiene prohibido
+              tocarla. La de abajo es la misma idea sin las repeticiones del
+              habla, y es la que se enseña por defecto.
+            </p>
+          </div>
+        )}
       </Modal>
     </div>
   )

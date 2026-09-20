@@ -34,6 +34,15 @@ export type Ficha = {
   readonly idConferencia: string
   /** Texto exacto extraído de la charla, tal como se dijo. */
   readonly fragmento: string
+  /**
+   * La misma idea sin las repeticiones del habla, escrita para leerse.
+   *
+   * Es lo que se muestra por defecto; `fragmento` sigue siendo lo que se
+   * cita. Vacío significa que no hizo falta condensarla —ya se entendía
+   * leída— o que el análisis corrió antes de que esto existiera, y en los
+   * dos casos se enseña la literal.
+   */
+  readonly condensado: string
   /** Quién lo dijo. Puede no ser el ponente principal cuando la charla fue un panel. */
   readonly hablante: string
   /** Trazabilidad al segundo exacto, requisito no funcional del PRD sección 9. */
@@ -85,6 +94,13 @@ export type EstadoDeComparticion = 'pendiente' | 'aceptada' | 'rechazada'
 export type Comparticion = {
   readonly idInvitado: string
   readonly estado: EstadoDeComparticion
+  /*
+    Copia del nombre y el correo en el momento de invitar. Se guardan aqui
+    porque `profiles` no es legible entre cuentas, y sin esto el aviso al
+    dueno solo podria decir "Aceptaron tu charla" sin decir quien.
+  */
+  readonly invitadoNombre: string
+  readonly invitadoCorreo: string
   /** Cuando el invitado contesto, en ISO. `null` mientras siga pendiente. */
   readonly respondidaEl: string | null
   /** Fecha ISO en que el dueño compartió la conferencia. */

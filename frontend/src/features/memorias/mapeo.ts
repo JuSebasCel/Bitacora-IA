@@ -1,5 +1,6 @@
 import type { Conferencia, Ficha, TipoDeUnidad } from '@/features/conferencias/data'
 import { formatearFecha } from '@/features/conferencias/data'
+import { textoDeFicha } from '@/features/conferencias/query'
 import type { RegistroDeDatosDeCampo } from '@/features/plantillas/data'
 import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
@@ -44,6 +45,11 @@ export function mapearConferenciaACampos(
     tema_principal: { parrafo: nombreDelTemaPrincipal, lista: [nombreDelTemaPrincipal] },
   }
 
+  /*
+    La cita destacada va literal, y es el unico campo que lo exige: una memoria
+    que entrecomilla a alguien esta afirmando que dijo exactamente eso. El
+    condensado no lo dijo nadie asi, por bien escrito que este.
+  */
   const citas = fichasRelevantes(fichas, conferencia.id, 'cita-textual')
   if (citas.length > 0) {
     registro.cita_destacada = {
@@ -52,11 +58,15 @@ export function mapearConferenciaACampos(
     }
   }
 
+  /*
+    El resumen del metodo no es una cita, es prosa de la memoria: aqui si entra
+    la version condensada, que es la que se lee sin las vueltas del habla.
+  */
   const metodos = fichasRelevantes(fichas, conferencia.id, 'metodo')
   if (metodos.length > 0) {
     registro.resumen_metodo = {
-      parrafo: metodos[0]?.fragmento ?? '',
-      lista: metodos.map((ficha) => ficha.fragmento),
+      parrafo: metodos[0] === undefined ? '' : textoDeFicha(metodos[0]),
+      lista: metodos.map(textoDeFicha),
     }
   } else if (conferencia.resumen.trim().length > 0) {
     registro.resumen_metodo = { parrafo: conferencia.resumen, lista: [conferencia.resumen] }

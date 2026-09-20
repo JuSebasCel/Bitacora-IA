@@ -37,6 +37,7 @@ function entradaDe(
     id: `fch-prueba-${contador}`,
     idConferencia: CONFERENCIA.id,
     fragmento: 'El dato nunca es neutral: refleja quién decidió qué preguntar.',
+    condensado: '',
     hablante: CONFERENCIA.ponente,
     segundoInicio: 185,
     segundoFin: 210,

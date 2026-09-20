@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { formatearFecha, formatearTimestamp } from '@/features/conferencias/data'
 import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from '@/features/conferencias/components/vocabulario'
 import type { FichaDelCatalogo } from '@/features/conferencias/query'
+import { textoDeFicha } from '@/features/conferencias/query'
 import { Insignia } from '@/shared/ui'
 
 export type PropsFichaDeCatalogo = {
@@ -106,7 +107,7 @@ export function FichaDeCatalogo({
         </span>
       </div>
 
-      <blockquote className="text-lg leading-snug text-texto">{ficha.fragmento}</blockquote>
+      <blockquote className="text-lg leading-snug text-texto">{textoDeFicha(ficha)}</blockquote>
 
       <p className="text-xs leading-relaxed text-texto-tenue">{ficha.contextoMinimo}</p>
 

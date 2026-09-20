@@ -41,6 +41,7 @@ from bitacora.compartido.ia import (
 )
 from bitacora.conferencias.repositorio import RepositorioSupabase
 from bitacora.conferencias.tipos import Segmento
+from bitacora.analisis.condensacion import Condensador, condensador_de
 from bitacora.transcripcion.openai import transcribir
 
 
@@ -134,6 +135,11 @@ def transcriptor_de(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Tr
 
 def analizador_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> AnalizadorDeDiscurso:
     return analizador_de(cliente, contexto.configuracion.modelo_de_analisis)
+
+
+def condensador_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Condensador:
+    """Usa el modelo de analisis: es la misma tarea de leer discurso, no una conversacion."""
+    return condensador_de(cliente, contexto.configuracion.modelo_de_analisis)
 
 
 def agente_para(

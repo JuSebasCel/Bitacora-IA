@@ -113,13 +113,25 @@ def test_las_columnas_de_ficha_existen_en_la_tabla() -> None:
     sql = _sql_del_esquema()
     definicion = sql[sql.index("create table fichas") : sql.index("create index fichas_")]
 
+    """
+    Tambien lo que agregaron las migraciones posteriores: una columna nacida
+    en un `alter table` es tan columna como las del `create`, y mirar solo el
+    esquema original haria fallar la prueba cada vez que el dominio crezca.
+    """
+    alteraciones = chr(10).join(
+        archivo.read_text(encoding="utf-8")
+        for archivo in sorted(MIGRACIONES.glob("*.sql"))
+        if "alter table fichas" in archivo.read_text(encoding="utf-8")
+    )
+
     for campo in fields(Ficha):
         if campo.name in CAMPOS_QUE_NO_SON_COLUMNAS:
             continue
 
-        assert re.search(rf"^\s+{campo.name}\s", definicion, re.MULTILINE), (
-            f"`fichas` no tiene la columna {campo.name}"
-        )
+        en_el_create = re.search(rf"^\s+{campo.name}\s", definicion, re.MULTILINE)
+        en_un_alter = re.search(rf"add column {campo.name}\s", alteraciones)
+
+        assert en_el_create or en_un_alter, f"`fichas` no tiene la columna {campo.name}"
 
     ficha = Ficha(
         id_conferencia="c",

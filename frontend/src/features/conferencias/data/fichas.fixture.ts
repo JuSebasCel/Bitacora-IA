@@ -25,7 +25,15 @@ import type { Ficha } from './tipos'
   discurso, con su confianza calculada por consistencia entre pasadas.
 */
 
-export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
+/*
+  Sin condensar: el condensado se pone abajo y solo donde ilustra algo.
+
+  Dejarlo como un campo más de cada entrada obligaría a escribir setenta y
+  dos cadenas vacías para que tres digan algo. El dominio ya trata el vacío
+  como "no hizo falta condensarla", que es exactamente lo que le pasa a la
+  mayoría de las de ejemplo.
+*/
+const SIN_CONDENSAR: readonly Omit<Ficha, 'condensado'>[] = [
   /* cnf-alc-01: Modelos de lenguaje aplicados a la revisión sistemática de literatura */
   {
     id: 'fch-alc-01-01',
@@ -1063,3 +1071,21 @@ export const FICHAS_DE_EJEMPLO: readonly Ficha[] = [
     contextoMinimo: 'Solución adoptada, con la comparación de errores antes y después.',
   },
 ]
+
+/*
+  Las que llevan condensado, por id.
+
+  Son las dos que de verdad lo necesitan: la primera repite el mismo giro tres
+  veces y la segunda explica el protocolo dos veces seguidas. El resto del
+  fixture está escrito como se escribe, no como se habla, y condensarlas sería
+  inventar una diferencia que en los datos reales no estaría.
+*/
+const CONDENSADOS: Readonly<Record<string, string>> = {
+  'fch-alc-01-01': 'No le piden al modelo que decida si un artículo entra en la revisión, sino que ordene la pila por probabilidad de relevancia: la exclusión sigue siendo de una persona. No es un clasificador binario que haya que auditar por sesgo, es un lector rápido que prioriza el trabajo de un lector humano.',
+  'fch-alc-01-02': 'El protocolo fue de dos pasadas ciegas sobre el mismo lote de resúmenes, con una tercera revisión humana solo cuando discrepaban o algo quedaba dudoso. Eso permitió medir el acuerdo entre revisores desde el primer lote y detectar que dos criterios de inclusión estaban redactados de forma ambigua.',
+}
+
+export const FICHAS_DE_EJEMPLO: readonly Ficha[] = SIN_CONDENSAR.map((ficha) => ({
+  ...ficha,
+  condensado: CONDENSADOS[ficha.id] ?? '',
+}))

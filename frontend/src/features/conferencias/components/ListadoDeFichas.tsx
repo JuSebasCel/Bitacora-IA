@@ -5,6 +5,7 @@ import type { Tema } from '@/features/taxonomia'
 import { EstadoVacio, Insignia } from '@/shared/ui'
 import { formatearTimestamp } from '../data'
 import type { Ficha } from '../data'
+import { textoDeFicha } from '../query'
 import { CONTENEDOR_DE_LISTADO, ELEMENTO_DE_FILA } from './animaciones'
 import { TIPO_EN_SINGULAR, TONO_POR_VALIDACION, VALIDACION_EN_SINGULAR } from './vocabulario'
 
@@ -121,7 +122,7 @@ export function ListadoDeFichas({
             </div>
 
             <blockquote className="border-l-2 border-acento/50 pl-3 text-base leading-relaxed text-texto">
-              {ficha.fragmento}
+              {textoDeFicha(ficha)}
             </blockquote>
 
             <p className="text-xs leading-relaxed text-texto-tenue">{ficha.contextoMinimo}</p>

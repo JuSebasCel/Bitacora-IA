@@ -27,6 +27,7 @@ function ficha(datos: Partial<Ficha>): Ficha {
     id: 'fch-prueba',
     idConferencia: CONFERENCIA.id,
     fragmento: 'Fragmento de prueba.',
+    condensado: '',
     hablante: CONFERENCIA.ponente,
     segundoInicio: 0,
     segundoFin: 10,

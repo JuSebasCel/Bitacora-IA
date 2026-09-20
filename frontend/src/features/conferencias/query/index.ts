@@ -35,6 +35,8 @@ export {
   palabrasDe,
 } from './filtros'
 
+export { fueCondensada, textoDeFicha } from './lectura'
+
 export type { ConteoPorEstado, ConteoPorTipo, ResumenDeFichas } from './resumen'
 export { resumirFichas } from './resumen'
 

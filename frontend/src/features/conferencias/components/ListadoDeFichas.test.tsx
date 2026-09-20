@@ -15,6 +15,7 @@ const FICHA: Ficha = {
   id: 'fch-prueba',
   idConferencia: 'cnf-prueba',
   fragmento: 'El dato nunca es neutral: refleja quién decidió qué preguntar.',
+  condensado: '',
   hablante: 'Mariana Escobar Vallejo',
   segundoInicio: 185,
   segundoFin: 210,

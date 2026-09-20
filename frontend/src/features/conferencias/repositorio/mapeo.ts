@@ -38,6 +38,8 @@ export type FilaDeComparticion = {
   readonly privacidad: unknown
   readonly estado?: string | null
   readonly respondida_el?: string | null
+  readonly invitado_nombre?: string | null
+  readonly invitado_correo?: string | null
 }
 
 export type FilaDeConferencia = {
@@ -62,6 +64,8 @@ export type FilaDeFicha = {
   readonly id: string
   readonly id_conferencia: string
   readonly fragmento: string
+  /* Ausente en las filas escritas antes de la migración que añadió la columna. */
+  readonly condensado?: string | null
   readonly hablante: string
   readonly segundo_inicio: number
   readonly segundo_fin: number
@@ -134,6 +138,8 @@ export function mapearComparticion(fila: FilaDeComparticion): Comparticion {
     compartidaEl: fila.compartida_el,
     estado,
     respondidaEl: fila.respondida_el ?? null,
+    invitadoNombre: fila.invitado_nombre ?? '',
+    invitadoCorreo: fila.invitado_correo ?? '',
     privacidad: mapearPrivacidad(fila.privacidad),
   }
 }
@@ -180,6 +186,7 @@ export function mapearFicha(fila: FilaDeFicha): Ficha | null {
     id: fila.id,
     idConferencia: fila.id_conferencia,
     fragmento: fila.fragmento,
+    condensado: fila.condensado ?? '',
     hablante: fila.hablante,
     segundoInicio: fila.segundo_inicio,
     segundoFin: fila.segundo_fin,

@@ -117,6 +117,14 @@ class Ficha:
     confianza_automatica: float
     contexto_minimo: str
     """
+    La misma idea sin las vueltas del habla. Vacio si no hizo falta.
+
+    Es columna, no transporte: se guarda al lado del fragmento y nunca lo
+    sustituye. El dia que alguien quiera verificar que se dijo, el original
+    tiene que seguir ahi.
+    """
+    condensado: str = ""
+    """
     Nombre del tema que el análisis quiso usar cuando todavía no existía.
 
     No es una columna: la ficha nace antes de que el tema exista, porque el

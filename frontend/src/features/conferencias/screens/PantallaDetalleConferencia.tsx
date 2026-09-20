@@ -1,10 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
 import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
-import { ShareNetworkIcon } from '@phosphor-icons/react/dist/csr/ShareNetwork'
 import { Link, useLocation, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
-import { DialogoDeCompartir } from '@/features/configuracion/components'
 import { useTemas } from '@/features/taxonomia'
 import { mensajeDeError } from '@/shared/errors'
 import { Esqueleto, PanelDeError } from '@/shared/ui'
@@ -74,7 +72,6 @@ export function PantallaDetalleConferencia() {
     idUsuario,
   )
 
-  const [dialogoCompartirAbierto, setDialogoCompartirAbierto] = useState(false)
 
   const fichas = useMemo(
     () => (resultado.ok ? fichasVisibles(fichasDeLaConferencia, resultado.visible) : []),
@@ -154,7 +151,6 @@ export function PantallaDetalleConferencia() {
   /* El dueño siempre puede validar lo suyo; un invitado solo si quien compartió lo permitió explícitamente. */
   const puedeValidar = visible.procedencia === 'propia' || privacidadEfectiva(visible).permitirValidarFichas
   /* Mismo criterio que validar: propia siempre, ajena solo con permiso explícito de recompartir. */
-  const puedeCompartir = visible.procedencia === 'propia' || privacidadEfectiva(visible).permitirRecompartir
 
   return (
     <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
@@ -175,28 +171,9 @@ export function PantallaDetalleConferencia() {
             alCrear={alCrearYAsignar}
           />
 
-          {puedeCompartir ? (
-            <button
-              type="button"
-              onClick={() => setDialogoCompartirAbierto(true)}
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-texto-tenue transition-colors hover:bg-fondo hover:text-texto"
-            >
-              <ShareNetworkIcon size={14} weight="regular" aria-hidden="true" />
-              Compartir
-            </button>
-          ) : null}
+
         </div>
       </section>
-
-      {puedeCompartir ? (
-        <DialogoDeCompartir
-          abierto={dialogoCompartirAbierto}
-          conferencia={conferencia}
-          idUsuario={idUsuario}
-          puedeCompartir={puedeCompartir}
-          alCerrar={() => setDialogoCompartirAbierto(false)}
-        />
-      ) : null}
 
       {conferencia.estado === 'fallida' ? (
         <PanelDeError mensaje={mensajeDeError('CONF_PROCESAMIENTO_FALLIDO')} />

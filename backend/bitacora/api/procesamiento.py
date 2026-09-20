@@ -21,6 +21,7 @@ from bitacora.api.dependencias import (
     Usuario,
     analizador_para,
     cliente_de_openai,
+    condensador_para,
     repositorio_de_conferencias,
     transcriptor_de,
 )
@@ -83,6 +84,7 @@ def procesar(
         transcriptor_de(usuario, cliente),
         analizador_para(usuario, cliente),
         registrar_fallo,
+        condensador_para(usuario, cliente),
     )
 
     return RespuestaDeProcesamiento(

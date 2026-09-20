@@ -113,6 +113,8 @@ describe('mapearComparticion', () => {
       /* Sin la columna, se asume lo menos permisivo: sin acceso hasta que se acepte. */
       estado: 'pendiente',
       respondidaEl: null,
+      invitadoNombre: '',
+      invitadoCorreo: '',
       privacidad: {
         compartirEtiquetas: true,
         compartirFichasPendientes: false,
@@ -202,6 +204,8 @@ describe('mapearFicha', () => {
       id: 'ficha-1',
       idConferencia: 'conf-1',
       fragmento: 'El dato nunca es neutral.',
+      /* La fila no trae la columna: es una escrita antes de que existiera, y cae a vacio. */
+      condensado: '',
       hablante: 'Mariana Escobar',
       segundoInicio: 120,
       segundoFin: 148,
