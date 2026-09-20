@@ -1,6 +1,6 @@
 export { BarraLateral } from './BarraLateral'
 export { BarraSuperior } from './BarraSuperior'
-export { NotificacionesDropdown } from './NotificacionesDropdown'
+export { CampanaDeAvisos } from './CampanaDeAvisos'
 export { ShellLayout } from './ShellLayout'
 export {
   PESO_DE_ICONO,

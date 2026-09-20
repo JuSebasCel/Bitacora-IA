@@ -2,7 +2,7 @@ import type { ReactElement, RefObject } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { MenuDeCuenta } from './MenuDeCuenta'
-import { NotificacionesDropdown } from './NotificacionesDropdown'
+import { CampanaDeAvisos } from './CampanaDeAvisos'
 import { ACCIONES_DE_NAVEGACION, SECCIONES_DE_NAVEGACION, esSeccionActiva } from './navegacion'
 
 type PropiedadesBarraLateral = {
@@ -86,11 +86,8 @@ export function BarraLateral({
         el nombre de la sección —que el dock y el título de la pantalla ya
         decían— para sostener un par de controles.
 
-        La campana de notificaciones se quitó por decisión de diseño. Ojo con
-        la consecuencia: era el único acceso a la curaduría de temas
-        propuestos (`NotificacionesDropdown`), así que ahora mismo no hay
-        forma de aprobarlos ni rechazarlos desde la interfaz. El componente
-        sigue existiendo y hay que devolverle una puerta.
+        La campana volvió, pero solo con lo que pide una respuesta: las
+        conferencias que te compartieron y lo que contestaron a las tuyas.
       */}
         <div className="flex items-start gap-1">
           {usuario === null ? null : (
@@ -105,7 +102,7 @@ export function BarraLateral({
             invitaciones a conferencias compartidas, que sin un sitio donde
             aparecer no se podrian ni aceptar.
           */}
-          {usuario === null ? null : <NotificacionesDropdown idUsuario={usuario.id} />}
+          {usuario === null ? null : <CampanaDeAvisos idUsuario={usuario.id} />}
 
           <button
             type="button"
