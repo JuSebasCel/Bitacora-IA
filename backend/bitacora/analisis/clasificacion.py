@@ -257,6 +257,7 @@ def validar_propuestas(
             )
 
         confianza = _numero_en_rango(propuesta.get("confianza"), 0.0, 1.0, 0.0)
+        relevancia = _numero_en_rango(propuesta.get("relevancia"), 0.0, 1.0, 0.5)
 
         fichas.append(
             Ficha(
@@ -272,6 +273,7 @@ def validar_propuestas(
                 # caía al tema de respaldo, que la archivaba bajo algo que no
                 # era lo suyo solo porque el vocabulario no lo cubría aún.
                 nombre_de_tema_nuevo="" if tema is not None else nombre_de_tema,
+                relevancia=relevancia,
                 tipo_de_unidad=tipo_de_unidad,
                 estado_de_validacion=estado_inicial(
                     tipo_de_unidad,

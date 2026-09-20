@@ -123,6 +123,50 @@ def _analizar_ventanas(
     return deduplicar(fichas), deduplicar_propuestas(propuestas)
 
 
+"""
+Techo de fichas por minuto de charla.
+
+El mismo numero que usa la interfaz al ofrecer las opciones (`carga/cuota.ts`).
+Se vuelve a aplicar aqui porque alli solo se conoce la duracion cuando se sube
+un audio: con una transcripcion no hay forma de saber cuanto dura hasta
+haberla leido, asi que el recorte de verdad tiene que ocurrir donde ya se sabe.
+"""
+FICHAS_POR_MINUTO = 0.75
+MINIMO_DE_FICHAS = 3
+
+
+def _cuantas_caben(maximo_pedido: int | None, duracion_en_segundos: int) -> int | None:
+    """
+    Lo pedido, recortado por lo que la duracion permite. `None` es sin limite.
+
+    Se recorta y no se rechaza: quien pidio ciento veinte fichas de un audio de
+    dos minutos no se equivoco de forma que haya que corregirle, simplemente no
+    sabia cuanto duraba. Darle las que caben es mas util que un error.
+    """
+    if maximo_pedido is None:
+        return None
+
+    techo = max(MINIMO_DE_FICHAS, round((duracion_en_segundos / 60) * FICHAS_POR_MINUTO))
+
+    return min(maximo_pedido, techo)
+
+
+def _mejores(fichas: Sequence[Ficha], cuantas: int | None) -> tuple[Ficha, ...]:
+    """
+    Las `cuantas` mas citables, devueltas en el orden de la charla.
+
+    Se ordena por relevancia para elegir y se reordena por coordenada para
+    guardar: una lista de fichas saltando de un minuto a otro no se puede leer
+    como lo que es, el recorrido de una charla.
+    """
+    if cuantas is None or len(fichas) <= cuantas:
+        return tuple(fichas)
+
+    elegidas = sorted(fichas, key=lambda f: f.relevancia, reverse=True)[:cuantas]
+
+    return tuple(sorted(elegidas, key=lambda f: f.segundo_inicio))
+
+
 def _resolver_temas_nuevos(
     fichas: Sequence[Ficha],
     vocabulario: Sequence[Tema],
@@ -207,6 +251,13 @@ def procesar_conferencia(
         caían al tema de respaldo —quedaban archivadas bajo algo que no era lo
         suyo— y el tema real se iba a una cola de curaduría que nadie miraba.
         """
+        """
+        El recorte va ANTES de crear los temas: un tema que solo lo pedia una
+        ficha descartada no tiene por que existir, y crearlo ensuciaria el
+        vocabulario con algo que al final no clasifica nada.
+        """
+        fichas = _mejores(fichas, _cuantas_caben(conferencia.maximo_de_fichas, duracion))
+
         creados = repositorio.crear_temas(
             [ficha.nombre_de_tema_nuevo for ficha in fichas if ficha.nombre_de_tema_nuevo]
         )

@@ -221,6 +221,8 @@ export type ConferenciaParaInsertar = {
   readonly fuente: FuenteDeConferencia
   /** Leída del propio archivo cuando es audio; 0 en transcripción. */
   readonly duracionEnSegundos?: number
+  /** Cuantas fichas se piden. `null` es sin limite. */
+  readonly maximoDeFichas?: number | null
 }
 
 export function filaParaInsertar(conferencia: ConferenciaParaInsertar): Record<string, unknown> {
@@ -242,6 +244,7 @@ export function filaParaInsertar(conferencia: ConferenciaParaInsertar): Record<s
     fuente: conferencia.fuente,
     resumen: '',
     duracion_en_segundos: conferencia.duracionEnSegundos ?? 0,
+    maximo_de_fichas: conferencia.maximoDeFichas ?? null,
     cargada_el: new Date().toISOString(),
   }
 }

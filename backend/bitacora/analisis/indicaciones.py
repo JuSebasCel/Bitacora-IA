@@ -80,7 +80,13 @@ uno. Escríbelo en singular y con mayúscula inicial.
 8. `confianza` es tu certeza real sobre la clasificación (tipo y tema), de 0 a \
 1. No la infles: una confianza honesta y baja manda la ficha a revisión \
 humana, que es donde debe ir.
-9. Saludos, agradecimientos, logística del evento, muletillas y preguntas del \
+9. `relevancia`, de 0 a 1, es otra cosa distinta: qué tan citable es esta \
+unidad en un artículo de investigación. Una cifra concreta, una postura clara \
+o un método explicado bien puntúan alto; un comentario de paso, una obviedad o \
+algo que solo se entiende conociendo el resto de la charla puntúan bajo. \
+Cuando haya que quedarse con unas pocas, se conservan las de relevancia más \
+alta — así que puntuar todo igual equivale a elegir al azar.
+10. Saludos, agradecimientos, logística del evento, muletillas y preguntas del \
 público sin contenido propio no son unidades. Prefiere devolver pocas y buenas.
 
 Devuelves un objeto JSON con una única clave `fichas`, cuyo valor es la lista \

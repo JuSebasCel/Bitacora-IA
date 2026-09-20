@@ -9,10 +9,13 @@ import type { OpcionDeSelector } from '@/shared/ui'
 import {
   EXTENSIONES_POR_FUENTE,
   duracionDeArchivo,
+  fichasPedidas,
+  maximoDeFichasPara,
   fuenteDeArchivo,
   tituloSugerido,
   validarArchivo,
 } from '../carga'
+import type { Densidad } from '../carga'
 import type { Conferencia, Etiqueta, FuenteDeConferencia } from '../data'
 import { formatearTimestamp } from '../data'
 import { useDirectorio } from '../directorio'
@@ -49,6 +52,13 @@ const EXTENSIONES_ADMITIDAS = [
   ...EXTENSIONES_POR_FUENTE.audio,
   ...EXTENSIONES_POR_FUENTE.transcripcion,
 ].join(',')
+
+const DENSIDADES: readonly { valor: Densidad; etiqueta: string }[] = [
+  { valor: 'pocas', etiqueta: 'Pocas' },
+  { valor: 'equilibrado', etiqueta: 'Equilibrado' },
+  { valor: 'muchas', etiqueta: 'Muchas' },
+  { valor: 'libre', etiqueta: 'Sin límite' },
+]
 
 const NOMBRE_DE_FUENTE: Record<FuenteDeConferencia, string> = {
   audio: 'Audio',
@@ -123,6 +133,7 @@ export function ModalDeCarga({
   const [campos, setCampos] = useState<Campos>(CAMPOS_VACIOS)
   const [archivo, setArchivo] = useState<File | null>(null)
   const [duracion, setDuracion] = useState(0)
+  const [densidad, setDensidad] = useState<Densidad>('equilibrado')
   const [etiquetasElegidas, setEtiquetasElegidas] = useState<readonly string[]>([])
   const [errores, setErrores] = useState<ErroresDeCampo>({})
   const [error, setError] = useState<string | null>(null)
@@ -147,6 +158,7 @@ export function ModalDeCarga({
     setCampos(CAMPOS_VACIOS)
     setArchivo(null)
     setDuracion(0)
+    setDensidad('equilibrado')
     setEtiquetasElegidas([])
     setErrores({})
     setError(null)
@@ -264,6 +276,7 @@ export function ModalDeCarga({
         idDueno: idUsuario,
         fuente: fuente ?? 'transcripcion',
         duracionEnSegundos: duracion,
+        maximoDeFichas: fichasPedidas(densidad, duracion),
       },
       archivo,
     )
@@ -463,6 +476,53 @@ export function ModalDeCarga({
                   {mensaje}
                 </p>
               ))}
+          </div>
+
+          {/*
+            Cuantas fichas se quieren.
+
+            Las opciones son fracciones del techo que impone la duracion, no
+            numeros fijos: "pocas" no significa lo mismo en una charla de diez
+            minutos que en una de dos horas. El techo solo se puede calcular
+            con un audio, que es de donde sale la duracion; con una
+            transcripcion el backend lo recorta cuando la transcribe y sabe
+            cuanto dura de verdad.
+          */}
+          <div className="flex flex-col gap-2">
+            <p className="px-1 text-sm font-medium text-texto-tenue">
+              Cuántas fichas
+              {duracion > 0 ? (
+                <span className="font-normal"> · hasta {maximoDeFichasPara(duracion)} en esta charla</span>
+              ) : null}
+            </p>
+
+            <div className="flex flex-wrap gap-1.5">
+              {DENSIDADES.map((opcion) => {
+                const activa = opcion.valor === densidad
+                const cuantas = duracion > 0 ? fichasPedidas(opcion.valor, duracion) : null
+
+                return (
+                  <label
+                    key={opcion.valor}
+                    className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
+                      activa
+                        ? 'bg-acento text-acento-contraste'
+                        : 'bg-acento-tenue text-texto-tenue hover:text-texto'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="densidad-de-fichas"
+                      checked={activa}
+                      onChange={() => setDensidad(opcion.valor)}
+                      className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+                    />
+                    {opcion.etiqueta}
+                    {cuantas === null ? null : <span className="opacity-70"> · {cuantas}</span>}
+                  </label>
+                )
+              })}
+            </div>
           </div>
 
           {/*

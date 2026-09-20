@@ -58,6 +58,9 @@ def _fila_a_conferencia(fila: dict[str, Any]) -> Conferencia:
         codigo_de_evento=str(fila.get("codigo_de_evento") or ""),
         fecha_del_evento=str(fila.get("fecha_del_evento") or ""),
         duracion_en_segundos=int(fila.get("duracion_en_segundos") or 0),
+        maximo_de_fichas=(
+            int(fila["maximo_de_fichas"]) if fila.get("maximo_de_fichas") else None
+        ),
         id_dueno=str(fila.get("id_dueno") or ""),
         estado=str(fila.get("estado") or ""),
         fuente=str(fila.get("fuente") or ""),

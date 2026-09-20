@@ -60,6 +60,13 @@ class Conferencia:
     codigo_de_evento: str
     fecha_del_evento: str
     duracion_en_segundos: int
+    """
+    Cuantas fichas pidio quien cargo la charla. `None` es sin limite.
+
+    Es una PETICION, no una garantia: el pipeline la recorta contra la duracion
+    real, que no se conoce hasta despues de transcribir.
+    """
+    maximo_de_fichas: int | None
     id_dueno: str
     estado: str
     fuente: str
@@ -118,6 +125,19 @@ class Ficha:
     con contenido a la escritura significa que quedó un tema sin crear.
     """
     nombre_de_tema_nuevo: str = ""
+    """
+    Que tan citable es esto, segun el propio modelo, de 0 a 1.
+
+    Sirve para decidir cuales sobreviven cuando se pidio un maximo, y no se
+    guarda: es un criterio de seleccion, no un dato de la ficha.
+
+    No se reusa `confianza_automatica` para esto aunque parezca lo mismo. Esa
+    mide la certeza sobre el TIPO Y EL TEMA que se asignaron, no si la idea
+    vale: una cifra suelta es trivial de clasificar y puede ser irrelevante,
+    mientras que una postura matizada baja la confianza justamente por ser
+    rica. Recortar por confianza dejaria lo mas facil de etiquetar, no lo mejor.
+    """
+    relevancia: float = 0.0
 
 
 """
@@ -127,7 +147,7 @@ Campos de `Ficha` que viajan con ella pero no son columnas de `fichas`.
 tiene que salir antes de escribir. Vive aqui, junto al tipo, para que quien
 agregue otro campo asi lo anote en el mismo sitio en que lo declara.
 """
-CAMPOS_QUE_NO_SON_COLUMNAS = frozenset({"nombre_de_tema_nuevo"})
+CAMPOS_QUE_NO_SON_COLUMNAS = frozenset({"nombre_de_tema_nuevo", "relevancia"})
 
 
 def fila_de_ficha(ficha: Ficha) -> dict[str, object]:
