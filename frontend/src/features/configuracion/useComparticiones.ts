@@ -3,13 +3,14 @@ import type { Conferencia, PrivacidadDeComparticion } from '@/features/conferenc
 import { mensajeDeError } from '@/shared/errors'
 import { crearInvitacion } from './comparticiones/comparticiones'
 import { crearComparticion } from './comparticiones/repositorio'
+import type { CuentaInvitable } from './comparticiones/repositorio'
 
 export type ResultadoDeAccion = { readonly ok: true } | { readonly ok: false; readonly mensaje: string }
 
 export type ValorDeComparticiones = {
   readonly invitar: (
     conferencia: Conferencia | null,
-    idInvitado: string,
+    invitado: CuentaInvitable,
     puedeCompartir: boolean,
     privacidad: PrivacidadDeComparticion,
   ) => Promise<ResultadoDeAccion>
@@ -31,11 +32,11 @@ export function useComparticiones(): ValorDeComparticiones {
   const invitar = useCallback(
     async (
       conferencia: Conferencia | null,
-      idInvitado: string,
+      invitado: CuentaInvitable,
       puedeCompartir: boolean,
       privacidad: PrivacidadDeComparticion,
     ): Promise<ResultadoDeAccion> => {
-      const previo = crearInvitacion(conferencia, idInvitado, puedeCompartir, privacidad)
+      const previo = crearInvitacion(conferencia, invitado.id, puedeCompartir, privacidad)
 
       if (!previo.ok) {
         return { ok: false, mensaje: mensajeDeError(previo.codigo) }
@@ -43,7 +44,7 @@ export function useComparticiones(): ValorDeComparticiones {
 
       /* `conferencia` no es null aquí: `crearInvitacion` ya lo habría rechazado. */
       const conf = conferencia as Conferencia
-      const resultado = await crearComparticion(conf.id, conf.idDueno, idInvitado, privacidad)
+      const resultado = await crearComparticion(conf.id, conf.idDueno, invitado, privacidad)
 
       return resultado.ok
         ? { ok: true }

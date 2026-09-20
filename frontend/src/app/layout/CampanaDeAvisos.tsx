@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { invitacionesPendientes, respuestasSinVer } from '@/features/conferencias/query'
@@ -32,6 +32,40 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
   const [vistas, setVistas] = useState<ReadonlySet<string>>(new Set())
   const [respondiendo, setRespondiendo] = useState<ReadonlySet<string>>(new Set())
   const boton = useRef<HTMLButtonElement>(null)
+
+  /*
+    Se vuelve a preguntar al abrir y cada treinta segundos.
+
+    Sin esto habia que cambiar de pantalla para que una invitacion recien
+    enviada apareciera: la consulta esta cacheada y nadie la invalidaba, asi
+    que la campana mostraba lo que hubiera en la cache desde que se cargo la
+    pantalla. Treinta segundos es un compromiso: una invitacion no es urgente,
+    pero enterarse al dia siguiente tampoco sirve.
+  */
+  useEffect(() => {
+    const intervalo = setInterval(recargar, 30_000)
+
+    /*
+      Y al volver a la pestana, sin esperar el turno del intervalo.
+
+      Es el gesto real: se comparte desde una cuenta, se cambia a la otra, y lo
+      primero que se hace es mirar la campana. Con solo el intervalo eso caia
+      en cualquier punto de los treinta segundos, que es de donde salia la
+      sensacion de que compartir "tardaba en llegar".
+    */
+    function alVolver(): void {
+      if (document.visibilityState === 'visible') {
+        recargar()
+      }
+    }
+
+    document.addEventListener('visibilitychange', alVolver)
+
+    return () => {
+      clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', alVolver)
+    }
+  }, [recargar])
 
   const invitaciones = useMemo(() => invitacionesPendientes(todas, idUsuario), [todas, idUsuario])
 
@@ -68,7 +102,10 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
       <button
         ref={boton}
         type="button"
-        onClick={() => setAbierta(true)}
+        onClick={() => {
+          recargar()
+          setAbierta(true)
+        }}
         aria-label={total === 0 ? 'Notificaciones' : `Notificaciones, ${total} sin leer`}
         className="relative mt-2 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto"
       >
@@ -149,7 +186,8 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
                 </span>
 
                 <p className="min-w-0 flex-1 text-sm text-texto">
-                  {respuesta.aceptada ? 'Aceptaron' : 'Rechazaron'}{' '}
+                  <span className="font-medium">{respuesta.quien}</span>{' '}
+                  {respuesta.aceptada ? 'aceptó' : 'rechazó'}{' '}
                   <span className="text-texto-tenue">«{respuesta.conferencia.titulo}»</span>
                 </p>
 

@@ -43,7 +43,7 @@ export async function listarPerfiles(): Promise<ResultadoDeConsulta<readonly Per
 export async function crearComparticion(
   idConferencia: string,
   idDueno: string,
-  idInvitado: string,
+  invitado: CuentaInvitable,
   privacidad: PrivacidadDeComparticion,
 ): Promise<ResultadoDeConsulta<Comparticion>> {
   const respuesta = await supabase
@@ -51,10 +51,13 @@ export async function crearComparticion(
     .insert({
       id_conferencia: idConferencia,
       id_dueno: idDueno,
-      id_invitado: idInvitado,
+      id_invitado: invitado.id,
+      /* Copia para poder nombrar a quien responde sin abrir `profiles`. */
+      invitado_nombre: invitado.nombre,
+      invitado_correo: invitado.correo,
       privacidad,
     })
-    .select('id_invitado, compartida_el, privacidad, estado, respondida_el')
+    .select('id_invitado, compartida_el, privacidad, estado, respondida_el, invitado_nombre, invitado_correo')
     .single()
 
   const fila = resultadoDe(respuesta as { data: FilaDeComparticion | null; error: null }, () => ({
@@ -93,9 +96,15 @@ export async function eliminarComparticion(
   invita necesita —no puede invitar a quien no existe— y no revela nada que no
   supiera ya: está preguntando por un correo concreto que él mismo escribió.
 */
+export type CuentaInvitable = {
+  readonly id: string
+  readonly nombre: string
+  readonly correo: string
+}
+
 export async function buscarCuentaPorCorreo(
   correo: string,
-): Promise<ResultadoDeConsulta<string | null>> {
+): Promise<ResultadoDeConsulta<CuentaInvitable | null>> {
   const { data, error } = await supabase.rpc('buscar_cuenta_por_correo', {
     correo_buscado: correo.trim(),
   })
@@ -104,7 +113,21 @@ export async function buscarCuentaPorCorreo(
     return resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_FALLO_INESPERADO' }))
   }
 
-  return { ok: true, datos: typeof data === 'string' && data !== '' ? data : null }
+  /* La funcion devuelve una tabla: cero filas si no hay cuenta con ese correo. */
+  const fila = Array.isArray(data) ? data[0] : null
+
+  if (fila === null || fila === undefined) {
+    return { ok: true, datos: null }
+  }
+
+  return {
+    ok: true,
+    datos: {
+      id: String(fila.id),
+      nombre: String(fila.nombre ?? ''),
+      correo: String(fila.correo ?? ''),
+    },
+  }
 }
 
 /*

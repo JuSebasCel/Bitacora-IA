@@ -221,6 +221,7 @@ export function PantallaConferencias(): ReactElement {
         abierto={compartirAbierto}
         alCerrar={() => setCompartirAbierto(false)}
         idUsuario={idUsuario}
+        alEnviado={recargar}
         anclaEn={botonDeCompartir}
         limites={marco}
         conferencias={visibles

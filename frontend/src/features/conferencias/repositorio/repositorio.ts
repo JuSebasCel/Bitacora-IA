@@ -31,7 +31,7 @@ import type { ConferenciaParaInsertar, FilaDeConferencia, FilaDeFicha } from './
   dibujado sin saber todavía qué puede enseñar.
 */
 const COLUMNAS_DE_CONFERENCIA =
-  '*, comparticiones ( id_invitado, compartida_el, privacidad, estado, respondida_el )'
+  '*, comparticiones ( id_invitado, compartida_el, privacidad, estado, respondida_el, invitado_nombre, invitado_correo )'
 
 const BUCKET_DE_AUDIO = 'audio-conferencias'
 

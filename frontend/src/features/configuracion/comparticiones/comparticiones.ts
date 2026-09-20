@@ -47,6 +47,8 @@ export function crearInvitacion(
       idInvitado,
       estado: 'pendiente',
       respondidaEl: null,
+      invitadoNombre: '',
+      invitadoCorreo: '',
       compartidaEl: new Date().toISOString(),
       privacidad,
     },

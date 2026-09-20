@@ -92,6 +92,8 @@ export function invitacionesPendientes(
 export type RespuestaAUnaInvitacion = {
   readonly conferencia: Conferencia
   readonly idInvitado: string
+  /** Quien contesto, con el nombre copiado al invitar. Cae al correo si no tenia nombre. */
+  readonly quien: string
   readonly aceptada: boolean
 }
 
@@ -119,6 +121,12 @@ export function respuestasSinVer(
       respuestas.push({
         conferencia,
         idInvitado: comparticion.idInvitado,
+        quien:
+          comparticion.invitadoNombre !== ''
+            ? comparticion.invitadoNombre
+            : comparticion.invitadoCorreo !== ''
+              ? comparticion.invitadoCorreo
+              : 'Alguien',
         aceptada: comparticion.estado === 'aceptada',
       })
     }

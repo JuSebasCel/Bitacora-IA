@@ -5,6 +5,7 @@ import type { Conferencia, PrivacidadDeComparticion } from '@/features/conferenc
 import { mensajeDeError } from '@/shared/errors'
 import { Modal } from '@/shared/ui'
 import { buscarCuentaPorCorreo } from '../comparticiones/repositorio'
+import type { CuentaInvitable } from '../comparticiones/repositorio'
 import { useComparticiones } from '../useComparticiones'
 
 /*
@@ -121,6 +122,16 @@ export type PropsModalDeCompartir = {
   /** Las que se pueden enviar: propias, o ajenas con permiso para recompartir. */
   conferencias: readonly Conferencia[]
   idUsuario: string
+  /*
+    Se avisa en cuanto algo sale, para que quien comparte vea su propia lista
+    al dia sin cambiar de pantalla.
+
+    Sin esto la conferencia recien compartida seguia apareciendo como si no lo
+    estuviera: la consulta de lo visible esta cacheada y nadie la invalidaba,
+    asi que el cambio solo se notaba al navegar a otra pestana y volver — que
+    es exactamente lo que se sentia como "tarda en llegar".
+  */
+  alEnviado?: () => void
   anclaEn?: RefObject<HTMLElement | null>
   limites?: RefObject<HTMLElement | null>
 }
@@ -130,6 +141,7 @@ export function ModalDeCompartir({
   alCerrar,
   conferencias,
   idUsuario,
+  alEnviado,
   anclaEn,
   limites,
 }: PropsModalDeCompartir): ReactElement {
@@ -137,7 +149,7 @@ export function ModalDeCompartir({
   const reducirMovimiento = useReducedMotion()
 
   const [correo, setCorreo] = useState('')
-  const [idInvitado, setIdInvitado] = useState('')
+  const [invitados, setInvitados] = useState<readonly CuentaInvitable[]>([])
   const [buscando, setBuscando] = useState(false)
   const [elegidas, setElegidas] = useState<readonly string[]>([])
   const [privacidad, setPrivacidad] = useState<PrivacidadDeComparticion>(PRIVACIDAD_INICIAL)
@@ -151,7 +163,7 @@ export function ModalDeCompartir({
     }
 
     setCorreo('')
-    setIdInvitado('')
+    setInvitados([])
     setElegidas([])
     setPrivacidad(PRIVACIDAD_INICIAL)
     setError(null)
@@ -184,18 +196,22 @@ export function ModalDeCompartir({
     }
 
     if (resultado.datos === null) {
-      setIdInvitado('')
       setError('No hay ninguna cuenta registrada con ese correo. Pídele que se registre primero.')
       return
     }
 
-    if (resultado.datos === idUsuario) {
-      setIdInvitado('')
+    if (resultado.datos.id === idUsuario) {
       setError('Ese eres tú.')
       return
     }
 
-    setIdInvitado(resultado.datos)
+    if (invitados.some((invitado) => invitado.id === resultado.datos?.id)) {
+      setError('Esa persona ya está en la lista.')
+      return
+    }
+
+    setInvitados((anteriores) => [...anteriores, resultado.datos as CuentaInvitable])
+    setCorreo('')
     setError(null)
   }
 
@@ -209,7 +225,7 @@ export function ModalDeCompartir({
   }
 
   async function enviar(): Promise<void> {
-    if (enviando || idInvitado === '' || seleccionadas.length === 0) {
+    if (enviando || invitados.length === 0 || seleccionadas.length === 0) {
       return
     }
 
@@ -224,25 +240,31 @@ export function ModalDeCompartir({
     let logradas = 0
     let ultimoFallo: string | null = null
 
-    for (const conferencia of seleccionadas) {
-      const resultado = await invitar(conferencia, idInvitado, true, privacidad)
+    for (const invitado of invitados) {
+      for (const conferencia of seleccionadas) {
+        const resultado = await invitar(conferencia, invitado, true, privacidad)
 
-      if (resultado.ok) {
-        logradas += 1
-      } else {
-        ultimoFallo = resultado.mensaje
+        if (resultado.ok) {
+          logradas += 1
+        } else {
+          ultimoFallo = resultado.mensaje
+        }
       }
     }
 
     setEnviando(false)
     setEnviadas(logradas)
 
-    if (logradas === seleccionadas.length) {
+    /* Basta con que una saliera: la lista de quien comparte ya cambio. */
+    if (logradas > 0) {
+      alEnviado?.()
+    }
+
+    if (logradas === seleccionadas.length * invitados.length) {
       alCerrar()
       return
     }
 
-    setElegidas(seleccionadas.slice(logradas).map((conferencia) => conferencia.id))
     setError(ultimoFallo)
   }
 
@@ -270,7 +292,6 @@ export function ModalDeCompartir({
             value={correo}
             onChange={(cambio) => {
               setCorreo(cambio.target.value)
-              setIdInvitado('')
               setError(null)
             }}
             onKeyDown={(tecla) => {
@@ -279,7 +300,7 @@ export function ModalDeCompartir({
                 void buscar()
               }
             }}
-            placeholder="correo@ejemplo.com"
+            placeholder="correo@ejemplo.com · puedes añadir varios"
             aria-label="Correo de la persona"
             className="h-11 min-w-0 flex-1 rounded-full bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-none"
           />
@@ -289,17 +310,31 @@ export function ModalDeCompartir({
             disabled={correo.trim() === '' || buscando}
             className="h-11 shrink-0 cursor-pointer rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion disabled:cursor-default disabled:opacity-40"
           >
-            {buscando ? 'Buscando…' : 'Buscar'}
+            {buscando ? 'Buscando…' : 'Añadir'}
           </button>
         </div>
 
-        {idInvitado === '' ? null : (
-          <p className="flex items-center gap-2 px-1 text-sm text-texto">
-            <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
-              check_circle
-            </span>
-            Cuenta encontrada. Se le enviará como invitación.
-          </p>
+        {invitados.length === 0 ? null : (
+          <div className="flex flex-wrap gap-1.5">
+            {invitados.map((invitado) => (
+              <span
+                key={invitado.id}
+                className="flex items-center gap-1 rounded-full bg-acento py-1 pr-1 pl-3 text-sm text-acento-contraste"
+              >
+                {invitado.nombre === '' ? invitado.correo : invitado.nombre}
+                <button
+                  type="button"
+                  aria-label={`Quitar a ${invitado.correo}`}
+                  onClick={() => setInvitados((antes) => antes.filter((x) => x.id !== invitado.id))}
+                  className="flex size-5 cursor-pointer items-center justify-center rounded-full bg-acento-contraste/20"
+                >
+                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-sm">
+                    close
+                  </span>
+                </button>
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
@@ -373,7 +408,7 @@ export function ModalDeCompartir({
 
       <button
         type="button"
-        disabled={enviando || idInvitado === '' || seleccionadas.length === 0}
+        disabled={enviando || invitados.length === 0 || seleccionadas.length === 0}
         onClick={() => {
           void enviar()
         }}
