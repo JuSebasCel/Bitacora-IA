@@ -16,7 +16,7 @@ import {
 import type { Conferencia, Etiqueta, FuenteDeConferencia } from '../data'
 import { formatearTimestamp } from '../data'
 import { useDirectorio } from '../directorio'
-import { crearConferencia, solicitarProcesamiento } from '../repositorio'
+import { crearConferencia, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
 import type { ResultadoCreacion } from './CreadorDeEtiqueta'
 import { SelectorDeEtiquetas } from './SelectorDeEtiquetas'
 
@@ -127,6 +127,16 @@ export function ModalDeCarga({
   const [errores, setErrores] = useState<ErroresDeCampo>({})
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  /*
+    Cancelar no aborta la subida: `supabase.storage.upload` no acepta un
+    `AbortSignal` en esta version del SDK, asi que los bytes siguen viajando.
+    Lo que si se garantiza es el resultado: cuando la carga termina se deshace,
+    y no queda ninguna conferencia a medias ni ningun audio huerfano.
+
+    Es una `ref` y no estado porque `alEnviar` la lee despues de un `await`, y
+    una variable de estado le llegaria con el valor que tenia al empezar.
+  */
+  const cancelada = useRef(false)
 
   /* Cada apertura empieza en blanco: es una conferencia nueva, no la anterior a medias. */
   useEffect(() => {
@@ -239,6 +249,7 @@ export function ModalDeCarga({
 
     setEnviando(true)
     setError(null)
+    cancelada.current = false
 
     const nombreEvento = eventos.find((candidato) => candidato.id === campos.idEvento)?.nombre ?? ''
     const nombrePonente = ponentes.find((candidato) => candidato.id === campos.idPonente)?.nombre ?? ''
@@ -260,6 +271,14 @@ export function ModalDeCarga({
     if (!resultado.ok) {
       setEnviando(false)
       setError(mensajeDeError(resultado.codigo))
+      return
+    }
+
+    /* Se cancelo mientras subia: se deshace lo creado y el analisis ni se pide. */
+    if (cancelada.current) {
+      void eliminarConferencia(resultado.datos.id, idUsuario)
+      setEnviando(false)
+      alCerrar()
       return
     }
 
@@ -508,13 +527,29 @@ export function ModalDeCarga({
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={enviando}
-            className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-60"
-          >
-            {enviando ? 'Cargando…' : 'Cargar conferencia'}
-          </button>
+          {enviando ? (
+            <div className="flex gap-2">
+              <span className="flex h-12 flex-1 items-center justify-center rounded-full bg-acento-tenue text-base text-texto-tenue">
+                Cargando…
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  cancelada.current = true
+                }}
+                className="h-12 cursor-pointer rounded-full px-6 text-base text-texto transition-colors hover:bg-acento-tenue"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="submit"
+              className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity"
+            >
+              Cargar conferencia
+            </button>
+          )}
         </form>
       </Modal>
 

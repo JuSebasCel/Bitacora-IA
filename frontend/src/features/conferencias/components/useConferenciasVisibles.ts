@@ -35,6 +35,7 @@ export type EstadoDeCarga = 'cargando' | 'listo'
 
 export type ConferenciasVisibles = {
   readonly carga: EstadoDeCarga
+  readonly todas: readonly Conferencia[]
   readonly visibles: readonly ConferenciaVisible[]
   readonly fichas: readonly Ficha[]
   /** Mensaje ya traducido si la consulta falló; null si todo fue bien. */
@@ -82,6 +83,12 @@ export function useConferenciasVisibles(idUsuario: string): ConferenciasVisibles
 
   return {
     carga: cargando ? 'cargando' : 'listo',
+    /*
+      Tambien las crudas: las invitaciones sin contestar quedan fuera de
+      `visibles` a proposito —no son conferencias del archivo— pero la campana
+      necesita verlas para poder ofrecerlas.
+    */
+    todas: datos?.conferencias ?? [],
     visibles,
     fichas: datos?.fichas ?? [],
     error: codigoDeError === null ? null : mensajeDeError(codigoDeError),

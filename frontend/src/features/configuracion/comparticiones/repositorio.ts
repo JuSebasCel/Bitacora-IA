@@ -54,7 +54,7 @@ export async function crearComparticion(
       id_invitado: idInvitado,
       privacidad,
     })
-    .select('id_invitado, compartida_el, privacidad')
+    .select('id_invitado, compartida_el, privacidad, estado, respondida_el')
     .single()
 
   const fila = resultadoDe(respuesta as { data: FilaDeComparticion | null; error: null }, () => ({
@@ -79,4 +79,71 @@ export async function eliminarComparticion(
   return error === null
     ? { ok: true, datos: null }
     : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_FALLO_INESPERADO' }))
+}
+
+/*
+  Busca una cuenta por su correo exacto.
+
+  Va por RPC y no por `select` sobre `profiles`: esa tabla no es legible entre
+  usuarios y no debe serlo, porque listarla convierte cualquier cuenta en un
+  directorio de todos los correos del sistema. La función devuelve el id y
+  nada más — ni nombre, ni si hay alguno parecido.
+
+  `null` significa que no hay cuenta con ese correo. Es información que quien
+  invita necesita —no puede invitar a quien no existe— y no revela nada que no
+  supiera ya: está preguntando por un correo concreto que él mismo escribió.
+*/
+export async function buscarCuentaPorCorreo(
+  correo: string,
+): Promise<ResultadoDeConsulta<string | null>> {
+  const { data, error } = await supabase.rpc('buscar_cuenta_por_correo', {
+    correo_buscado: correo.trim(),
+  })
+
+  if (error !== null) {
+    return resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_FALLO_INESPERADO' }))
+  }
+
+  return { ok: true, datos: typeof data === 'string' && data !== '' ? data : null }
+}
+
+/*
+  El invitado contesta. Solo escribe el estado y su fecha: RLS le deja tocar
+  la fila entera —no sabe acotar columnas— así que es aquí donde se sostiene
+  que no pueda cambiarse la privacidad que le concedieron.
+*/
+export async function responderComparticion(
+  idConferencia: string,
+  idInvitado: string,
+  estado: 'aceptada' | 'rechazada',
+): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase
+    .from('comparticiones')
+    .update({
+      estado,
+      respondida_el: new Date().toISOString(),
+      respuesta_vista_por_dueno: false,
+    })
+    .eq('id_conferencia', idConferencia)
+    .eq('id_invitado', idInvitado)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
+}
+
+/** El dueño marca como visto el aviso de que le contestaron, para que deje de aparecer. */
+export async function marcarRespuestaVista(
+  idConferencia: string,
+  idInvitado: string,
+): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase
+    .from('comparticiones')
+    .update({ respuesta_vista_por_dueno: true })
+    .eq('id_conferencia', idConferencia)
+    .eq('id_invitado', idInvitado)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
 }

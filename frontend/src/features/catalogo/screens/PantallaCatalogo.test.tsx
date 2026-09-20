@@ -187,7 +187,7 @@ describe('PantallaCatalogo', () => {
       `useState`/`useEffect` internos) y React detecta un cambio en el orden
       de hooks entre renders del mismo componente.
     */
-    const cargandoTodavia = { carga: 'cargando' as const, visibles: [], fichas: [], error: null, recargar: vi.fn() }
+    const cargandoTodavia = { carga: 'cargando' as const, todas: [], visibles: [], fichas: [], error: null, recargar: vi.fn() }
     vi.mocked(useConferenciasVisibles).mockReturnValueOnce(cargandoTodavia).mockReturnValueOnce(cargandoTodavia)
 
     montar()

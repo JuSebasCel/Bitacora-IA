@@ -110,6 +110,9 @@ describe('mapearComparticion', () => {
     ).toEqual({
       idInvitado: 'usuario-2',
       compartidaEl: '2026-06-01T10:00:00Z',
+      /* Sin la columna, se asume lo menos permisivo: sin acceso hasta que se acepte. */
+      estado: 'pendiente',
+      respondidaEl: null,
       privacidad: {
         compartirEtiquetas: true,
         compartirFichasPendientes: false,

@@ -9,6 +9,7 @@ export type {
   Comparticion,
   Conferencia,
   EspacioDeEtiquetas,
+  EstadoDeComparticion,
   EstadoDeProcesamiento,
   EstadoDeValidacion,
   Etiqueta,

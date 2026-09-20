@@ -175,14 +175,17 @@ describe('ShellLayout', () => {
   })
 
   /*
-    La campana se quitó por diseño, y con ella el único acceso a la curaduría
-    de temas propuestos. Esta prueba fija ese hecho para que quede registrado
-    en la suite y no se descubra como sorpresa más adelante.
+    La campana volvio al dock. Se habia quitado en el redisenno, y con ella el
+    unico acceso a la curaduria de temas; ahora ademas es donde llegan las
+    invitaciones a conferencias compartidas, que sin un sitio donde aparecer
+    no se podrian ni aceptar.
   */
-  it('ya no expone la campana de notificaciones en ninguna parte', () => {
+  it('expone la campana de notificaciones en el dock', () => {
     montarShell()
 
-    expect(screen.queryByRole('button', { name: /notificaciones/i })).not.toBeInTheDocument()
+    expect(
+      within(barraDeNavegacion()).getByRole('button', { name: /notificaciones/i }),
+    ).toBeInTheDocument()
   })
 
   it('marca con aria-current="page" solo la sección de la ruta actual', () => {

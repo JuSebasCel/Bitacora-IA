@@ -42,6 +42,13 @@ export function crearInvitacion(
 
   return {
     ok: true,
-    comparticion: { idInvitado, compartidaEl: new Date().toISOString(), privacidad },
+    /* Nace pendiente: compartir es invitar, no dar acceso. */
+    comparticion: {
+      idInvitado,
+      estado: 'pendiente',
+      respondidaEl: null,
+      compartidaEl: new Date().toISOString(),
+      privacidad,
+    },
   }
 }

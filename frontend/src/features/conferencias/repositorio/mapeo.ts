@@ -1,6 +1,7 @@
 import type {
   Comparticion,
   Conferencia,
+  EstadoDeComparticion,
   EstadoDeProcesamiento,
   EstadoDeValidacion,
   Ficha,
@@ -35,6 +36,8 @@ export type FilaDeComparticion = {
   readonly id_invitado: string
   readonly compartida_el: string
   readonly privacidad: unknown
+  readonly estado?: string | null
+  readonly respondida_el?: string | null
 }
 
 export type FilaDeConferencia = {
@@ -114,10 +117,23 @@ export function mapearPrivacidad(crudo: unknown): PrivacidadDeComparticion {
   }
 }
 
+const ESTADOS_DE_COMPARTICION: readonly string[] = ['pendiente', 'aceptada', 'rechazada']
+
 export function mapearComparticion(fila: FilaDeComparticion): Comparticion {
+  /*
+    Un estado que no se reconoce cae a `pendiente`, que es el menos permisivo:
+    ante una fila que no se entiende, lo correcto es no dar acceso. Lo mismo
+    para una fila vieja sin la columna.
+  */
+  const estado = ESTADOS_DE_COMPARTICION.includes(fila.estado ?? '')
+    ? (fila.estado as EstadoDeComparticion)
+    : 'pendiente'
+
   return {
     idInvitado: fila.id_invitado,
     compartidaEl: fila.compartida_el,
+    estado,
+    respondidaEl: fila.respondida_el ?? null,
     privacidad: mapearPrivacidad(fila.privacidad),
   }
 }

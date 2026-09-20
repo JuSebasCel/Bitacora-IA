@@ -7,6 +7,8 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useDirectorio } from '@/features/conferencias/directorio'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
+import { invitacionesPendientes, respuestasSinVer } from '@/features/conferencias/query'
+import { responderComparticion } from '@/features/configuracion/comparticiones/repositorio'
 import { normalizarTexto, privacidadEfectiva } from '@/features/conferencias/query'
 import { useTaxonomia } from '@/features/taxonomia'
 import { MensajeDeFormulario, Popover } from '@/shared/ui'
@@ -40,10 +42,11 @@ const CLASES_DE_ACCION =
   'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors'
 
 export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): ReactElement {
-  const { visibles, fichas } = useConferenciasVisibles(idUsuario)
+  const { todas, visibles, fichas, recargar } = useConferenciasVisibles(idUsuario)
   const { eventos } = useDirectorio()
   const { taxonomia, aprobar, rechazar } = useTaxonomia()
   const [tick, setTick] = useState(0)
+  const [vistas, setVistas] = useState<ReadonlySet<string>>(new Set())
   const [aviso, setAviso] = useState<{ idPropuesta: string; mensaje: string } | null>(null)
   const [enProceso, setEnProceso] = useState<ReadonlySet<string>>(new Set())
   const reducirMovimiento = useReducedMotion()
@@ -69,7 +72,31 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
     })
   }, [visibles, fichas, tick])
 
-  const totalAvisos = taxonomia.propuestas.length + pendientesDeValidar.length
+  /*
+    Invitaciones dirigidas a mi, y respuestas a lo que yo comparti.
+
+    Las respuestas vistas se recuerdan en el propio navegador: marcarlas en la
+    fila exigiria que el dueno escriba sobre su comparticion cada vez que abre
+    la campana, y un aviso leido no es un hecho del dominio que merezca un
+    viaje a la base.
+  */
+  const invitaciones = useMemo(
+    () => invitacionesPendientes(todas, idUsuario),
+    [todas, idUsuario],
+  )
+
+  const respuestas = useMemo(
+    () => respuestasSinVer(todas, idUsuario, (idConf, idInv) => vistas.has(`${idConf}:${idInv}`)),
+    [todas, idUsuario, vistas],
+  )
+
+  const totalAvisos =
+    taxonomia.propuestas.length + pendientesDeValidar.length + invitaciones.length + respuestas.length
+
+  async function responder(idConferencia: string, aceptar: boolean): Promise<void> {
+    await responderComparticion(idConferencia, idUsuario, aceptar ? 'aceptada' : 'rechazada')
+    recargar()
+  }
 
   function nombreDeEvento(idEvento: string): string {
     return eventos.find((evento) => evento.id === idEvento)?.nombre ?? 'Evento retirado'
@@ -142,6 +169,70 @@ export function NotificacionesDropdown({ idUsuario }: { idUsuario: string }): Re
             <p className="text-xs text-texto-tenue">Nada pendiente por ahora.</p>
           ) : (
             <div className="flex max-h-96 flex-col gap-4 overflow-y-auto">
+              {invitaciones.length === 0 ? null : (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium text-texto-tenue">Te compartieron</p>
+                  {invitaciones.map((conferencia) => (
+                    <div key={conferencia.id} className="flex flex-col gap-2 rounded-2xl bg-fondo p-3">
+                      <p className="text-sm text-texto">{conferencia.titulo}</p>
+                      <p className="text-xs text-texto-tenue">
+                        {conferencia.ponente} · {conferencia.evento}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void responder(conferencia.id, true)}
+                          className="h-8 flex-1 cursor-pointer rounded-full bg-acento text-xs font-medium text-acento-contraste"
+                        >
+                          Aceptar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void responder(conferencia.id, false)}
+                          className="h-8 flex-1 cursor-pointer rounded-full bg-acento-tenue text-xs text-texto"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {respuestas.length === 0 ? null : (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium text-texto-tenue">Respondieron a lo que compartiste</p>
+                  {respuestas.map((respuesta) => (
+                    <div
+                      key={`${respuesta.conferencia.id}:${respuesta.idInvitado}`}
+                      className="flex items-start gap-2 rounded-2xl bg-fondo p-3"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="material-symbols-rounded icono-relleno mt-0.5 text-base text-texto-tenue"
+                      >
+                        {respuesta.aceptada ? 'check_circle' : 'cancel'}
+                      </span>
+                      <p className="flex-1 text-xs text-texto">
+                        {respuesta.aceptada ? 'Aceptó' : 'Rechazó'} «{respuesta.conferencia.titulo}»
+                      </p>
+                      <button
+                        type="button"
+                        aria-label="Descartar el aviso"
+                        onClick={() =>
+                          setVistas((anteriores) =>
+                            new Set(anteriores).add(`${respuesta.conferencia.id}:${respuesta.idInvitado}`),
+                          )
+                        }
+                        className="cursor-pointer text-xs text-texto-tenue hover:text-texto"
+                      >
+                        Vale
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {taxonomia.propuestas.length === 0 ? null : (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-medium text-texto-tenue">Temas propuestos</p>

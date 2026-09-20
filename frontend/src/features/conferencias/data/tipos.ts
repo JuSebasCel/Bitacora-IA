@@ -74,8 +74,19 @@ export type PrivacidadDeComparticion = {
   readonly permitirRecompartir: boolean
 }
 
+/*
+  Una comparticion nace `pendiente`: compartir es invitar, no dar acceso.
+
+  Mientras no se acepte, el invitado ve de que va la charla pero no su
+  contenido — la politica de RLS sobre `fichas` exige el estado `aceptada`.
+*/
+export type EstadoDeComparticion = 'pendiente' | 'aceptada' | 'rechazada'
+
 export type Comparticion = {
   readonly idInvitado: string
+  readonly estado: EstadoDeComparticion
+  /** Cuando el invitado contesto, en ISO. `null` mientras siga pendiente. */
+  readonly respondidaEl: string | null
   /** Fecha ISO en que el dueño compartió la conferencia. */
   readonly compartidaEl: string
   readonly privacidad: PrivacidadDeComparticion

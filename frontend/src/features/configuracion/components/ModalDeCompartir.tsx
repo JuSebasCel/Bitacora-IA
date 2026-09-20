@@ -2,10 +2,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import type { ReactElement, ReactNode, RefObject } from 'react'
 import type { Conferencia, PrivacidadDeComparticion } from '@/features/conferencias/data'
-import { Modal, SelectorDeOpciones } from '@/shared/ui'
-import type { OpcionDeSelector } from '@/shared/ui'
-import { listarPerfiles } from '../comparticiones/repositorio'
-import type { PerfilDelGrupo } from '../comparticiones/repositorio'
+import { mensajeDeError } from '@/shared/errors'
+import { Modal } from '@/shared/ui'
+import { buscarCuentaPorCorreo } from '../comparticiones/repositorio'
 import { useComparticiones } from '../useComparticiones'
 
 /*
@@ -137,8 +136,9 @@ export function ModalDeCompartir({
   const { invitar } = useComparticiones()
   const reducirMovimiento = useReducedMotion()
 
-  const [perfiles, setPerfiles] = useState<readonly PerfilDelGrupo[]>([])
+  const [correo, setCorreo] = useState('')
   const [idInvitado, setIdInvitado] = useState('')
+  const [buscando, setBuscando] = useState(false)
   const [elegidas, setElegidas] = useState<readonly string[]>([])
   const [privacidad, setPrivacidad] = useState<PrivacidadDeComparticion>(PRIVACIDAD_INICIAL)
   const [enviando, setEnviando] = useState(false)
@@ -150,18 +150,13 @@ export function ModalDeCompartir({
       return
     }
 
+    setCorreo('')
     setIdInvitado('')
     setElegidas([])
     setPrivacidad(PRIVACIDAD_INICIAL)
     setError(null)
     setEnviadas(0)
 
-    void listarPerfiles().then((resultado) => {
-      if (resultado.ok) {
-        /* Uno mismo no es un destinatario posible. */
-        setPerfiles(resultado.datos.filter((perfil) => perfil.id !== idUsuario))
-      }
-    })
   }, [abierto, idUsuario])
 
   const disponibles = conferencias.filter((conferencia) => !elegidas.includes(conferencia.id))
@@ -169,10 +164,40 @@ export function ModalDeCompartir({
     .map((id) => conferencias.find((conferencia) => conferencia.id === id))
     .filter((conferencia): conferencia is Conferencia => conferencia !== undefined)
 
-  const opcionesDePersona: readonly OpcionDeSelector<string>[] = perfiles.map((perfil) => ({
-    valor: perfil.id,
-    etiqueta: perfil.nombre === '' ? perfil.correo : perfil.nombre,
-  }))
+  /*
+    Si no hay cuenta con ese correo se dice y no se comparte nada. Es lo que
+    pidio el usuario: una advertencia clara en vez de un fallo silencioso o
+    una invitacion a la nada.
+  */
+  async function buscar(): Promise<void> {
+    if (correo.trim() === '' || buscando) {
+      return
+    }
+
+    setBuscando(true)
+    const resultado = await buscarCuentaPorCorreo(correo)
+    setBuscando(false)
+
+    if (!resultado.ok) {
+      setError(mensajeDeError(resultado.codigo))
+      return
+    }
+
+    if (resultado.datos === null) {
+      setIdInvitado('')
+      setError('No hay ninguna cuenta registrada con ese correo. Pídele que se registre primero.')
+      return
+    }
+
+    if (resultado.datos === idUsuario) {
+      setIdInvitado('')
+      setError('Ese eres tú.')
+      return
+    }
+
+    setIdInvitado(resultado.datos)
+    setError(null)
+  }
 
   function alternar(idConferencia: string): void {
     setError(null)
@@ -230,17 +255,52 @@ export function ModalDeCompartir({
       {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
       {...(limites === undefined ? {} : { limites })}
     >
+      {/*
+        Se escribe el correo en vez de elegir de una lista. Listar las cuentas
+        convertiria cualquier sesion en un directorio de todos los correos del
+        sistema; preguntando por uno concreto no se revela nada que quien
+        pregunta no supiera ya.
+      */}
       <div className="flex flex-col gap-2">
         <p className="px-1 text-sm font-medium text-texto-tenue">Con quién</p>
-        <SelectorDeOpciones
-          etiquetaAccesible="Destinatario"
-          icono="person"
-          vacio={perfiles.length === 0 ? 'No hay nadie más en el grupo' : 'Elige a una persona'}
-          deshabilitado={perfiles.length === 0}
-          valor={idInvitado}
-          opciones={opcionesDePersona}
-          alCambiar={setIdInvitado}
-        />
+
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={correo}
+            onChange={(cambio) => {
+              setCorreo(cambio.target.value)
+              setIdInvitado('')
+              setError(null)
+            }}
+            onKeyDown={(tecla) => {
+              if (tecla.key === 'Enter') {
+                tecla.preventDefault()
+                void buscar()
+              }
+            }}
+            placeholder="correo@ejemplo.com"
+            aria-label="Correo de la persona"
+            className="h-11 min-w-0 flex-1 rounded-full bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => void buscar()}
+            disabled={correo.trim() === '' || buscando}
+            className="h-11 shrink-0 cursor-pointer rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion disabled:cursor-default disabled:opacity-40"
+          >
+            {buscando ? 'Buscando…' : 'Buscar'}
+          </button>
+        </div>
+
+        {idInvitado === '' ? null : (
+          <p className="flex items-center gap-2 px-1 text-sm text-texto">
+            <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
+              check_circle
+            </span>
+            Cuenta encontrada. Se le enviará como invitación.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">

@@ -8,6 +8,8 @@
 export type { ConferenciaVisible, FichaDelCatalogo, Procedencia, ResultadoConferencia } from './acceso'
 export {
   conferenciasVisibles,
+  invitacionesPendientes,
+  respuestasSinVer,
   fichasDelCatalogo,
   fichasVisibles,
   obtenerConferencia,

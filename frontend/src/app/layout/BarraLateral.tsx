@@ -2,6 +2,7 @@ import type { ReactElement, RefObject } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { MenuDeCuenta } from './MenuDeCuenta'
+import { NotificacionesDropdown } from './NotificacionesDropdown'
 import { ACCIONES_DE_NAVEGACION, SECCIONES_DE_NAVEGACION, esSeccionActiva } from './navegacion'
 
 type PropiedadesBarraLateral = {
@@ -97,6 +98,14 @@ export function BarraLateral({
               <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} />
             </div>
           )}
+
+          {/*
+            Vuelve la campana. Se quito en el rediseno y con ella el unico
+            acceso a la curaduria de temas; ahora ademas es donde llegan las
+            invitaciones a conferencias compartidas, que sin un sitio donde
+            aparecer no se podrian ni aceptar.
+          */}
+          {usuario === null ? null : <NotificacionesDropdown idUsuario={usuario.id} />}
 
           <button
             type="button"

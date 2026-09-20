@@ -48,7 +48,83 @@ function visibilidadDe(conferencia: Conferencia, idUsuario: string): Conferencia
     return null
   }
 
+  /*
+    Una invitacion sin contestar no es una conferencia del archivo.
+
+    Postgres deja ver la fila —hace falta para poder decidir si se acepta—
+    pero no sus fichas. Si se colara aqui, apareceria en el explorador como
+    una charla vacia y sin explicacion. Su sitio es la bandeja de
+    invitaciones, no el archivo.
+  */
+  if (comparticion.estado !== 'aceptada') {
+    return null
+  }
+
   return { conferencia, procedencia: 'compartida', comparticion }
+}
+
+/*
+  Invitaciones dirigidas a esta persona y todavia sin contestar.
+
+  Sale de las mismas conferencias que ya trae el listado: la fila viaja con sus
+  comparticiones embebidas, asi que no hace falta una segunda consulta.
+*/
+export function invitacionesPendientes(
+  todas: readonly Conferencia[],
+  idUsuario: string,
+): readonly Conferencia[] {
+  return todas.filter(
+    (conferencia) =>
+      conferencia.idDueno !== idUsuario &&
+      conferencia.comparticiones.some(
+        (c) => c.idInvitado === idUsuario && c.estado === 'pendiente',
+      ),
+  )
+}
+
+/*
+  Respuestas a lo que YO comparti y que todavia no he visto.
+
+  El aviso se deriva de la propia fila en vez de una tabla de notificaciones:
+  el unico dato que hace falta —quien contesto y que dijo— ya esta ahi, y una
+  tabla aparte habria que mantenerla en sincronia sin que nadie gane nada.
+*/
+export type RespuestaAUnaInvitacion = {
+  readonly conferencia: Conferencia
+  readonly idInvitado: string
+  readonly aceptada: boolean
+}
+
+export function respuestasSinVer(
+  todas: readonly Conferencia[],
+  idUsuario: string,
+  yaVistas: (idConferencia: string, idInvitado: string) => boolean,
+): readonly RespuestaAUnaInvitacion[] {
+  const respuestas: RespuestaAUnaInvitacion[] = []
+
+  for (const conferencia of todas) {
+    if (conferencia.idDueno !== idUsuario) {
+      continue
+    }
+
+    for (const comparticion of conferencia.comparticiones) {
+      if (comparticion.estado === 'pendiente') {
+        continue
+      }
+
+      if (yaVistas(conferencia.id, comparticion.idInvitado)) {
+        continue
+      }
+
+      respuestas.push({
+        conferencia,
+        idInvitado: comparticion.idInvitado,
+        aceptada: comparticion.estado === 'aceptada',
+      })
+    }
+  }
+
+  return respuestas
 }
 
 /** Lo que una persona puede ver: lo suyo, más lo que le compartieron, y nada más. */
