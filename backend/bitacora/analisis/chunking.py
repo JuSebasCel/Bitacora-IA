@@ -19,13 +19,24 @@ from typing import Sequence
 from bitacora.conferencias.tipos import Segmento
 
 """
-Tamaño de ventana en caracteres, no en tokens: contar tokens exigiría cargar
-el tokenizador del modelo, que cambia con el modelo y volvería el chunking
-dependiente de una variable de entorno. ~6000 caracteres son unos 1500 tokens
-en español, muy por debajo de cualquier límite vigente, así que la
-aproximación gruesa sobra para lo que hay que decidir aquí.
+Tamano de ventana en caracteres, no en tokens: contar tokens exigiria cargar
+el tokenizador del modelo, que cambia con el modelo y volveria el chunking
+dependiente de una variable de entorno. ~12000 caracteres son unos 3000 tokens
+en espanol, muy por debajo de cualquier limite vigente, asi que la
+aproximacion gruesa sobra para lo que hay que decidir aqui.
+
+Medido sobre una charla real de 82 minutos: con 6000 salian 14 ventanas y el
+analisis tardaba 422 segundos. Cada ventana reenvia la instruccion del sistema
+entera (~800 tokens), asi que 14 llamadas gastaban ~11000 tokens en repetir lo
+mismo -- un tercio de todo lo enviado. Al doblar la ventana son 7 llamadas: la
+mitad de esa repeticion y la mitad de la latencia, sin tocar la calidad.
+
+El limite existe para cuidar el analisis, no porque el modelo no acepte mas.
+Subirlo mucho mas si tendria coste: una ventana enorme diluye la atencion del
+modelo sobre cada parte y empeora el recorte, que es justo lo que se acaba de
+arreglar.
 """
-CARACTERES_POR_VENTANA = 6000
+CARACTERES_POR_VENTANA = 12000
 
 """
 Cuántos segmentos del final de una ventana se repiten al principio de la

@@ -137,13 +137,22 @@ export function useTaxonomia(): ValorDeTaxonomia {
 export type ValorDeTemas = {
   readonly temas: Taxonomia['temas']
   readonly cargando: boolean
+  /**
+   * Vuelve a pedir el pool.
+   *
+   * Hace falta porque el análisis **crea temas mientras corre**: una ficha
+   * puede quedar apuntando a uno que esta caché todavía no conoce, y entonces
+   * la pantalla la etiqueta como "Tema retirado" cuando en realidad es un
+   * tema recién nacido.
+   */
+  readonly recargar: () => void
 }
 
 export function useTemas(): ValorDeTemas {
-  const { datos, cargando } = useConsultaCacheada(CLAVE_TEMAS, async () => {
+  const { datos, cargando, invalidar } = useConsultaCacheada(CLAVE_TEMAS, async () => {
     const respuesta = await leerTaxonomiaRemota()
     return respuesta.ok ? { ok: true, datos: respuesta.datos.temas } : respuesta
   })
 
-  return { temas: datos ?? [], cargando }
+  return { temas: datos ?? [], cargando, recargar: invalidar }
 }

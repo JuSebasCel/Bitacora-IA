@@ -36,7 +36,7 @@ export function PantallaConferencias(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { carga, visibles, fichas, error, recargar } = useConferenciasVisibles(idUsuario)
-  const { temas } = useTemas()
+  const { temas, recargar: recargarTemas } = useTemas()
   const { espacio, visiblesDe, crear, asignar, quitar, eliminar } = useEtiquetas(idUsuario)
   const [params, setParams] = useSearchParams()
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
@@ -83,9 +83,18 @@ export function PantallaConferencias(): ReactElement {
       return
     }
 
-    const intervalo = setInterval(recargar, 10_000)
+    /*
+      También los temas: el análisis los va creando sobre la marcha, y sin
+      esto una ficha recién guardada apunta a un tema que esta pantalla no
+      conoce y se pinta como "Tema retirado".
+    */
+    const intervalo = setInterval(() => {
+      recargar()
+      recargarTemas()
+    }, 10_000)
+
     return () => clearInterval(intervalo)
-  }, [hayAlgoEnVuelo, recargar])
+  }, [hayAlgoEnVuelo, recargar, recargarTemas])
 
   /*
     "Cargar conferencia" vive en el dock y llega como `?nuevo=1`. Va en un
@@ -176,7 +185,10 @@ export function PantallaConferencias(): ReactElement {
           empezó a moverse.
         */
         alAnalizar={(idConferencia) => {
-          void solicitarProcesamiento(idConferencia).then(recargar)
+          void solicitarProcesamiento(idConferencia).then(() => {
+            recargar()
+            recargarTemas()
+          })
         }}
         alRenombrarConferencia={(idConferencia, cambio) => {
           void actualizarConferencia(idConferencia, cambio).then(recargar)
