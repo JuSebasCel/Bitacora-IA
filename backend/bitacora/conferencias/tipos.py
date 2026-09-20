@@ -126,16 +126,26 @@ class Ficha:
     """
     nombre_de_tema_nuevo: str = ""
     """
-    Que tan citable es esto, segun el propio modelo, de 0 a 1.
+    Cuanto sostiene esta unidad el argumento de la charla, de 0 a 1.
+
+    La prueba que la define: si alguien leyera solo las unidades de relevancia
+    alta, sin escuchar la charla, deberia entender que defiende quien habla y
+    por que. Alto es la tesis, el razonamiento que la sostiene, los hallazgos
+    que la respaldan y los limites que el ponente reconoce; bajo es lo que se
+    puede quitar sin que el argumento cambie.
+
+    NO es "que tan citable suena". Una frase lucida que no afirma nada -- "el
+    dato es el nuevo petroleo" -- es muy citable y no aporta, asi que va baja.
+    Medir citabilidad llenaria el catalogo de titulares y lo dejaria sin tesis.
+
+    Tampoco se reusa `confianza_automatica`, aunque parezca lo mismo: esa mide
+    la certeza sobre el TIPO Y EL TEMA asignados. Una cifra suelta es trivial
+    de clasificar y puede ser irrelevante; una postura matizada baja la
+    confianza justamente por ser rica. Recortar por confianza dejaria lo mas
+    facil de etiquetar, no lo que mas dice.
 
     Sirve para decidir cuales sobreviven cuando se pidio un maximo, y no se
     guarda: es un criterio de seleccion, no un dato de la ficha.
-
-    No se reusa `confianza_automatica` para esto aunque parezca lo mismo. Esa
-    mide la certeza sobre el TIPO Y EL TEMA que se asignaron, no si la idea
-    vale: una cifra suelta es trivial de clasificar y puede ser irrelevante,
-    mientras que una postura matizada baja la confianza justamente por ser
-    rica. Recortar por confianza dejaria lo mas facil de etiquetar, no lo mejor.
     """
     relevancia: float = 0.0
 
