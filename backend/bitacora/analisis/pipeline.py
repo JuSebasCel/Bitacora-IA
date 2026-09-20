@@ -14,6 +14,7 @@ request), así que `conferencias.estado` ES la barra de progreso.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 from typing import Callable, Protocol, Sequence
 
@@ -132,6 +133,8 @@ Se vuelve a aplicar aqui porque alli solo se conoce la duracion cuando se sube
 un audio: con una transcripcion no hay forma de saber cuanto dura hasta
 haberla leido, asi que el recorte de verdad tiene que ocurrir donde ya se sabe.
 """
+registro = logging.getLogger("bitacora.analisis")
+
 FICHAS_POR_MINUTO = 0.75
 MINIMO_DE_FICHAS = 3
 
@@ -258,6 +261,7 @@ def procesar_conferencia(
         ficha descartada no tiene por que existir, y crearlo ensuciaria el
         vocabulario con algo que al final no clasifica nada.
         """
+        generadas = len(fichas)
         fichas = _mejores(fichas, _cuantas_caben(conferencia.maximo_de_fichas, duracion))
 
         """
@@ -267,6 +271,24 @@ def procesar_conferencia(
         """
         if condensar is not None:
             fichas = condensar_fichas(fichas, condensar)
+
+        """
+        Una linea por analisis con lo que de verdad paso.
+
+        Es lo que convierte "me dio ciento cuarenta y nueve fichas cuando pedi
+        pocas" en algo diagnosticable sin abrir la base: dice si el tope llego,
+        cuanto recorto y cuantas se condensaron. Sin esto los tres fallos
+        posibles —el tope no viajo, el recorte no corrio, la condensacion
+        fallo— se ven identicos desde fuera.
+        """
+        registro.info(
+            "analisis conferencia=%s pedidas=%s generadas=%d guardadas=%d condensadas=%d",
+            id_conferencia,
+            conferencia.maximo_de_fichas,
+            generadas,
+            len(fichas),
+            sum(1 for ficha in fichas if ficha.condensado),
+        )
 
         creados = repositorio.crear_temas(
             [ficha.nombre_de_tema_nuevo for ficha in fichas if ficha.nombre_de_tema_nuevo]

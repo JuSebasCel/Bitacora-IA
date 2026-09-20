@@ -13,6 +13,7 @@ const CONFERENCIA: Conferencia = {
   codigoDeEvento: 'SAIA-2026-01',
   fechaDelEvento: '2026-03-11',
   duracionEnSegundos: 2890,
+  maximoDeFichas: null,
   idDueno: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
   estado: 'procesada',
   idTemaPrincipal: 'tem-modelos-de-lenguaje',

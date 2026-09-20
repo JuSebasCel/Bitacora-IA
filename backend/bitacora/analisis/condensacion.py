@@ -18,6 +18,7 @@ en tokens de sistema que una sola llamada con las cuarenta dentro.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Protocol, Sequence
 
 from bitacora.compartido.ia import (
@@ -65,6 +66,8 @@ condensados genéricos. Veinte es suficiente para amortizar la instrucción y
 pequeño para que cada texto siga recibiendo atención.
 """
 FICHAS_POR_LOTE = 20
+
+registro = logging.getLogger("bitacora.condensacion")
 
 
 class Condensador(Protocol):
@@ -137,7 +140,24 @@ def condensar_fichas(fichas: Sequence[Ficha], condensar: Condensador) -> tuple[F
 
         try:
             condensados = condensar([ficha.fragmento for ficha in lote])
-        except Exception:  # noqa: BLE001
+        except Exception as fallo:  # noqa: BLE001
+            """
+            Se registra el tipo, no el detalle: un `str(excepcion)` de OpenAI
+            puede llevar el prefijo de la clave de la persona, y el log del
+            servidor no es un lugar privado.
+
+            Callarlo del todo era peor que el propio fallo. Una ficha sin
+            condensar y una que no lo necesitaba se ven exactamente igual en
+            la interfaz, asi que sin esta linea no habia forma de distinguir
+            "el modelo fallo" de "no hizo falta" ni de "este backend todavia
+            no condensa".
+            """
+            registro.warning(
+                "condensacion fallida lote=%d-%d tipo=%s",
+                inicio,
+                inicio + len(lote),
+                type(fallo).__name__,
+            )
             resultado.extend(lote)
             continue
 

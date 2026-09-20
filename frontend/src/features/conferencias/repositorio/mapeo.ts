@@ -50,6 +50,7 @@ export type FilaDeConferencia = {
   readonly codigo_de_evento: string
   readonly fecha_del_evento: string
   readonly duracion_en_segundos: number
+  readonly maximo_de_fichas?: number | null
   readonly id_dueno: string
   readonly estado: string
   readonly id_tema_principal: string | null
@@ -157,6 +158,8 @@ export function mapearConferencia(fila: FilaDeConferencia): Conferencia | null {
     codigoDeEvento: fila.codigo_de_evento,
     fechaDelEvento: fila.fecha_del_evento,
     duracionEnSegundos: fila.duracion_en_segundos,
+    /* `0` tambien es "sin tope": un tope de cero fichas no significa nada. */
+    maximoDeFichas: fila.maximo_de_fichas ? fila.maximo_de_fichas : null,
     idDueno: fila.id_dueno,
     estado: fila.estado as EstadoDeProcesamiento,
     /*

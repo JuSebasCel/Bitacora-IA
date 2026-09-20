@@ -137,6 +137,8 @@ describe('mapearConferencia', () => {
       codigoDeEvento: 'JIA-2026-03',
       fechaDelEvento: '2026-05-14',
       duracionEnSegundos: 2700,
+      /* La fila no trae la columna: se cargó sin elegir tope, y cae a null. */
+      maximoDeFichas: null,
       idDueno: 'usuario-1',
       estado: 'procesada',
       idTemaPrincipal: 'tema-1',

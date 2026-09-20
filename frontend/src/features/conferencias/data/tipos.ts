@@ -118,6 +118,15 @@ export type Conferencia = {
   /** Fecha ISO. Se guarda como cadena para poder ordenar sin construir un Date. */
   readonly fechaDelEvento: string
   readonly duracionEnSegundos: number
+  /**
+   * Cuantas fichas se pidieron al cargarla. `null` es sin tope.
+   *
+   * Se guarda y se ensena porque es una decision de quien la subio, y sin
+   * verla no hay forma de saber si el analisis obedecio: una charla con
+   * ciento cuarenta y nueve fichas se lee igual de bien tanto si es lo que se
+   * pidio como si el tope se perdio por el camino.
+   */
+  readonly maximoDeFichas: number | null
   /** Cuenta que cargó la conferencia y decide con quién se comparte. */
   readonly idDueno: string
   readonly estado: EstadoDeProcesamiento

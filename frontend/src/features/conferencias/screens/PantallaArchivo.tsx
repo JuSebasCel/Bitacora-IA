@@ -173,6 +173,43 @@ function CitaEnContexto({ contexto, fragmento }: { contexto: string; fragmento: 
   )
 }
 
+/*
+  Cuantas fichas se pidieron y cuantas hay.
+
+  Cuando coinciden basta con decir el numero: el tope se respeto y no hay nada
+  que explicar. Cuando no coinciden se dicen los dos, porque el desajuste es
+  informacion — significa que el analisis devolvio menos de lo que cabia (la
+  charla no daba para mas) o que el tope no llego a aplicarse.
+*/
+function ResumenDeLaCuota({
+  pedidas,
+  guardadas,
+}: {
+  pedidas: number | null
+  guardadas: number
+}): ReactElement {
+  if (pedidas === null) {
+    return (
+      <p className="px-4 pt-2 text-xs text-texto-tenue">
+        {guardadas} fichas · sin tope al cargarla
+      </p>
+    )
+  }
+
+  return (
+    <p className="px-4 pt-2 text-xs text-texto-tenue">
+      Pediste hasta {pedidas} ·{' '}
+      {guardadas === pedidas ? (
+        <span>las {guardadas} que hay</span>
+      ) : guardadas < pedidas ? (
+        <span>hay {guardadas}, no dio para mas</span>
+      ) : (
+        <span className="text-texto">hay {guardadas}: el tope no se aplicó</span>
+      )}
+    </p>
+  )
+}
+
 /** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
 function sePuedeAnalizar(estado: EstadoDeProcesamiento): boolean {
   return estado === 'en-cola' || estado === 'fallida'
@@ -833,6 +870,23 @@ export function PantallaArchivo({
                   </span>
                 )}
               </button>
+
+              {/*
+                Cuantas se pidieron, dicho aqui y no escondido en un panel.
+
+                La eleccion del momento de cargar no se vela en ninguna parte
+                despues: una charla con ciento cuarenta y nueve fichas se lee
+                igual tanto si es lo que se pidio como si el tope se perdio por
+                el camino, y no habia forma de distinguir los dos casos. Si lo
+                guardado no coincide con lo pedido se dice en vez de callarlo:
+                es el unico sitio donde ese desajuste puede notarse.
+              */}
+              <ResumenDeLaCuota
+                pedidas={conferenciaSeleccionada.conferencia.maximoDeFichas}
+                guardadas={
+                  entradas.filter((e) => e.conferencia.id === conferenciaSeleccionada.conferencia.id).length
+                }
+              />
             </div>
           )}
 

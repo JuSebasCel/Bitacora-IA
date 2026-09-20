@@ -11,6 +11,7 @@ const CONFERENCIA: Conferencia = {
   codigoDeEvento: 'PRU-2026-01',
   fechaDelEvento: '2026-05-01',
   duracionEnSegundos: 1200,
+  maximoDeFichas: null,
   idDueno: 'usr-prueba',
   estado: 'procesada',
   idTemaPrincipal: 'tem-de-prueba',
