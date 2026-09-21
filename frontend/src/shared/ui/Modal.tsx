@@ -59,6 +59,18 @@ export type PropsModal = {
    * teclado.
    */
   cerrarAlPulsarElVelo?: boolean
+  /**
+   * Hacia dónde se abre el modal anclado. Por defecto `izquierda`: su borde
+   * derecho se alinea con el del botón y la ventana crece hacia dentro de la
+   * pantalla. `derecha` la pone a la derecha del botón, para los que viven en
+   * el dock: alineados por la derecha quedaban encima del propio dock.
+   */
+  crecerHacia?: 'izquierda' | 'derecha'
+  /**
+   * Sin cabecera, sin fondo y sin relleno: el contenido es la ventana entera.
+   * Para los modales que traen su propia superficie, como el del chat.
+   */
+  sinMarco?: boolean
 }
 
 const ANCHO: Record<'angosto' | 'normal', string> = {
@@ -103,6 +115,8 @@ export function Modal({
   ancho = 'normal',
   limites,
   cerrarAlPulsarElVelo = true,
+  crecerHacia = 'izquierda',
+  sinMarco = false,
 }: PropsModal): ReactElement | null {
   const ventanaRef = useRef<HTMLDivElement>(null)
   const veloRef = useRef<HTMLDivElement>(null)
@@ -140,9 +154,18 @@ export function Modal({
 
       ventana.style.top = `${Math.max(MARGEN, Math.min(caja.top, window.innerHeight - altoVentana - MARGEN))}px`
 
-      const derecha = window.innerWidth - caja.right
-      if (window.innerWidth - derecha - anchoVentana < bordeIzquierdo) {
-        ventana.style.right = `${window.innerWidth - bordeIzquierdo - anchoVentana}px`
+      if (crecerHacia === 'derecha') {
+        const izquierda = Math.min(
+          caja.right + MARGEN / 2,
+          window.innerWidth - anchoVentana - MARGEN,
+        )
+        ventana.style.right = ''
+        ventana.style.left = `${Math.max(bordeIzquierdo, izquierda)}px`
+      } else {
+        const derecha = window.innerWidth - caja.right
+        if (window.innerWidth - derecha - anchoVentana < bordeIzquierdo) {
+          ventana.style.right = `${window.innerWidth - bordeIzquierdo - anchoVentana}px`
+        }
       }
     }
 
@@ -171,7 +194,7 @@ export function Modal({
     })
 
     return () => cancelAnimationFrame(cuadro)
-  }, [abierto, montado, anclaje, anclaEn, limites])
+  }, [abierto, montado, anclaje, anclaEn, limites, crecerHacia])
 
   /* Salida: el mismo FLIP al revés; al terminar, recién ahí se desmonta. */
   useEffect(() => {
@@ -244,7 +267,8 @@ export function Modal({
       return
     }
 
-    const enfocadoAntes = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const enfocadoAntes =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
     const desbordePrevio = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
@@ -305,25 +329,35 @@ export function Modal({
           Restando el margen a mano, los 16px de aire valen para los dos
           anclajes. `dvh` y no `vh` por la barra del navegador en móvil.
         */
-        className={`${cerrando ? '' : 'entra-con-desenfoque'} ${ANCHO[ancho]} flex max-h-[calc(100dvh-2rem)] max-w-full flex-col rounded-[32px] bg-panel focus:outline-none`}
+        className={`${cerrando ? '' : 'entra-con-desenfoque'} ${ANCHO[ancho]} flex max-h-[calc(100dvh-2rem)] max-w-full flex-col rounded-[32px] ${
+          sinMarco ? 'overflow-hidden' : 'bg-panel'
+        } focus:outline-none`}
       >
-        <div className="flex shrink-0 items-center gap-3 px-5 pt-5 pb-3">
-          <button
-            type="button"
-            onClick={alCerrar}
-            aria-label="Cerrar"
-            className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-2xl text-texto-tenue transition-colors hover:text-texto"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded icono-contorno">
-              close
-            </span>
-          </button>
-          <h2 className="font-titulo text-[28px] leading-tight font-semibold text-texto">{titulo}</h2>
-        </div>
+        {sinMarco ? (
+          children
+        ) : (
+          <>
+            <div className="flex shrink-0 items-center gap-3 px-5 pt-5 pb-3">
+              <button
+                type="button"
+                onClick={alCerrar}
+                aria-label="Cerrar"
+                className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-2xl text-texto-tenue transition-colors hover:text-texto"
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno">
+                  close
+                </span>
+              </button>
+              <h2 className="font-titulo text-[28px] leading-tight font-semibold text-texto">
+                {titulo}
+              </h2>
+            </div>
 
-        <div className="sin-barra-de-scroll flex min-h-0 flex-col gap-4 overflow-y-auto px-8 pt-2 pb-8">
-          {children}
-        </div>
+            <div className="sin-barra-de-scroll flex min-h-0 flex-col gap-4 overflow-y-auto px-8 pt-2 pb-8">
+              {children}
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.body,

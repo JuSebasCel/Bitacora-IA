@@ -1,3 +1,4 @@
+export { ChatEnCamino } from './ChatEnCamino'
 export { BurbujaDeMensaje } from './BurbujaDeMensaje'
 export type { PropsBurbujaDeMensaje } from './BurbujaDeMensaje'
 export { CompositorDeMensaje } from './CompositorDeMensaje'
