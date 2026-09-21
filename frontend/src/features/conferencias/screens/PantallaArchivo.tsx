@@ -9,6 +9,7 @@ import {
   EstadoVacioIlustrado,
   CLASES_DE_PILDORA,
   colorPorClave,
+  EleccionEnPastillas,
   Esqueleto,
   hoyEnIso,
   Modal,
@@ -266,10 +267,10 @@ const AMBITOS: readonly { valor: Ambito; etiqueta: string }[] = [
   { valor: 'todo', etiqueta: 'En todo el archivo' },
 ]
 
-const PROCEDENCIAS: readonly { valor: Segmento; etiqueta: string }[] = [
-  { valor: 'todas', etiqueta: 'Todas' },
-  { valor: 'propias', etiqueta: 'Propias' },
-  { valor: 'compartidas', etiqueta: 'Compartidas' },
+const PROCEDENCIAS: readonly { valor: Segmento; etiqueta: string; icono: string }[] = [
+  { valor: 'todas', etiqueta: 'Todas', icono: 'select_all' },
+  { valor: 'propias', etiqueta: 'Propias', icono: 'person' },
+  { valor: 'compartidas', etiqueta: 'Compartidas', icono: 'group' },
 ]
 
 /*
@@ -278,23 +279,23 @@ const PROCEDENCIAS: readonly { valor: Segmento; etiqueta: string }[] = [
   sería otro control que buscar. Etiquetas cortas a propósito: cuatro
   opciones tienen que caber en un segmentado del ancho del modal.
 */
-const ORDENES_DE_EVENTOS: readonly { valor: OrdenDeEventos; etiqueta: string }[] = [
-  { valor: 'recientes', etiqueta: 'Recientes' },
-  { valor: 'antiguos', etiqueta: 'Antiguos' },
-  { valor: 'alfabetico', etiqueta: 'A–Z' },
+const ORDENES_DE_EVENTOS: readonly { valor: OrdenDeEventos; etiqueta: string; icono: string }[] = [
+  { valor: 'recientes', etiqueta: 'Recientes', icono: 'schedule' },
+  { valor: 'antiguos', etiqueta: 'Antiguos', icono: 'history' },
+  { valor: 'alfabetico', etiqueta: 'A–Z', icono: 'sort_by_alpha' },
 ]
 
-const ORDENES_DE_CONFERENCIAS: readonly { valor: OrdenDeListado; etiqueta: string }[] = [
-  { valor: 'fecha-desc', etiqueta: 'Recientes' },
-  { valor: 'fecha-asc', etiqueta: 'Antiguas' },
-  { valor: 'titulo-asc', etiqueta: 'A–Z' },
-  { valor: 'fichas-desc', etiqueta: 'Más fichas' },
+const ORDENES_DE_CONFERENCIAS: readonly { valor: OrdenDeListado; etiqueta: string; icono: string }[] = [
+  { valor: 'fecha-desc', etiqueta: 'Recientes', icono: 'schedule' },
+  { valor: 'fecha-asc', etiqueta: 'Antiguas', icono: 'history' },
+  { valor: 'titulo-asc', etiqueta: 'A–Z', icono: 'sort_by_alpha' },
+  { valor: 'fichas-desc', etiqueta: 'Más fichas', icono: 'stacks' },
 ]
 
-const ORDENES_DE_FICHAS: readonly { valor: OrdenDeFichas; etiqueta: string }[] = [
-  { valor: 'charla', etiqueta: 'Como se dijeron' },
-  { valor: 'tema', etiqueta: 'Por tema' },
-  { valor: 'tipo', etiqueta: 'Por tipo' },
+const ORDENES_DE_FICHAS: readonly { valor: OrdenDeFichas; etiqueta: string; icono: string }[] = [
+  { valor: 'charla', etiqueta: 'Como se dijeron', icono: 'format_list_numbered' },
+  { valor: 'tema', etiqueta: 'Por tema', icono: 'label' },
+  { valor: 'tipo', etiqueta: 'Por tipo', icono: 'category' },
 ]
 
 /*
@@ -313,12 +314,12 @@ const COLOR_DE_TIPO: Record<Ficha['tipoDeUnidad'], ColorDePildora> = {
 }
 
 /* Cinco opciones son demasiadas para un segmentado: van como pastillas de una sola elección. */
-const ESTADOS: readonly { valor: FiltroDeEstado; etiqueta: string }[] = [
-  { valor: 'todos', etiqueta: 'Cualquier estado' },
-  { valor: 'procesada', etiqueta: 'Procesada' },
-  { valor: 'procesando', etiqueta: 'Procesando' },
-  { valor: 'en-cola', etiqueta: 'En cola' },
-  { valor: 'fallida', etiqueta: 'Procesamiento interrumpido' },
+const ESTADOS: readonly { valor: FiltroDeEstado; etiqueta: string; icono: string }[] = [
+  { valor: 'todos', etiqueta: 'Cualquiera', icono: 'select_all' },
+  { valor: 'procesada', etiqueta: 'Procesada', icono: 'check_circle' },
+  { valor: 'procesando', etiqueta: 'Procesando', icono: 'progress_activity' },
+  { valor: 'en-cola', etiqueta: 'En cola', icono: 'hourglass_empty' },
+  { valor: 'fallida', etiqueta: 'Interrumpida', icono: 'error' },
 ]
 
 /** Cuántos filtros están puestos. Lo dice el botón, para no tener que abrirlo a mirar. */
@@ -1727,44 +1728,24 @@ export function PantallaArchivo({
         ancho="angosto"
         limites={marco}
       >
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-medium text-texto-tenue">Procedencia</legend>
-          <Segmentado
-            opciones={PROCEDENCIAS}
-            valor={criterios.segmento}
-            alCambiar={(segmento) => alCambiarCriterios({ segmento })}
-          />
-        </fieldset>
+        {/*
+          Pastillas de elección de la referencia: la elegida crece y empuja a
+          sus vecinas (ver `EleccionEnPastillas`). Antes eran segmentados con
+          una pieza que se deslizaba y pastillas sueltas de otro estilo.
+        */}
+        <EleccionEnPastillas
+          etiqueta="Procedencia"
+          opciones={PROCEDENCIAS}
+          valor={criterios.segmento}
+          alCambiar={(segmento) => alCambiarCriterios({ segmento })}
+        />
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-medium text-texto-tenue">Estado de procesamiento</legend>
-
-          <div className="flex flex-wrap gap-1.5">
-            {ESTADOS.map((opcion) => {
-              const activa = opcion.valor === criterios.estado
-
-              return (
-                <label
-                  key={opcion.valor}
-                  className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
-                    activa
-                      ? 'bg-acento text-acento-contraste'
-                      : 'bg-acento-tenue text-texto-tenue hover:text-texto'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="estado-del-archivo"
-                    checked={activa}
-                    onChange={() => alCambiarCriterios({ estado: opcion.valor })}
-                    className="absolute inset-0 cursor-pointer appearance-none opacity-0"
-                  />
-                  {opcion.etiqueta}
-                </label>
-              )
-            })}
-          </div>
-        </fieldset>
+        <EleccionEnPastillas
+          etiqueta="Estado"
+          opciones={ESTADOS}
+          valor={criterios.estado}
+          alCambiar={(estado) => alCambiarCriterios({ estado })}
+        />
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 text-sm font-medium text-texto-tenue">Etiquetas</legend>
@@ -1778,36 +1759,26 @@ export function PantallaArchivo({
           />
         </fieldset>
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-2 text-sm font-medium text-texto-tenue">Orden</legend>
+        <EleccionEnPastillas
+          etiqueta="Ordenar eventos"
+          opciones={ORDENES_DE_EVENTOS}
+          valor={criterios.ordenDeEventos}
+          alCambiar={(ordenDeEventos) => alCambiarCriterios({ ordenDeEventos })}
+        />
 
-          <div className="flex flex-col gap-1.5">
-            <p className="px-1 text-sm text-texto-tenue">Eventos</p>
-            <Segmentado
-              opciones={ORDENES_DE_EVENTOS}
-              valor={criterios.ordenDeEventos}
-              alCambiar={(ordenDeEventos) => alCambiarCriterios({ ordenDeEventos })}
-            />
-          </div>
+        <EleccionEnPastillas
+          etiqueta="Ordenar conferencias"
+          opciones={ORDENES_DE_CONFERENCIAS}
+          valor={criterios.orden}
+          alCambiar={(orden) => alCambiarCriterios({ orden })}
+        />
 
-          <div className="flex flex-col gap-1.5">
-            <p className="px-1 text-sm text-texto-tenue">Conferencias</p>
-            <Segmentado
-              opciones={ORDENES_DE_CONFERENCIAS}
-              valor={criterios.orden}
-              alCambiar={(orden) => alCambiarCriterios({ orden })}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <p className="px-1 text-sm text-texto-tenue">Fichas</p>
-            <Segmentado
-              opciones={ORDENES_DE_FICHAS}
-              valor={criterios.ordenDeFichas}
-              alCambiar={(ordenDeFichas) => alCambiarCriterios({ ordenDeFichas })}
-            />
-          </div>
-        </fieldset>
+        <EleccionEnPastillas
+          etiqueta="Ordenar fichas"
+          opciones={ORDENES_DE_FICHAS}
+          valor={criterios.ordenDeFichas}
+          alCambiar={(ordenDeFichas) => alCambiarCriterios({ ordenDeFichas })}
+        />
 
         {/* Quitar los filtros deja el orden como está: ordenar no es filtrar, y perderlo al limpiar sorprendería. */}
         {filtrosActivos === 0 ? null : (

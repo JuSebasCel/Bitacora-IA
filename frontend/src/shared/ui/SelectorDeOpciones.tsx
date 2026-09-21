@@ -46,6 +46,12 @@ export type PropsSelectorDeOpciones<T extends string> = {
    */
   alCrear?: (nombre: string) => Promise<{ ok: true; valor: T } | { ok: false; mensaje: string }>
   textoDeCreacion?: string
+  /**
+   * Campo de ancho completo en vez de pastilla, con la lista del mismo ancho
+   * abriéndose sobre él: el de la referencia para los formularios ("Estado",
+   * "Proyecto" al crear una tarea). Se lee como un campo más de la columna.
+   */
+  completo?: boolean
 }
 
 export function SelectorDeOpciones<T extends string>({
@@ -59,6 +65,7 @@ export function SelectorDeOpciones<T extends string>({
   deshabilitado = false,
   alCrear,
   textoDeCreacion = 'Crear',
+  completo = false,
 }: PropsSelectorDeOpciones<T>): ReactElement {
   const [nombre, setNombre] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -101,18 +108,28 @@ export function SelectorDeOpciones<T extends string>({
     <Popover
       alinear={alinear}
       etiquetaAccesible={`${etiquetaAccesible}: ${elegida?.etiqueta ?? vacio}`}
-      className="min-w-0"
-      claseDelBoton="max-w-full cursor-pointer"
-      claseDelPanel="w-56"
+      className={completo ? 'w-full min-w-0' : 'min-w-0'}
+      claseDelBoton={completo ? 'w-full cursor-pointer' : 'max-w-full cursor-pointer'}
+      claseDelPanel={completo ? '' : 'w-56'}
+      anchoDelBoton={completo}
       boton={
-        <span className="flex h-11 min-w-0 max-w-full items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion">
+        <span
+          className={
+            completo
+              ? 'flex h-12 w-full min-w-0 items-center gap-2 rounded-2xl bg-acento-tenue px-4 text-left text-base text-texto transition-colors hover:bg-ilustracion'
+              : 'flex h-11 min-w-0 max-w-full items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion'
+          }
+        >
           {icono === undefined ? null : (
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
               {icono}
             </span>
           )}
           <span className="truncate">{elegida?.etiqueta ?? vacio}</span>
-          <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg opacity-60">
+          <span
+            aria-hidden="true"
+            className={`material-symbols-rounded icono-contorno shrink-0 text-lg opacity-60 ${completo ? 'ml-auto' : ''}`}
+          >
             expand_more
           </span>
         </span>

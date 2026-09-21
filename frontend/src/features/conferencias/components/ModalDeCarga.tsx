@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useApiKey } from '@/features/configuracion/useApiKey'
 import { mensajeDeError } from '@/shared/errors'
-import { hoyEnIso, Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
+import { EleccionEnPastillas, hoyEnIso, Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
 import type { OpcionDeSelector } from '@/shared/ui'
 import {
   EXTENSIONES_POR_FUENTE,
@@ -53,11 +53,11 @@ const EXTENSIONES_ADMITIDAS = [
   ...EXTENSIONES_POR_FUENTE.transcripcion,
 ].join(',')
 
-const DENSIDADES: readonly { valor: Densidad; etiqueta: string }[] = [
-  { valor: 'pocas', etiqueta: 'Pocas' },
-  { valor: 'equilibrado', etiqueta: 'Equilibrado' },
-  { valor: 'muchas', etiqueta: 'Muchas' },
-  { valor: 'libre', etiqueta: 'Sin límite' },
+const DENSIDADES: readonly { valor: Densidad; etiqueta: string; icono: string }[] = [
+  { valor: 'pocas', etiqueta: 'Pocas', icono: 'filter_list' },
+  { valor: 'equilibrado', etiqueta: 'Equilibrado', icono: 'balance' },
+  { valor: 'muchas', etiqueta: 'Muchas', icono: 'stacks' },
+  { valor: 'libre', etiqueta: 'Sin límite', icono: 'all_inclusive' },
 ]
 
 const NOMBRE_DE_FUENTE: Record<FuenteDeConferencia, string> = {
@@ -601,33 +601,14 @@ export function ModalDeCarga({
               ) : null}
             </p>
 
-            <div className="flex flex-wrap gap-1.5">
-              {DENSIDADES.map((opcion) => {
-                const activa = opcion.valor === densidad
+            <EleccionEnPastillas
+              opciones={DENSIDADES.map((opcion) => {
                 const cuantas = duracion > 0 ? fichasPedidas(opcion.valor, duracion) : null
-
-                return (
-                  <label
-                    key={opcion.valor}
-                    className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
-                      activa
-                        ? 'bg-acento text-acento-contraste'
-                        : 'bg-acento-tenue text-texto-tenue hover:text-texto'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="densidad-de-fichas"
-                      checked={activa}
-                      onChange={() => setDensidad(opcion.valor)}
-                      className="absolute inset-0 cursor-pointer appearance-none opacity-0"
-                    />
-                    {opcion.etiqueta}
-                    {cuantas === null ? null : <span className="opacity-70"> · {cuantas}</span>}
-                  </label>
-                )
+                return { ...opcion, etiqueta: cuantas === null ? opcion.etiqueta : `${opcion.etiqueta} · ${cuantas}` }
               })}
-            </div>
+              valor={densidad}
+              alCambiar={setDensidad}
+            />
           </div>
 
           {/*

@@ -1028,3 +1028,19 @@
     }
   }
 }
+
+/*
+  La pastilla de `EleccionEnPastillas`, con las transiciones medidas en la
+  referencia: el relleno crece con un rebote fuerte (la curva llega a 2 y
+  vuelve), el color responde casi al instante y el radio acompaña con un
+  rebote más suave. La regla global de reducir movimiento las anula.
+*/
+.opcion-en-pastilla {
+  transition-property: padding, background-color, color, border-radius;
+  transition-duration: 0.4s, 0.125s, 0.125s, 0.2s;
+  transition-timing-function:
+    cubic-bezier(0.38, 0.49, 0, 2),
+    ease,
+    ease,
+    cubic-bezier(0.38, 0.49, 0, 1.5);
+}

@@ -160,7 +160,7 @@ describe('PantallaConferencias, filtros', () => {
     montar()
 
     const filtros = await abrirFiltros()
-    await userEvent.click(within(filtros).getByRole('radio', { name: 'En cola' }))
+    await userEvent.click(within(filtros).getByRole('button', { name: 'En cola' }))
 
     await waitFor(() => {
       expect(ubicacion()).toBe('/conferencias?estado=en-cola')

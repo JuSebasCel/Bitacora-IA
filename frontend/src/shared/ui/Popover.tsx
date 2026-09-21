@@ -49,6 +49,11 @@ export type PropsPopover = {
   claseDelBoton?: string
   /** Sustituye el tamaño del panel; el fondo, el radio y la elevación se conservan. */
   claseDelPanel?: string
+  /**
+   * El panel mide lo mismo que su botón. Para los campos desplegables: la
+   * lista se abre sobre el campo, con su mismo ancho, como en la referencia.
+   */
+  anchoDelBoton?: boolean
 }
 
 export function Popover({
@@ -61,13 +66,18 @@ export function Popover({
   className,
   claseDelBoton,
   claseDelPanel,
+  anchoDelBoton = false,
 }: PropsPopover): ReactElement {
   const [abierto, setAbierto] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
   const disparadorRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   /* Números y no `CSSProperties`: `motion` tiene su propio tipo de estilo y no acepta el de React. */
-  const [posicion, setPosicion] = useState({ top: -9999, left: -9999, maxHeight: 0 })
+  const [posicion, setPosicion] = useState<{ top: number; left: number; maxHeight: number; width?: number }>({
+    top: -9999,
+    left: -9999,
+    maxHeight: 0,
+  })
   const reducirMovimiento = useReducedMotion()
   const idPanel = useId()
 
@@ -90,7 +100,8 @@ export function Popover({
     }
 
     const ancla = disparador.getBoundingClientRect()
-    const { width, height } = panel.getBoundingClientRect()
+    const { height } = panel.getBoundingClientRect()
+    const width = anchoDelBoton ? ancla.width : panel.getBoundingClientRect().width
 
     const izquierdaBase = alinear === 'derecha' ? ancla.right - width : ancla.left
     const izquierda = Math.min(
@@ -106,8 +117,9 @@ export function Popover({
       top: cabeDebajo || !cabeEncima ? debajo : ancla.top - SEPARACION - height,
       left: izquierda,
       maxHeight: window.innerHeight - MARGEN * 2,
+      ...(anchoDelBoton ? { width } : {}),
     })
-  }, [alinear])
+  }, [alinear, anchoDelBoton])
 
   useLayoutEffect(() => {
     if (!abierto) {
