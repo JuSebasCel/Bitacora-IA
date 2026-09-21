@@ -329,7 +329,13 @@ export function ModalDeCarga({
         abierto={abierto}
         alCerrar={alCerrar}
         titulo="Cargar conferencia"
-        ancho="normal"
+        /*
+          Angosto, no normal. A 720px el formulario ocupaba media pantalla de
+          ancho y aun asi se salia por abajo, que es lo peor de las dos cosas:
+          grande y cortado. En una columna de 440px todo el formulario es una
+          sola lectura vertical y el desplazamiento cae donde se espera.
+        */
+        ancho="angosto"
         {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
         {...(limites === undefined ? {} : { limites })}
       >

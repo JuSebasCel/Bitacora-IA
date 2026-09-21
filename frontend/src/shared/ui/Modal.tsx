@@ -244,11 +244,18 @@ export function Modal({
         aria-label={titulo}
         tabIndex={-1}
         /*
-          `max-h-full` con el cuerpo desplazable: un formulario largo dentro
+          Alto acotado con el cuerpo desplazable: un formulario largo dentro
           de un modal centrado se salía por abajo de la pantalla y su botón de
           envío quedaba fuera de alcance. La cabecera no se desplaza.
+
+          El tope es `100dvh - 2rem` y no `max-h-full`: el `p-4` del velo no
+          encoge a un hijo posicionado en absoluto —que es como queda el modal
+          anclado—, así que con `full` el modal llegaba a medir la ventana
+          entera y quedaba pegado al borde de arriba y al de abajo a la vez.
+          Restando el margen a mano, los 16px de aire valen para los dos
+          anclajes. `dvh` y no `vh` por la barra del navegador en móvil.
         */
-        className={`${cerrando ? '' : 'entra-con-desenfoque'} ${ANCHO[ancho]} flex max-h-full max-w-full flex-col rounded-[32px] bg-panel focus:outline-none`}
+        className={`${cerrando ? '' : 'entra-con-desenfoque'} ${ANCHO[ancho]} flex max-h-[calc(100dvh-2rem)] max-w-full flex-col rounded-[32px] bg-panel focus:outline-none`}
       >
         <div className="flex shrink-0 items-center gap-3 px-5 pt-5 pb-3">
           <button
