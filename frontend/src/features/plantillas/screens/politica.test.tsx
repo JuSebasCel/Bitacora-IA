@@ -107,14 +107,14 @@ describe('Redacción de la pantalla de plantillas', () => {
 describe('Redacción de la pantalla del editor de plantillas', () => {
   it('no usa lenguaje de obra en curso', async () => {
     montarEditor()
-    await screen.findByLabelText('Nombre de la plantilla')
+    await screen.findByRole('button', { name: /Nombre de la plantilla/ })
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })
 
   it('no usa el guion largo en ningún texto visible', async () => {
     montarEditor()
-    await screen.findByLabelText('Nombre de la plantilla')
+    await screen.findByRole('button', { name: /Nombre de la plantilla/ })
 
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })

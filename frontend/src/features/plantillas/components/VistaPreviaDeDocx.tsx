@@ -23,14 +23,11 @@ const NOMBRE_DEL_RESALTE = 'marcadores-de-plantilla'
   navegador trabaja sobre rangos, que sí pueden cruzar nodos: se busca en el
   texto de todos seguidos y se traduce cada coincidencia a su rango.
 
-  Donde no existe la API (navegadores viejos) simplemente no se resalta: la
-  hoja se sigue viendo igual y los marcadores siguen en la columna de al lado.
+  Devuelve los rangos para que `dibujarPildoras` les ponga fondo. El color
+  del texto va por la API de resaltado; donde no existe (navegadores viejos)
+  solo quedan las píldoras, y la hoja se sigue leyendo igual.
 */
-function resaltarMarcadoresEn(contenedor: HTMLElement): void {
-  if (typeof CSS === 'undefined' || !('highlights' in CSS) || typeof Highlight === 'undefined') {
-    return
-  }
-
+function marcadoresEn(contenedor: HTMLElement): Range[] {
   const nodos: Text[] = []
   const inicios: number[] = []
   let texto = ''
@@ -69,7 +66,70 @@ function resaltarMarcadoresEn(contenedor: HTMLElement): void {
     }
   }
 
-  CSS.highlights.set(NOMBRE_DEL_RESALTE, new Highlight(...rangos))
+  if (typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined') {
+    CSS.highlights.set(NOMBRE_DEL_RESALTE, new Highlight(...rangos))
+  }
+
+  return rangos
+}
+
+/* Aire de la píldora alrededor del texto, en píxeles de la hoja a tamaño real. */
+const HOLGURA_HORIZONTAL = 5
+const HOLGURA_VERTICAL = 1
+
+/*
+  Una píldora detrás de cada marcador, como capa aparte dentro de la hoja.
+
+  `::highlight` solo deja cambiar colores: sin radio ni relleno, el fondo era
+  un rectángulo pegado a las letras, y se veía como texto subrayado a
+  rotulador. Las píldoras se miden sobre los rangos ya pintados y se colocan
+  en coordenadas de la hoja a tamaño real, dividiendo por el zoom que tenga
+  en ese momento: así acompañan a la hoja cuando se acerca o se aleja sin
+  tener que volver a medirlas. Van detrás del texto (`z-index: -1`, con la
+  hoja aislada como contexto de apilamiento; ver `index.css`).
+
+  Un marcador que Word partió en varios tramos da un rectángulo por tramo; se
+  unen los de cada renglón para que salga una sola píldora por línea.
+*/
+function dibujarPildoras(contenedor: HTMLElement, rangos: readonly Range[]): void {
+  contenedor.querySelectorAll('.pildora-de-marcador').forEach((pildora) => pildora.remove())
+
+  for (const rango of rangos) {
+    const hoja = rango.startContainer.parentElement?.closest<HTMLElement>('section.docx')
+    const anchoNatural = Number.parseFloat(hoja?.style.width ?? '')
+    if (hoja === null || hoja === undefined || !Number.isFinite(anchoNatural) || anchoNatural <= 0) {
+      continue
+    }
+
+    const caja = hoja.getBoundingClientRect()
+    const escala = caja.width / (hoja.style.width.endsWith('pt') ? (anchoNatural * 96) / 72 : anchoNatural)
+    if (escala <= 0) {
+      continue
+    }
+
+    const renglones: DOMRect[] = []
+    for (const tramo of rango.getClientRects()) {
+      const mismoRenglon = renglones.find((renglon) => Math.abs(renglon.top - tramo.top) < 2)
+      if (mismoRenglon === undefined) {
+        renglones.push(DOMRect.fromRect(tramo))
+      } else {
+        const derecha = Math.max(mismoRenglon.right, tramo.right)
+        mismoRenglon.x = Math.min(mismoRenglon.x, tramo.x)
+        mismoRenglon.width = derecha - mismoRenglon.x
+        mismoRenglon.height = Math.max(mismoRenglon.height, tramo.height)
+      }
+    }
+
+    for (const renglon of renglones) {
+      const pildora = document.createElement('div')
+      pildora.className = 'pildora-de-marcador'
+      pildora.style.left = `${(renglon.left - caja.left) / escala - HOLGURA_HORIZONTAL}px`
+      pildora.style.top = `${(renglon.top - caja.top) / escala - HOLGURA_VERTICAL}px`
+      pildora.style.width = `${renglon.width / escala + HOLGURA_HORIZONTAL * 2}px`
+      pildora.style.height = `${renglon.height / escala + HOLGURA_VERTICAL * 2}px`
+      hoja.appendChild(pildora)
+    }
+  }
 }
 
 /*
@@ -114,7 +174,10 @@ export function VistaPreviaDeDocx({
       .then(() => {
         setPintada(true)
         if (resaltarMarcadores) {
-          resaltarMarcadoresEn(contenedor)
+          const rangos = marcadoresEn(contenedor)
+          dibujarPildoras(contenedor, rangos)
+          /* Con las fuentes de Word ya cargadas el texto se mueve: se vuelven a medir. */
+          void document.fonts?.ready.then(() => dibujarPildoras(contenedor, rangos))
         }
       })
       .catch(() => {
@@ -141,10 +204,18 @@ export function VistaPreviaDeDocx({
     )
   }
 
+  /*
+    Con zoom, la hoja es la pantalla de trabajo y ocupa todo el alto que le
+    da quien la contiene. Sin él —la memoria, cuando el PDF no sale— es una
+    vista más dentro de una página que ya se desplaza, y se acota a la
+    ventana.
+  */
   const hoja = (
     <div
       ref={contenedorRef}
-      className="vista-previa-docx elevacion max-h-[70vh] overflow-auto rounded-sm border border-filete bg-fondo p-4"
+      className={`vista-previa-docx overflow-auto bg-fondo p-4 ${
+        conZoom ? 'h-full rounded-2xl' : 'elevacion max-h-[70vh] rounded-sm border border-filete'
+      }`}
     />
   )
 
@@ -160,7 +231,7 @@ export function VistaPreviaDeDocx({
     ancho.
   */
   return (
-    <div className="relative">
+    <div className="relative h-full">
       {hoja}
 
       {zoom === null ? null : (

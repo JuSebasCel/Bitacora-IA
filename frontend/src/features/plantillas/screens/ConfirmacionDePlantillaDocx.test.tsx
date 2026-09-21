@@ -95,13 +95,16 @@ describe('ConfirmacionDePlantillaDocx', () => {
     expect(screen.queryByRole('textbox', { name: /qué debe ir aquí/i })).not.toBeInTheDocument()
   })
 
-  it('escribir el nombre llama a alRenombrar con lo tecleado', async () => {
+  /* El título se edita con doble clic, y entra con todo seleccionado: lo que se teclea lo sustituye. */
+  it('con doble clic en el título, lo que se escribe llama a alRenombrar', async () => {
     const alRenombrar = vi.fn()
     montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', []), { alRenombrar })
 
-    await userEvent.type(screen.getByRole('textbox', { name: 'Nombre de la plantilla' }), 'X')
+    expect(screen.queryByRole('textbox', { name: 'Nombre de la plantilla' })).not.toBeInTheDocument()
+    await userEvent.dblClick(screen.getByRole('button', { name: /Nombre de la plantilla/ }))
+    await userEvent.keyboard('X')
 
-    expect(alRenombrar).toHaveBeenLastCalledWith('PruebaX')
+    expect(alRenombrar).toHaveBeenLastCalledWith('X')
   })
 
   /*

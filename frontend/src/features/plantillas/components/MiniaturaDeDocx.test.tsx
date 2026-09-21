@@ -18,10 +18,12 @@ afterEach(() => {
   clase: solo los tres estados visibles del componente.
 */
 describe('MiniaturaDeDocx', () => {
-  it('sin archivo todavía, muestra el ícono de respaldo', () => {
+  /* Mientras llega, el barrido de carga; el ícono queda para cuando no va a llegar nada. */
+  it('sin archivo todavía, muestra el barrido de carga', () => {
     const { container } = render(<MiniaturaDeDocx archivo={null} />)
 
-    expect(container.querySelector('svg')).toBeInTheDocument()
+    expect(container.querySelector('.barrido-de-carga')).toBeInTheDocument()
+    expect(container.querySelector('svg')).not.toBeInTheDocument()
     expect(renderAsyncMock).not.toHaveBeenCalled()
   })
 
@@ -40,7 +42,6 @@ describe('MiniaturaDeDocx', () => {
 
     const { container } = render(<MiniaturaDeDocx archivo={new Blob(['x'])} />)
 
-    await waitFor(() => expect(renderAsyncMock).toHaveBeenCalled())
-    expect(container.querySelector('svg')).toBeInTheDocument()
+    await waitFor(() => expect(container.querySelector('svg')).toBeInTheDocument())
   })
 })

@@ -111,18 +111,23 @@
       fondo frío original; sobre beige, un parche ajeno.
     - Arena clara (L 0.87): cohesiva, pero la fila elegida casi desaparecía —
       mismo matiz que el panel y solo un escalón de brillo por encima.
-    - Azul empolvado: se veía, pero en claro el usuario no quiere azul.
+    - Azul empolvado: se veía, pero en ese momento el usuario no quería azul
+      en claro.
     - Arcilla y salvia, probadas en pantalla: las dos se distinguían bien, pero
       la arcilla tira a salmón y se confunde con el rojo de error y borrado,
       y el verde en esta app significa "validado".
 
-    Se quedó esta arena más honda: L 0.845 con algo más de croma. Es la
-    corrección de lo que falló en la primera arena — ahora hay suficiente
-    distancia con el panel (0,922) para que la selección se lea, sin salir de
-    la familia cálida ni cargar un significado que no le toca.
+    - Arena honda (L 0.845): se leía, pero el acento de la app es el azul 262
+      del tema oscuro, y el claro quedaba con otro color de acento.
+
+    Ahora es ese mismo azul, llevado a claro: L 0.88 para que se despegue del
+    panel (0,922) sin oscurecerse, y croma baja (0,045) para que sobre el
+    beige se lea como un azul suave y no como un parche frío. El texto encima
+    es el mismo matiz, hondo. El menú no se toca: el inactivo sigue cálido,
+    que es donde el azul sí sobraba.
   */
-  --bitacora-ilustracion: oklch(0.845 0.035 70);
-  --bitacora-ilustracion-texto: oklch(0.3 0.03 60);
+  --bitacora-ilustracion: oklch(0.88 0.045 258);
+  --bitacora-ilustracion-texto: oklch(0.34 0.09 262);
 
   /*
     Velo de los modales. Aquí nos apartamos de la referencia a propósito:
@@ -461,9 +466,25 @@
     el único amarillo de la pantalla. Los dos pares del tema se leen bien sobre
     papel.
   */
+  /*
+    Los `[[marcadores]]` dentro de la hoja. El fondo en forma de píldora lo
+    dibuja `VistaPreviaDeDocx` como capa aparte, porque `::highlight` no
+    admite radios ni relleno; aquí solo va el color del texto.
+  */
   ::highlight(marcadores-de-plantilla) {
-    background-color: var(--bitacora-ilustracion);
     color: var(--bitacora-ilustracion-texto);
+  }
+
+  .vista-previa-docx section.docx {
+    isolation: isolate;
+  }
+
+  .pildora-de-marcador {
+    position: absolute;
+    z-index: -1;
+    border-radius: 9999px;
+    background: var(--bitacora-ilustracion);
+    pointer-events: none;
   }
 
   .velo-de-modal {
@@ -685,6 +706,12 @@
   */
   .vista-previa-docx .docx-wrapper {
     padding: 0 !important;
+    /*
+      `safe`: al acercar, la hoja se hace más ancha que su caja. Centrada a
+      secas desbordaba por los dos lados, y lo que se salía por la izquierda
+      quedaba en coordenadas negativas, adonde el scroll no llega.
+    */
+    align-items: safe center !important;
   }
 
   .vista-previa-docx .docx-wrapper > section.docx {

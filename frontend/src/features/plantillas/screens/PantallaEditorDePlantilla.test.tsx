@@ -101,7 +101,8 @@ describe('PantallaEditorDePlantilla — edición', () => {
     conPlantillas([crearPlantillaDesdeDocx(id, `${id}/original.docx`, 'Importada', [])])
 
     montar(id)
-    const campoNombre = await screen.findByLabelText('Nombre de la plantilla')
+    await usuario.dblClick(await screen.findByRole('button', { name: /Nombre de la plantilla/ }))
+    const campoNombre = screen.getByRole('textbox', { name: 'Nombre de la plantilla' })
     await usuario.clear(campoNombre)
     await usuario.type(campoNombre, 'Memoria de cierre')
 

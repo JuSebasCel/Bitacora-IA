@@ -114,6 +114,8 @@ export function ConfirmacionDePlantillaDocx({
 }: PropsConfirmacionDePlantillaDocx): ReactElement {
   const { archivo, codigoDeError } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
   const [nombre, setNombre] = useState(plantilla.nombre)
+  /* El nombre de antes de empezar a editar, para que Escape lo devuelva. `null` = no se está editando. */
+  const [nombreAlEditar, setNombreAlEditar] = useState<string | null>(null)
   const [urlDeDescarga, setUrlDeDescarga] = useState<string | null>(null)
   const [borradoAbierto, setBorradoAbierto] = useState(false)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
@@ -169,25 +171,60 @@ export function ConfirmacionDePlantillaDocx({
           </Link>
 
           {/*
-            El nombre es el título y se edita en el sitio. Un campo con rótulo
-            aparte convertiría la cabecera en un formulario; así se lee como lo
-            que es, y se corrige tocándolo.
+            El nombre es el título y se edita en el sitio, con doble clic,
+            como un archivo en el escritorio. Siempre editable era un campo de
+            texto disfrazado: un clic suelto para seleccionar o copiar el
+            título ya dejaba el cursor dentro. Con el teclado, Enter o F2.
           */}
-          <input
-            value={nombre}
-            onChange={(evento) => {
-              setNombre(evento.target.value)
-              alRenombrar(evento.target.value)
-            }}
-            /* Enter confirma el nombre, como en cualquier título que se edita en su sitio. */
-            onKeyDown={(evento) => {
-              if (evento.key === 'Enter') {
-                evento.currentTarget.blur()
-              }
-            }}
-            aria-label="Nombre de la plantilla"
-            className="-mx-2 min-w-0 rounded-xl bg-transparent px-2 font-titulo text-[32px] leading-tight font-semibold text-texto transition-colors hover:bg-acento-tenue focus:bg-acento-tenue focus:outline-none"
-          />
+          {nombreAlEditar === null ? (
+            <div
+              role="button"
+              tabIndex={0}
+              onDoubleClick={() => setNombreAlEditar(nombre)}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Enter' || evento.key === 'F2') {
+                  evento.preventDefault()
+                  setNombreAlEditar(nombre)
+                }
+              }}
+              aria-label={`Nombre de la plantilla: ${nombre}. Doble clic para cambiarlo`}
+              title="Doble clic para cambiar el nombre"
+              className="-mx-2 min-w-0 cursor-default truncate rounded-xl px-2 font-titulo text-[32px] leading-tight font-semibold text-texto select-none focus:outline-2 focus:outline-acento"
+            >
+              {nombre}
+            </div>
+          ) : (
+            <input
+              value={nombre}
+              autoFocus
+              onFocus={(evento) => evento.currentTarget.select()}
+              onChange={(evento) => {
+                setNombre(evento.target.value)
+                alRenombrar(evento.target.value)
+              }}
+              onBlur={() => {
+                /* Una plantilla sin nombre no se guarda: salir en blanco devuelve el de antes. */
+                if (nombre.trim() === '' && nombreAlEditar !== null) {
+                  setNombre(nombreAlEditar)
+                  alRenombrar(nombreAlEditar)
+                }
+                setNombreAlEditar(null)
+              }}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Enter') {
+                  evento.currentTarget.blur()
+                }
+
+                if (evento.key === 'Escape') {
+                  setNombre(nombreAlEditar)
+                  alRenombrar(nombreAlEditar)
+                  setNombreAlEditar(null)
+                }
+              }}
+              aria-label="Nombre de la plantilla"
+              className="-mx-2 min-w-0 rounded-xl bg-acento-tenue px-2 font-titulo text-[32px] leading-tight font-semibold text-texto focus:outline-none"
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2 pt-7">
@@ -229,7 +266,7 @@ export function ConfirmacionDePlantillaDocx({
         <section
           aria-label="Vista previa"
           className="flex min-h-[28rem] min-w-0 flex-1 flex-col rounded-[24px] bg-panel p-4">
-          <div className="sin-barra-de-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl">
+          <div className="min-h-0 flex-1">
             <VistaPreviaDeDocx blob={archivo} resaltarMarcadores conZoom />
           </div>
         </section>

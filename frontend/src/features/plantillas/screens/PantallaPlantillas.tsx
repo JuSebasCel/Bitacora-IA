@@ -299,7 +299,7 @@ export function PantallaPlantillas(): ReactElement {
 function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement {
   const tarjeta = useRef<HTMLAnchorElement>(null)
   useAterrizarDesdeCierre(tarjeta, plantilla.id)
-  const { archivo } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
+  const { archivo, codigoDeError } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
 
   const campos = plantilla.marcadores.filter((marcador) => marcador.tipo === 'simple')
   const listos = campos.filter((marcador) => (marcador.instruccion ?? '').trim() !== '').length
@@ -327,7 +327,7 @@ function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement 
       {/* Con la forma de una hoja carta: la miniatura la enseña entera, no recortada. */}
       <div className="relative aspect-[17/22] overflow-hidden rounded-2xl bg-papel shadow-[inset_0_0_0_1px_var(--bitacora-filete)]"
       >
-        <MiniaturaDeDocx archivo={archivo} />
+        <MiniaturaDeDocx archivo={archivo} fallida={codigoDeError !== null} />
       </div>
 
       <div className="flex flex-col gap-1 px-2 pb-1">
