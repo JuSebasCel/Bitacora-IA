@@ -2,6 +2,7 @@ import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
 import { renderAsync } from 'docx-preview'
 import type { ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useAjusteDeHoja } from './ajusteDeHoja'
 
 export type PropsMiniaturaDeDocx = {
   /** Bytes del `.docx` original, o `null` mientras se descargan del bucket o si la descarga falló. */
@@ -23,6 +24,7 @@ export type PropsMiniaturaDeDocx = {
 export function MiniaturaDeDocx({ archivo }: PropsMiniaturaDeDocx): ReactElement {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const [listo, setListo] = useState(false)
+  useAjusteDeHoja(contenedorRef, listo, 'hoja-entera')
 
   useEffect(() => {
     let cancelado = false
@@ -64,7 +66,7 @@ export function MiniaturaDeDocx({ archivo }: PropsMiniaturaDeDocx): ReactElement
       <div
         ref={contenedorRef}
         aria-hidden="true"
-        className="vista-previa-docx pointer-events-none h-full w-[250%] origin-top-left scale-[0.4]"
+        className="vista-previa-docx miniatura-docx pointer-events-none h-full w-full"
       />
     </div>
   )

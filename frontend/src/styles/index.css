@@ -652,65 +652,6 @@
   }
 
   /*
-    Contenido del documento del editor de plantillas (F4). Escapado a su
-    propio bloque porque TipTap no trae tipografía por defecto: el propio
-    `.ProseMirror` (el `contentEditable` real) necesita reglas explícitas de
-    espaciado para párrafos, encabezados, listas e imágenes.
-  */
-  .prose-plantilla .ProseMirror {
-    outline: none;
-    min-height: 40vh;
-  }
-
-  .prose-plantilla .ProseMirror > * + * {
-    margin-top: 0.75em;
-  }
-
-  .prose-plantilla .ProseMirror h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .prose-plantilla .ProseMirror h2 {
-    font-size: 1.35rem;
-    font-weight: 600;
-    line-height: 1.25;
-  }
-
-  .prose-plantilla .ProseMirror h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    line-height: 1.3;
-  }
-
-  .prose-plantilla .ProseMirror ul,
-  .prose-plantilla .ProseMirror ol {
-    padding-left: 1.4em;
-  }
-
-  .prose-plantilla .ProseMirror ul {
-    list-style: disc;
-  }
-
-  .prose-plantilla .ProseMirror ol {
-    list-style: decimal;
-  }
-
-  .prose-plantilla .ProseMirror img {
-    max-width: 100%;
-    border-radius: 0.25rem;
-  }
-
-  .prose-plantilla .ProseMirror p.is-editor-empty:first-child::before {
-    content: attr(data-placeholder);
-    float: left;
-    height: 0;
-    pointer-events: none;
-    color: var(--bitacora-texto-tenue);
-  }
-
-  /*
     `docx-preview` (vista previa/miniatura de una plantilla `.docx`, F4) trae
     su propia hoja de estilos con `inWrapper: true`: un fondo gris fijo
     (`.docx-wrapper`) y la página en blanco fijo
@@ -723,6 +664,41 @@
   */
   .vista-previa-docx :where(.docx-wrapper) {
     background: var(--bitacora-fondo) !important;
+  }
+
+  /*
+    Las imágenes de Word, a su tamaño. El `max-width: 100%` que la base de
+    Tailwind pone a todo `<img>` las borraba cuando flotaban: `docx-preview`
+    dibuja una imagen "delante del texto" (`wrapNone`) dentro de una caja de
+    0 px de ancho y la saca de ahí con `left`/`top`, así que el 100 % de su
+    caja era 0 y la imagen quedaba cargada pero invisible. Pasaba con el
+    logo de un encabezado.
+  */
+  .vista-previa-docx img {
+    max-width: none;
+  }
+
+  /*
+    Sin el marco de 30 px que la librería pone alrededor de la hoja: el aire
+    lo da quien la contiene, y así el ajuste de `ajusteDeHoja.ts` encaja la
+    página y no la página más su marco.
+  */
+  .vista-previa-docx .docx-wrapper {
+    padding: 0 !important;
+  }
+
+  .vista-previa-docx .docx-wrapper > section.docx {
+    margin-bottom: 16px !important;
+  }
+
+  /* En la miniatura la hoja es la tarjeta: ni fondo alrededor ni sombra propia. */
+  .miniatura-docx .docx-wrapper {
+    background: transparent !important;
+  }
+
+  .miniatura-docx .docx-wrapper > section.docx {
+    margin-bottom: 0 !important;
+    box-shadow: none !important;
   }
 
   .vista-previa-docx :where(.docx-wrapper > section.docx) {

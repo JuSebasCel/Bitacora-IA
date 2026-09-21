@@ -1,6 +1,7 @@
 import { renderAsync } from 'docx-preview'
 import type { ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useAjusteDeHoja } from './ajusteDeHoja'
 
 export type PropsVistaPreviaDeDocx = {
   blob: Blob | null
@@ -79,6 +80,9 @@ function resaltarMarcadoresEn(contenedor: HTMLElement): void {
 export function VistaPreviaDeDocx({ blob, resaltarMarcadores = false }: PropsVistaPreviaDeDocx): ReactElement | null {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const [fallo, setFallo] = useState(false)
+  const [pintada, setPintada] = useState(false)
+  /* 16 px de aire: el `p-4` del contenedor, que `clientWidth` cuenta como espacio disponible. */
+  useAjusteDeHoja(contenedorRef, pintada, 'ancho', 16)
 
   useEffect(() => {
     const contenedor = contenedorRef.current
@@ -87,6 +91,7 @@ export function VistaPreviaDeDocx({ blob, resaltarMarcadores = false }: PropsVis
     }
 
     setFallo(false)
+    setPintada(false)
     contenedor.innerHTML = ''
 
     /*
@@ -101,6 +106,7 @@ export function VistaPreviaDeDocx({ blob, resaltarMarcadores = false }: PropsVis
     */
     renderAsync(blob, contenedor, undefined, { inWrapper: true })
       .then(() => {
+        setPintada(true)
         if (resaltarMarcadores) {
           resaltarMarcadoresEn(contenedor)
         }

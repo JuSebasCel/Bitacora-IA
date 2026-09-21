@@ -324,7 +324,8 @@ function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement 
         Word es blanco aunque la app esté en oscuro, y verlo así es lo que
         permite reconocerlo.
       */}
-      <div className="relative h-56 overflow-hidden rounded-2xl bg-papel shadow-[inset_0_0_0_1px_var(--bitacora-filete)]"
+      {/* Con la forma de una hoja carta: la miniatura la enseña entera, no recortada. */}
+      <div className="relative aspect-[17/22] overflow-hidden rounded-2xl bg-papel shadow-[inset_0_0_0_1px_var(--bitacora-filete)]"
       >
         <MiniaturaDeDocx archivo={archivo} />
       </div>

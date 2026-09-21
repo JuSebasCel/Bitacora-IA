@@ -53,7 +53,7 @@ export function Esqueleto({ filas = 3, etiqueta = 'Cargando', variante = 'lista'
       <div role="status" aria-label={etiqueta} className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-4">
         {elementos.map((indice) => (
           <div key={indice} className={`${BARRIDO} flex flex-col gap-3 rounded-[24px] bg-panel p-3`}>
-            <div className="h-56 rounded-2xl bg-acento-tenue" />
+            <div className="aspect-[17/22] rounded-2xl bg-acento-tenue" />
             <div className="flex flex-col gap-2 px-2 pb-1">
               <Barra ancho="w-3/4" />
               <Barra ancho="w-1/2" />
