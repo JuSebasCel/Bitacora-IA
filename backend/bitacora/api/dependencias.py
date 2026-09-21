@@ -28,6 +28,7 @@ from bitacora.analisis.pipeline import Transcriptor
 from bitacora.compartido.configuracion import Configuracion, leer_configuracion
 from bitacora.compartido.datos import (
     ClienteSupabase,
+    Proposito,
     Sesion,
     crear_cliente,
     leer_api_key_de_openai,
@@ -80,13 +81,13 @@ class ContextoDeUsuario:
     cliente: ClienteSupabase
     configuracion: Configuracion
 
-    def clave_de_openai(self) -> ClaveDeOpenAI:
+    def clave_de_openai(self, proposito: Proposito = "analisis") -> ClaveDeOpenAI:
         """
         Se lee tarde, no al construir el contexto: los endpoints que no llaman
         a OpenAI no deberían fallar con `CONFIG_API_KEY_REQUERIDA` ni descifrar
         un secreto de Vault que no van a usar.
         """
-        return leer_api_key_de_openai(self.cliente)
+        return leer_api_key_de_openai(self.cliente, proposito)
 
 
 def contexto_de_usuario(
@@ -114,7 +115,7 @@ def repositorio_del_agente(contexto: ContextoDeUsuario) -> RepositorioSupabaseDe
     return RepositorioSupabaseDelAgente(contexto.cliente, contexto.sesion.id_usuario)
 
 
-def cliente_de_openai(contexto: ContextoDeUsuario) -> ClienteDeOpenAI:
+def cliente_de_openai(contexto: ContextoDeUsuario, proposito: Proposito = "analisis") -> ClienteDeOpenAI:
     """
     Un cliente por petición, no uno por colaborador.
 
@@ -122,7 +123,7 @@ def cliente_de_openai(contexto: ContextoDeUsuario) -> ClienteDeOpenAI:
     `analizador_para` costaría dos llamadas RPC a `leer_mi_api_key()` —dos
     descifrados en Vault— para el mismo endpoint y la misma clave.
     """
-    return crear_cliente_de_openai(contexto.clave_de_openai())
+    return crear_cliente_de_openai(contexto.clave_de_openai(proposito))
 
 
 def transcriptor_de(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Transcriptor:

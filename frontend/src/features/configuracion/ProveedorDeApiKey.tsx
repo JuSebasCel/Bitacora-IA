@@ -4,7 +4,7 @@ import { useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
 import { supabase } from '@/shared/supabase/cliente'
 import { ContextoApiKey } from './contextoApiKey'
-import type { ResultadoDeAccion } from './contextoApiKey'
+import type { PropositoDeClave, ResultadoDeAccion } from './contextoApiKey'
 
 /*
   Estado de la API key, una sola vez para toda la sesión (B12).
@@ -30,6 +30,7 @@ export function ProveedorDeApiKey({ children }: { children: ReactNode }): ReactE
   const idUsuario = usuario?.id ?? ''
 
   const [clave, setClave] = useState<string | null>(null)
+  const [claveDeChat, setClaveDeChat] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
@@ -37,15 +38,25 @@ export function ProveedorDeApiKey({ children }: { children: ReactNode }): ReactE
 
     if (idUsuario === '') {
       setClave(null)
+      setClaveDeChat(null)
       setCargando(false)
       return
     }
 
     setCargando(true)
 
-    supabase.rpc('leer_mi_api_key').then(({ data, error }) => {
+    /*
+      La de análisis se pide sin argumentos: `analisis` es el propósito por
+      defecto de la función, y así esta lectura es la misma que hacía la app
+      antes de que hubiera dos claves.
+    */
+    const deAnalisis = supabase.rpc('leer_mi_api_key')
+    const deChat = supabase.rpc('leer_mi_api_key', { proposito: 'chat' })
+
+    void Promise.all([deAnalisis, deChat]).then(([analisis, chat]) => {
       if (cancelado) return
-      setClave(error || typeof data !== 'string' ? null : data)
+      setClave(analisis.error || typeof analisis.data !== 'string' ? null : analisis.data)
+      setClaveDeChat(chat.error || typeof chat.data !== 'string' ? null : chat.data)
       setCargando(false)
     })
 
@@ -54,36 +65,47 @@ export function ProveedorDeApiKey({ children }: { children: ReactNode }): ReactE
     }
   }, [idUsuario])
 
-  const guardar = useCallback(async (claveNueva: string): Promise<ResultadoDeAccion> => {
-    const limpia = claveNueva.trim()
+  const guardar = useCallback(
+    async (claveNueva: string, proposito: PropositoDeClave = 'analisis'): Promise<ResultadoDeAccion> => {
+      const limpia = claveNueva.trim()
 
-    if (limpia.length === 0) {
-      return { ok: false, mensaje: mensajeDeError('CONFIG_API_KEY_REQUERIDA') }
-    }
+      if (limpia.length === 0) {
+        return { ok: false, mensaje: mensajeDeError('CONFIG_API_KEY_REQUERIDA') }
+      }
 
-    const { error } = await supabase.rpc('guardar_mi_api_key', { clave: limpia })
+      const { error } = await supabase.rpc('guardar_mi_api_key', { clave: limpia, proposito })
+
+      if (error) {
+        return { ok: false, mensaje: mensajeDeError('CONFIG_API_KEY_FALLO_INESPERADO') }
+      }
+
+      if (proposito === 'chat') {
+        setClaveDeChat(limpia)
+      } else {
+        setClave(limpia)
+      }
+      return { ok: true }
+    },
+    [],
+  )
+
+  const borrar = useCallback(async (proposito: PropositoDeClave = 'analisis'): Promise<ResultadoDeAccion> => {
+    const { error } = await supabase.rpc('borrar_mi_api_key', { proposito })
 
     if (error) {
       return { ok: false, mensaje: mensajeDeError('CONFIG_API_KEY_FALLO_INESPERADO') }
     }
 
-    setClave(limpia)
-    return { ok: true }
-  }, [])
-
-  const borrar = useCallback(async (): Promise<ResultadoDeAccion> => {
-    const { error } = await supabase.rpc('borrar_mi_api_key')
-
-    if (error) {
-      return { ok: false, mensaje: mensajeDeError('CONFIG_API_KEY_FALLO_INESPERADO') }
+    if (proposito === 'chat') {
+      setClaveDeChat(null)
+    } else {
+      setClave(null)
     }
-
-    setClave(null)
     return { ok: true }
   }, [])
 
   return (
-    <ContextoApiKey.Provider value={{ clave, cargando, guardar, borrar }}>
+    <ContextoApiKey.Provider value={{ clave, claveDeChat, cargando, guardar, borrar }}>
       {children}
     </ContextoApiKey.Provider>
   )

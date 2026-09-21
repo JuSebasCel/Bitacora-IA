@@ -27,7 +27,7 @@ mismos tres desenlaces que `frontend/src/shared/supabase/consultas.ts`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from bitacora.compartido.configuracion import Configuracion
 from bitacora.compartido.errores import ErrorDeBitacora
@@ -152,23 +152,35 @@ def verificar_sesion(cliente: ClienteSupabase, token: str) -> Sesion:
     return Sesion(id_usuario=str(id_usuario), token=token)
 
 
-def leer_api_key_de_openai(cliente: ClienteSupabase) -> ClaveDeOpenAI:
+Proposito = Literal["analisis", "chat"]
+"""Para qué se usa una API key. Cada persona puede tener una por propósito."""
+
+
+def leer_api_key_de_openai(cliente: ClienteSupabase, proposito: Proposito = "analisis") -> ClaveDeOpenAI:
     """
-    `leer_mi_api_key()` no recibe parámetros: resuelve el usuario con
-    `auth.uid()` del lado de Postgres, así que es estructuralmente imposible
-    pedir la clave de otra persona desde aquí, aunque este backend quisiera.
+    `leer_mi_api_key()` no recibe el usuario: lo resuelve con `auth.uid()`
+    del lado de Postgres, así que es estructuralmente imposible pedir la
+    clave de otra persona desde aquí, aunque este backend quisiera. Sí
+    recibe el propósito: hay una clave para el análisis y otra, opcional,
+    para el chat.
+
+    Sin clave de chat, el chat usa la de análisis: la separación existe para
+    quien quiera dos límites de gasto distintos, no para obligar a nadie a
+    pegar dos claves.
 
     El valor devuelto se envuelve de inmediato en `ClaveDeOpenAI` y nunca toca
     un log: la única forma de sacarlo es leer `.valor` a propósito.
     """
     try:
-        respuesta = cliente.rpc("leer_mi_api_key", {}).execute()
+        respuesta = cliente.rpc("leer_mi_api_key", {"proposito": proposito}).execute()
     except Exception as fallo:  # noqa: BLE001
         raise traducir_fallo_de_datos(fallo) from fallo
 
     valor = getattr(respuesta, "data", None)
 
     if not isinstance(valor, str) or valor.strip() == "":
+        if proposito == "chat":
+            return leer_api_key_de_openai(cliente, "analisis")
         raise ErrorDeBitacora("CONFIG_API_KEY_REQUERIDA")
 
     return ClaveDeOpenAI(valor.strip())

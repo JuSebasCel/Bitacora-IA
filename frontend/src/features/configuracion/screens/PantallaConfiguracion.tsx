@@ -7,24 +7,69 @@ import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { nombreDePersona } from '@/features/conferencias/data'
 import { privacidadEfectiva } from '@/features/conferencias/query'
 import type { ConferenciaVisible } from '@/features/conferencias/query'
-import { Button, EncabezadoDeSeccion, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import { Button, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import type { PropositoDeClave } from '../contextoApiKey'
 import { useApiKey } from '../useApiKey'
 
 const ID_CAMPO_API_KEY = 'config-api-key'
 
 /*
-  Configuración (F8): API key propia, y conferencias compartidas conmigo.
+  Configuración: las claves de OpenAI y lo que otras personas compartieron
+  contigo.
 
-  Compartir una conferencia YA NO vive aquí: vivía en un formulario que
-  obligaba a volver a encontrar la conferencia en un desplegable genérico,
-  pese a que casi siempre se comparte justo después de estar viéndola. Ahora
-  el botón "Compartir" está en el detalle de la conferencia misma
-  (`PantallaDetalleConferencia.tsx`, `DialogoDeCompartir`), con la
-  conferencia ya puesta — esta pantalla no necesita saber cuál.
+  Con el lenguaje de las demás pantallas: título grande, paneles de radio
+  24 sobre el fondo, sin filetes ni sombras. Se fue lo que ya no hacía
+  nada: los permisos de "incluye pendientes" y "puedes validar" de cada
+  compartida hablaban de la validación de fichas, que salió de la interfaz.
+
+  Compartir una conferencia no vive aquí: está en la propia conferencia,
+  que es donde se decide hacerlo.
 */
 
-function SeccionApiKey(): ReactElement {
-  const { clave, cargando, guardar, borrar } = useApiKey()
+/*
+  Dos claves, una por uso, en vez de una sola. Separarlas deja poner en
+  OpenAI un límite de gasto distinto a cada una —analizar una charla larga
+  cuesta mucho más que una pregunta de chat— y cortar una sin tocar la otra.
+  La del chat es opcional: sin ella, el chat usa la de análisis.
+*/
+const USOS: readonly {
+  proposito: PropositoDeClave
+  titulo: string
+  descripcion: string
+  icono: string
+}[] = [
+  {
+    proposito: 'analisis',
+    titulo: 'Análisis y memorias',
+    descripcion: 'Transcribe y analiza las conferencias que cargas, y redacta las memorias. Sin ella no se puede cargar nada.',
+    icono: 'auto_awesome',
+  },
+  {
+    proposito: 'chat',
+    titulo: 'Chat',
+    descripcion: 'Responde las preguntas del chat. Es opcional: si no pones una, el chat usa la de análisis.',
+    icono: 'forum',
+  },
+]
+
+/* Lo justo para reconocer cuál es sin poder copiarla: `sk-…a1b2`. */
+function claveAbreviada(clave: string): string {
+  return `${clave.slice(0, 3)}…${clave.slice(-4)}`
+}
+
+function TarjetaDeClave({
+  proposito,
+  titulo,
+  descripcion,
+  icono,
+}: {
+  proposito: PropositoDeClave
+  titulo: string
+  descripcion: string
+  icono: string
+}): ReactElement {
+  const { clave: claveDeAnalisis, claveDeChat, cargando, guardar, borrar } = useApiKey()
+  const clave = proposito === 'chat' ? claveDeChat : claveDeAnalisis
   const [valor, setValor] = useState('')
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -34,12 +79,8 @@ function SeccionApiKey(): ReactElement {
     if (enviando) return
     setEnviando(true)
 
-    const resultado = await guardar(valor)
-    setMensaje(
-      resultado.ok
-        ? { texto: 'API key guardada.', esError: false }
-        : { texto: resultado.mensaje, esError: true },
-    )
+    const resultado = await guardar(valor, proposito)
+    setMensaje(resultado.ok ? { texto: 'Clave guardada.', esError: false } : { texto: resultado.mensaje, esError: true })
     if (resultado.ok) {
       setValor('')
     }
@@ -50,65 +91,50 @@ function SeccionApiKey(): ReactElement {
     if (enviando) return
     setEnviando(true)
 
-    const resultado = await borrar()
-    setMensaje(
-      resultado.ok
-        ? { texto: 'API key eliminada.', esError: false }
-        : { texto: resultado.mensaje, esError: true },
-    )
+    const resultado = await borrar(proposito)
+    setMensaje(resultado.ok ? { texto: 'Clave quitada.', esError: false } : { texto: resultado.mensaje, esError: true })
     setEnviando(false)
   }
 
+  const estado =
+    cargando ? null : clave !== null ? (
+      <Estado punto="bg-texto">Guardada · {claveAbreviada(clave)}</Estado>
+    ) : proposito === 'chat' ? (
+      <Estado punto="bg-texto-tenue/40">{claveDeAnalisis === null ? 'Sin clave' : 'Usa la de análisis'}</Estado>
+    ) : (
+      <Estado punto="bg-pendiente">Falta</Estado>
+    )
+
   return (
-    <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
-      <div>
-        <h2 className="text-base font-semibold tracking-tight text-texto">API key</h2>
-        <p className="mt-1 text-sm text-texto-tenue">
-          Se usa para las llamadas a OpenAI que hagas vos: cargar conferencias y consultar el chat. Se
-          guarda cifrada, y solo vos podés leerla o reemplazarla.
-        </p>
+    <section aria-label={`Clave de ${titulo.toLowerCase()}`} className="flex flex-col gap-5 rounded-[24px] bg-panel p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ilustracion text-ilustracion-texto">
+          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-[22px]">
+            {icono}
+          </span>
+        </div>
+        {estado}
       </div>
 
-      <details className="rounded-md border border-filete bg-fondo p-3 text-sm text-texto-tenue">
-        <summary className="cursor-pointer font-medium text-texto">¿Cómo consigo una API key?</summary>
-        <ol className="mt-2 flex list-decimal flex-col gap-1 pl-4">
-          <li>
-            Entra a{' '}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noreferrer"
-              className="text-acento underline underline-offset-2"
-            >
-              platform.openai.com/api-keys
-            </a>{' '}
-            con tu cuenta de OpenAI.
-          </li>
-          <li>Pulsa «Create new secret key» y ponle un nombre, por ejemplo «Menti Vault».</li>
-          <li>
-            Copia la clave que empieza por <code className="coordenada">sk-</code> y pégala abajo — OpenAI
-            solo la muestra una vez.
-          </li>
-        </ol>
-      </details>
+      <div className="flex flex-col gap-1.5">
+        <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">{titulo}</h2>
+        <p className="text-sm leading-relaxed text-texto-tenue">{descripcion}</p>
+      </div>
 
-      {/*
-        El mensaje de "ya tienes una guardada" y el de "API key guardada"
-        dicen básicamente lo mismo justo después de guardar -- se ocultan
-        mutuamente en vez de mostrar los dos a la vez.
-      */}
-      {mensaje !== null ? null : cargando ? (
-        <p className="text-xs text-texto-tenue">Cargando…</p>
-      ) : clave !== null ? (
-        <p className="text-xs text-texto-tenue">Ya tienes una API key guardada. Escribe una nueva para reemplazarla.</p>
-      ) : null}
-
-      <Field id={ID_CAMPO_API_KEY} etiqueta="API key">
+      <Field
+        id={proposito === 'analisis' ? ID_CAMPO_API_KEY : `config-api-key-${proposito}`}
+        etiqueta={clave === null ? 'Pega tu clave' : 'Reemplazar por otra'}
+      >
         <Input
           type="password"
           autoComplete="off"
           value={valor}
           onChange={(evento) => setValor(evento.target.value)}
+          onKeyDown={(evento) => {
+            if (evento.key === 'Enter') {
+              void alGuardar()
+            }
+          }}
           placeholder="sk-…"
         />
       </Field>
@@ -123,18 +149,19 @@ function SeccionApiKey(): ReactElement {
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
             {mensaje.esError ? (
-              <MensajeDeFormulario id="config-api-key-error">{mensaje.texto}</MensajeDeFormulario>
+              <MensajeDeFormulario id={`config-api-key-${proposito}-error`}>{mensaje.texto}</MensajeDeFormulario>
             ) : (
-              <p className="text-xs text-validado">{mensaje.texto}</p>
+              <p className="text-sm text-texto-tenue">{mensaje.texto}</p>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex gap-2">
+      <div className="mt-auto flex gap-2">
         <Button
-          variante="secundario"
+          variante="primario"
           cargando={enviando}
+          disabled={valor.trim() === ''}
           onClick={() => {
             void alGuardar()
           }}
@@ -150,10 +177,57 @@ function SeccionApiKey(): ReactElement {
               void alQuitar()
             }}
           >
-            Quitar mi API key
+            Quitar
           </Button>
         )}
       </div>
+    </section>
+  )
+}
+
+function Estado({ punto, children }: { punto: string; children: string | (string | ReactElement)[] }): ReactElement {
+  return (
+    <span className="flex items-center gap-1.5 rounded-full bg-acento-tenue px-3 py-1 text-sm text-texto-tenue">
+      <span aria-hidden="true" className={`size-1.5 rounded-full ${punto}`} />
+      {children}
+    </span>
+  )
+}
+
+const PASOS_PARA_CONSEGUIR_UNA_CLAVE: readonly ReactElement[] = [
+  <>
+    Entra a{' '}
+    <a
+      href="https://platform.openai.com/api-keys"
+      target="_blank"
+      rel="noreferrer"
+      className="font-medium text-texto underline underline-offset-2"
+    >
+      platform.openai.com/api-keys
+    </a>{' '}
+    con tu cuenta de OpenAI.
+  </>,
+  <>Pulsa «Create new secret key» y ponle un nombre, por ejemplo «Menti Vault».</>,
+  <>Copia la clave, que empieza por «sk-», y pégala arriba. OpenAI solo la muestra una vez.</>,
+]
+
+function ComoConseguirUnaClave(): ReactElement {
+  return (
+    <section aria-label="Cómo conseguir una clave" className="flex flex-col gap-4 rounded-[24px] bg-panel p-6">
+      <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Cómo conseguir una clave</h2>
+
+      <ol className="grid grid-cols-3 gap-3">
+        {PASOS_PARA_CONSEGUIR_UNA_CLAVE.map((paso, indice) => (
+          <li key={indice} className="flex gap-3 rounded-[20px] bg-fondo p-4 text-sm leading-relaxed text-texto-tenue">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-acento-tenue text-sm font-semibold text-texto">
+              {indice + 1}
+            </span>
+            <p>{paso}</p>
+          </li>
+        ))}
+      </ol>
+
+      <p className="text-sm text-texto-tenue">Las claves se guardan cifradas, y solo tú puedes leerlas o reemplazarlas.</p>
     </section>
   )
 }
@@ -162,35 +236,38 @@ function SeccionCompartidasConmigo({ visibles }: { visibles: readonly Conferenci
   const compartidas = visibles.filter((visible) => visible.procedencia === 'compartida')
 
   return (
-    <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
-      <div>
-        <h2 className="text-base font-semibold tracking-tight text-texto">Compartidas conmigo</h2>
-        <p className="mt-1 text-sm text-texto-tenue">Conferencias que otras personas del grupo compartieron contigo.</p>
+    <section aria-label="Compartidas conmigo" className="flex flex-col gap-4 rounded-[24px] bg-panel p-6">
+      <div className="flex flex-col gap-1.5">
+        <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Compartidas conmigo</h2>
+        <p className="text-sm text-texto-tenue">Conferencias que otras personas del grupo compartieron contigo.</p>
       </div>
 
       {compartidas.length === 0 ? (
-        <p className="text-sm text-texto-tenue">Nadie ha compartido ninguna conferencia contigo todavía.</p>
+        <p className="rounded-[20px] bg-fondo p-4 text-sm text-texto-tenue">
+          Nadie ha compartido ninguna conferencia contigo todavía.
+        </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {compartidas.map((visible) => {
             const privacidad = privacidadEfectiva(visible)
 
             return (
-              <li key={visible.conferencia.id} className="rounded-md bg-fondo p-3">
-                <p className="text-sm font-medium text-texto">{visible.conferencia.titulo}</p>
-                <p className="text-xs text-texto-tenue">
-                  Compartida por {nombreDePersona(visible.conferencia.idDueno) ?? 'otra persona'}
-                </p>
-                <p className="mt-1 text-xs text-texto-tenue">
-                  {[
-                    privacidad.compartirEtiquetas ? 'etiquetas visibles' : null,
-                    privacidad.compartirFichasPendientes ? 'incluye pendientes' : null,
-                    privacidad.permitirValidarFichas ? 'puedes validar' : null,
-                    privacidad.permitirRecompartir ? 'puedes recompartir' : null,
-                  ]
-                    .filter((texto) => texto !== null)
-                    .join(' · ') || 'sin permisos adicionales'}
-                </p>
+              <li
+                key={visible.conferencia.id}
+                className="flex items-center justify-between gap-4 rounded-[20px] bg-fondo px-5 py-4"
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <p className="truncate text-base font-medium text-texto">{visible.conferencia.titulo}</p>
+                  <p className="text-sm text-texto-tenue">
+                    Compartida por {nombreDePersona(visible.conferencia.idDueno) ?? 'otra persona'}
+                  </p>
+                </div>
+
+                {privacidad.permitirRecompartir ? (
+                  <span className="shrink-0 rounded-full bg-acento-tenue px-3 py-1 text-sm text-texto-tenue">
+                    Puedes recompartir
+                  </span>
+                ) : null}
               </li>
             )
           })}
@@ -207,10 +284,9 @@ export function PantallaConfiguracion(): ReactElement {
   const ubicacion = useLocation()
 
   /*
-    Quien llega desde el aviso de API key faltante (el menú de cuenta, o el
-    panel de carga de conferencia) trae `#config-api-key` en la URL: el
-    campo se desplaza a la vista y recibe el foco, en vez de dejar a la
-    persona a buscarlo en una pantalla con dos secciones.
+    Quien llega desde el aviso de clave faltante (el menú de cuenta, o el
+    modal de carga) trae `#config-api-key` en la URL: el campo se desplaza a
+    la vista y recibe el foco, en vez de dejar a la persona a buscarlo.
   */
   useEffect(() => {
     if (ubicacion.hash !== `#${ID_CAMPO_API_KEY}`) {
@@ -223,16 +299,20 @@ export function PantallaConfiguracion(): ReactElement {
   }, [ubicacion.hash])
 
   return (
-    <>
-      <EncabezadoDeSeccion
-        titulo="Configuración"
-        descripcion="Guarda tu API key y revisa las conferencias que otras personas del grupo compartieron contigo."
-      />
-
-      <div className="mt-6 flex flex-col gap-6">
-        <SeccionApiKey />
-        <SeccionCompartidasConmigo visibles={visibles} />
+    <div className="flex flex-col gap-6 pb-6">
+      <div className="flex flex-col gap-2">
+        <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Configuración</h1>
+        <p className="text-base text-texto-tenue">Tus claves de OpenAI y lo que otras personas compartieron contigo.</p>
       </div>
-    </>
+
+      <div className="grid grid-cols-2 gap-4">
+        {USOS.map((uso) => (
+          <TarjetaDeClave key={uso.proposito} {...uso} />
+        ))}
+      </div>
+
+      <ComoConseguirUnaClave />
+      <SeccionCompartidasConmigo visibles={visibles} />
+    </div>
   )
 }

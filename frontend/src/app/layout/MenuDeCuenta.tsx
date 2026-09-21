@@ -1,31 +1,31 @@
-import { DesktopIcon } from '@phosphor-icons/react/dist/csr/Desktop'
-import { GearIcon } from '@phosphor-icons/react/dist/csr/Gear'
-import { MoonIcon } from '@phosphor-icons/react/dist/csr/Moon'
-import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
-import { SunIcon } from '@phosphor-icons/react/dist/csr/Sun'
-import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
-import type { Icon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useId, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { Link } from 'react-router'
 import type { UsuarioSesion } from '@/features/auth/session'
 import { useApiKey } from '@/features/configuracion/useApiKey'
 import { useTema, type Tema } from '@/shared/tema'
-import { Popover } from '@/shared/ui'
+import { Modal } from '@/shared/ui'
 import { inicialesDe } from './inicialesDe'
 
-const OPCIONES_DE_TEMA: ReadonlyArray<{ valor: Tema; etiqueta: string; Icono: Icon }> = [
-  { valor: 'claro', etiqueta: 'Claro', Icono: SunIcon },
-  { valor: 'oscuro', etiqueta: 'Oscuro', Icono: MoonIcon },
-  { valor: 'sistema', etiqueta: 'Sistema', Icono: DesktopIcon },
+const OPCIONES_DE_TEMA: ReadonlyArray<{ valor: Tema; etiqueta: string; icono: string }> = [
+  { valor: 'claro', etiqueta: 'Claro', icono: 'light_mode' },
+  { valor: 'oscuro', etiqueta: 'Oscuro', icono: 'dark_mode' },
+  { valor: 'sistema', etiqueta: 'Sistema', icono: 'desktop_windows' },
 ]
 
+const FILA =
+  'flex h-12 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 text-base transition-colors hover:bg-acento-tenue'
+
 /*
-  Círculo con iniciales en vez de "nombre + botón Cerrar sesión" sueltos: el
-  nombre, el correo, el tema y "Cerrar sesión" viven juntos en un solo menú,
-  mismo patrón de `Popover` que ya usa `NotificacionesDropdown`. El tema es la
-  única "setting" que se agrega -- es la única que hace algo real; no se
-  agregan opciones decorativas sin función.
+  El menú de la cuenta, en el modal del sistema anclado a la tarjeta: crece
+  desde ella, igual que la campana crece desde su botón. Antes era el
+  popover suelto del diseño anterior, con filetes entre filas, iconos de
+  otra familia y el tema en botones de 11 px.
+
+  Lleva lo que se hace con la cuenta y nada más: el aviso de la clave si
+  falta, el tema, Configuración y cerrar sesión. El nombre y el correo no se
+  repiten dentro: ya están en la tarjeta que lo abre.
 */
 export function MenuDeCuenta({
   usuario,
@@ -39,20 +39,30 @@ export function MenuDeCuenta({
   const apiKeyFaltante = !cargandoApiKey && apiKey === null
   const nombreVisible = usuario.nombre === '' ? usuario.correo : usuario.nombre
   const reducirMovimiento = useReducedMotion()
+  const [abierto, setAbierto] = useState(false)
+  const boton = useRef<HTMLButtonElement>(null)
+  const idDelPanel = useId()
+
+  const cerrar = (): void => setAbierto(false)
 
   return (
-    <Popover
-      alinear="derecha"
-      etiquetaAccesible={
-        apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
-      }
-      /*
-        Dos círculos concéntricos, como la referencia: un aro gris de 40px que
-        lo despega del fondo y, dentro, el disco con las iniciales. Solo con el
-        disco pequeño el avatar se leía como un punto suelto.
-      */
-      claseDelBoton="flex w-full cursor-pointer items-center gap-3 rounded-[20px] p-2 text-left transition-colors hover:bg-acento-tenue"
-      boton={
+    <>
+      <button
+        ref={boton}
+        type="button"
+        onClick={() => setAbierto(true)}
+        aria-haspopup="dialog"
+        aria-expanded={abierto}
+        aria-controls={idDelPanel}
+        aria-label={
+          apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
+        }
+        className="flex w-full cursor-pointer items-center gap-3 rounded-[20px] p-2 text-left transition-colors hover:bg-acento-tenue"
+      >
+        {/*
+          Dos círculos concéntricos, como la referencia: un aro gris de 40px que
+          lo despega del fondo y, dentro, el disco con las iniciales.
+        */}
         <span aria-hidden="true" className="relative flex min-w-0 flex-1 items-center gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-acento-tenue">
             <span className="flex size-9 items-center justify-center rounded-full bg-acento text-sm font-semibold text-acento-contraste">
@@ -60,19 +70,12 @@ export function MenuDeCuenta({
             </span>
           </span>
 
-          {/*
-            El nombre y el correo al lado del avatar. Solo con el disco, la
-            cabecera del dock era un punto suelto en una franja vacía: el
-            hueco pedía contenido, no un círculo más grande.
-          */}
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-semibold text-texto">{nombreVisible}</span>
             <span className="truncate text-xs text-texto-tenue">{usuario.correo}</span>
           </span>
 
-          <span className="material-symbols-rounded icono-contorno shrink-0 text-lg text-texto-tenue">
-            unfold_more
-          </span>
+          <span className="material-symbols-rounded icono-contorno shrink-0 text-lg text-texto-tenue">unfold_more</span>
           <AnimatePresence>
             {apiKeyFaltante ? (
               <motion.span
@@ -85,73 +88,76 @@ export function MenuDeCuenta({
             ) : null}
           </AnimatePresence>
         </span>
-      }
-    >
-      {(cerrar) => (
-        /* Sin repetir nombre y correo: desde que el disparador los enseña, volver a ponerlos aquí era decirlos dos veces. */
-        <div className="flex flex-col gap-3">
+      </button>
+
+      <Modal abierto={abierto} alCerrar={cerrar} titulo="Tu cuenta" ancho="angosto" anclaje="disparador" anclaEn={boton}>
+        <div id={idDelPanel} className="flex flex-col gap-5 pb-1">
           {apiKeyFaltante ? (
             <Link
               to="/configuracion#config-api-key"
               onClick={cerrar}
-              className="flex items-start gap-2 rounded-md border border-pendiente/40 bg-pendiente/10 p-2.5 text-xs text-texto transition-colors hover:border-pendiente"
+              className="flex items-start gap-3 rounded-[20px] bg-ilustracion p-4 text-ilustracion-texto transition-opacity hover:opacity-90"
             >
-              <WarningCircleIcon
-                size={15}
-                weight="regular"
-                aria-hidden="true"
-                className="mt-0.5 shrink-0 text-pendiente"
-              />
-              <span>
+              <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-[22px]">
+                key
+              </span>
+              <span className="text-sm leading-relaxed">
                 Falta tu API key. Configúrala para poder cargar conferencias.
               </span>
             </Link>
           ) : null}
 
-          <div className="border-t border-filete pt-3">
-            <p className="mb-1.5 text-xs font-medium text-texto-tenue">Tema</p>
-            <div className="grid grid-cols-3 gap-1 rounded-md border border-filete bg-fondo p-1">
-              {OPCIONES_DE_TEMA.map(({ valor, etiqueta, Icono }) => (
+          <div className="flex flex-col gap-2">
+            <p className="px-1 text-sm font-medium text-texto-tenue">Tema</p>
+            {/*
+              El tema elegido lleva la superficie clara dentro del carril, como
+              una pastilla que se desliza entre tres. Cambiarlo no cierra el
+              menú: se prueba y se compara sin tener que volver a abrirlo.
+            */}
+            <div className="grid grid-cols-3 gap-1 rounded-full bg-acento-tenue p-1">
+              {OPCIONES_DE_TEMA.map(({ valor, etiqueta, icono }) => (
                 <button
                   key={valor}
                   type="button"
                   onClick={() => establecerTema(valor)}
                   aria-pressed={tema === valor}
-                  className={`flex flex-col items-center gap-1 rounded px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                    tema === valor
-                      ? 'elevacion bg-panel text-acento'
-                      : 'text-texto-tenue hover:text-texto'
+                  className={`flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm transition-colors ${
+                    tema === valor ? 'bg-fondo font-medium text-texto' : 'text-texto-tenue hover:text-texto'
                   }`}
                 >
-                  <Icono size={14} weight="regular" aria-hidden="true" />
+                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                    {icono}
+                  </span>
                   {etiqueta}
                 </button>
               ))}
             </div>
           </div>
 
-          <Link
-            to="/configuracion"
-            onClick={cerrar}
-            className="flex items-center gap-2 border-t border-filete pt-3 text-sm text-texto transition-colors hover:text-acento"
-          >
-            <GearIcon size={16} weight="regular" aria-hidden="true" />
-            Configuración
-          </Link>
+          <div className="flex flex-col">
+            <Link to="/configuracion" onClick={cerrar} className={`${FILA} text-texto`}>
+              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl text-texto-tenue">
+                settings
+              </span>
+              Configuración
+            </Link>
 
-          <button
-            type="button"
-            onClick={() => {
-              cerrar()
-              cerrarSesion()
-            }}
-            className="flex items-center gap-2 border-t border-filete pt-3 text-sm text-texto-tenue transition-colors hover:text-error"
-          >
-            <SignOutIcon size={16} weight="regular" aria-hidden="true" />
-            Cerrar sesión
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                cerrar()
+                cerrarSesion()
+              }}
+              className={`${FILA} text-texto-tenue hover:text-error`}
+            >
+              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
+                logout
+              </span>
+              Cerrar sesión
+            </button>
+          </div>
         </div>
-      )}
-    </Popover>
+      </Modal>
+    </>
   )
 }

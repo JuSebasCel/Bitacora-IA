@@ -67,7 +67,7 @@ class RespuestaDelChat(BaseModel):
 
 @router.post("/preguntar", response_model=RespuestaDelChat)
 def preguntar(cuerpo: PreguntaDelUsuario, usuario: Usuario) -> RespuestaDelChat:
-    proponer, sintetizar = agente_para(usuario, cliente_de_openai(usuario))
+    proponer, sintetizar = agente_para(usuario, cliente_de_openai(usuario, "chat"))
 
     resultado = responder(
         cuerpo.pregunta,
