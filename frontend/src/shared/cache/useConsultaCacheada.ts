@@ -94,9 +94,32 @@ function cargar<T>(clave: string, consultar: () => Promise<ResultadoDeConsulta<T
 
   const promesa = consultar().then((resultado) => {
     const actualizadoEnMs = Date.now()
-    const nuevoEstado: EstadoDeCache<T> = resultado.ok
-      ? { fase: 'listo', datos: resultado.datos, actualizadoEnMs }
-      : { fase: 'error', codigo: resultado.codigo, actualizadoEnMs }
+    const anterior = (cache.get(clave) as EntradaDeCache<T> | undefined)?.estado
+
+    /*
+      Revalidar no puede sacudir la pantalla. Dos reglas:
+
+      - Si llega lo mismo que ya había, se conserva la misma referencia de
+        `datos`. Antes cada consulta de fondo (la campana revalida cada
+        treinta segundos) entregaba objetos nuevos aunque nada hubiera
+        cambiado, y todo lo que dependía de ellos se recalculaba y se volvía
+        a pintar, animaciones de entrada incluidas: se veía como si la
+        pantalla se reiniciara sola.
+      - Si falla una revalidación y ya había datos, se siguen enseñando esos.
+        Un corte de red de un segundo cambiaba la pantalla entera por el
+        error y la devolvía después. El error solo se enseña cuando no hay
+        nada que enseñar en su lugar.
+    */
+    let nuevoEstado: EstadoDeCache<T>
+    if (resultado.ok) {
+      const iguales =
+        anterior?.fase === 'listo' && JSON.stringify(anterior.datos) === JSON.stringify(resultado.datos)
+      nuevoEstado = { fase: 'listo', datos: iguales ? anterior.datos : resultado.datos, actualizadoEnMs }
+    } else if (anterior?.fase === 'listo') {
+      nuevoEstado = anterior
+    } else {
+      nuevoEstado = { fase: 'error', codigo: resultado.codigo, actualizadoEnMs }
+    }
 
     cache.set(clave, { estado: nuevoEstado, promesaEnCurso: null })
     notificar(clave)

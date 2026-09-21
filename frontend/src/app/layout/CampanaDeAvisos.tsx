@@ -26,6 +26,29 @@ import { Modal } from '@/shared/ui'
   visto no es un hecho del dominio que merezca un viaje.
 */
 
+/* Cada cuánto vuelve a sonar mientras haya algo sin mirar: lo bastante espaciado para no volverse ruido. */
+const INTERVALO_DE_TIMBRE_MS = 6_000
+
+const CLAVE_DE_MIRADAS = 'menti-vault:avisos-mirados'
+
+function leerMiradas(idUsuario: string): ReadonlySet<string> {
+  try {
+    const crudo = localStorage.getItem(`${CLAVE_DE_MIRADAS}:${idUsuario}`)
+    const lista: unknown = crudo === null ? [] : JSON.parse(crudo)
+    return new Set(Array.isArray(lista) ? lista.filter((clave): clave is string => typeof clave === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function guardarMiradas(idUsuario: string, miradas: ReadonlySet<string>): void {
+  try {
+    localStorage.setItem(`${CLAVE_DE_MIRADAS}:${idUsuario}`, JSON.stringify([...miradas]))
+  } catch {
+    /* Sin almacenamiento la campana vuelve a sonar al recargar; nada más depende de esto. */
+  }
+}
+
 export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElement {
   const { todas, recargar } = useConferenciasVisibles(idUsuario)
   const [abierta, setAbierta] = useState(false)
@@ -77,50 +100,71 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
   const total = invitaciones.length + respuestas.length
 
   /*
-    Cuando llega algo nuevo, la campana suena: se balancea como colgada de
-    su argolla y suelta una onda en el azul de acento. Una vez por llegada,
-    no en bucle: un aviso que se mueve sin parar se deja de mirar, y además
-    distrae de lo que se está haciendo. Por eso solo se dispara cuando el
-    total sube, no cada vez que se vuelve a consultar el mismo número.
+    Mientras haya avisos sin mirar, la campana suena cada tanto: se balancea
+    como colgada de su argolla y suelta una onda en el azul de acento. Abrirla
+    es mirarlos, y ahí se calla hasta que llegue otro.
 
-    El primer recuento también cuenta como llegada si trae algo: al entrar
-    en la app con avisos pendientes, es la forma de enterarse.
+    Antes sonaba una sola vez, cuando subía el número: si en ese momento no
+    se estaba mirando el dock, el aviso pasaba sin que nadie se enterara, y
+    la campana quieta no se distinguía de una sin nada nuevo.
+
+    Lo mirado se recuerda por aviso —cada invitación y cada respuesta— y en
+    el navegador de quien mira: al recargar no vuelve a sonar por lo que ya
+    se vio, pero un aviso nuevo sí.
   */
   const icono = useRef<HTMLSpanElement>(null)
   const onda = useRef<HTMLSpanElement>(null)
-  const totalAnterior = useRef(0)
+
+  const claves = useMemo(
+    () => [
+      ...invitaciones.map((conferencia) => `invitacion:${conferencia.id}`),
+      ...respuestas.map((respuesta) => `respuesta:${respuesta.conferencia.id}:${respuesta.idInvitado}`),
+    ],
+    [invitaciones, respuestas],
+  )
+  const [miradas, setMiradas] = useState<ReadonlySet<string>>(() => leerMiradas(idUsuario))
+  const sinMirar = claves.some((clave) => !miradas.has(clave))
+
+  function marcarComoMiradas(): void {
+    const todas = new Set([...miradas, ...claves])
+    setMiradas(todas)
+    guardarMiradas(idUsuario, todas)
+  }
 
   useEffect(() => {
-    const subio = total > totalAnterior.current
-    totalAnterior.current = total
-
     const sinMovimiento =
       typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!subio || sinMovimiento || typeof icono.current?.animate !== 'function') {
+    if (!sinMirar || sinMovimiento || typeof icono.current?.animate !== 'function') {
       return
     }
 
-    icono.current.animate(
-      [
-        { transform: 'rotate(0deg)' },
-        { transform: 'rotate(16deg)', offset: 0.15 },
-        { transform: 'rotate(-13deg)', offset: 0.32 },
-        { transform: 'rotate(9deg)', offset: 0.5 },
-        { transform: 'rotate(-5deg)', offset: 0.68 },
-        { transform: 'rotate(2deg)', offset: 0.84 },
-        { transform: 'rotate(0deg)' },
-      ],
-      { duration: 700, easing: 'ease-out' },
-    )
+    function sonar(): void {
+      icono.current?.animate(
+        [
+          { transform: 'rotate(0deg)' },
+          { transform: 'rotate(16deg)', offset: 0.15 },
+          { transform: 'rotate(-13deg)', offset: 0.32 },
+          { transform: 'rotate(9deg)', offset: 0.5 },
+          { transform: 'rotate(-5deg)', offset: 0.68 },
+          { transform: 'rotate(2deg)', offset: 0.84 },
+          { transform: 'rotate(0deg)' },
+        ],
+        { duration: 700, easing: 'ease-out' },
+      )
 
-    onda.current?.animate(
-      [
-        { transform: 'scale(0.7)', opacity: 0.55 },
-        { transform: 'scale(1.9)', opacity: 0 },
-      ],
-      { duration: 750, easing: 'cubic-bezier(0.2, 0.6, 0.3, 1)' },
-    )
-  }, [total])
+      onda.current?.animate(
+        [
+          { transform: 'scale(0.7)', opacity: 0.55 },
+          { transform: 'scale(1.9)', opacity: 0 },
+        ],
+        { duration: 750, easing: 'cubic-bezier(0.2, 0.6, 0.3, 1)' },
+      )
+    }
+
+    sonar()
+    const intervalo = setInterval(sonar, INTERVALO_DE_TIMBRE_MS)
+    return () => clearInterval(intervalo)
+  }, [sinMirar])
 
   async function responder(idConferencia: string, aceptar: boolean): Promise<void> {
     if (respondiendo.has(idConferencia)) {
@@ -150,6 +194,7 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
         type="button"
         onClick={() => {
           recargar()
+          marcarComoMiradas()
           setAbierta(true)
         }}
         aria-label={total === 0 ? 'Notificaciones' : `Notificaciones, ${total} sin leer`}
