@@ -227,7 +227,6 @@ function ComoConseguirUnaClave(): ReactElement {
         ))}
       </ol>
 
-      <p className="text-sm text-texto-tenue">Las claves se guardan cifradas, y solo tú puedes leerlas o reemplazarlas.</p>
     </section>
   )
 }
@@ -237,10 +236,7 @@ function SeccionCompartidasConmigo({ visibles }: { visibles: readonly Conferenci
 
   return (
     <section aria-label="Compartidas conmigo" className="flex flex-col gap-4 rounded-[24px] bg-panel p-6">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Compartidas conmigo</h2>
-        <p className="text-sm text-texto-tenue">Conferencias que otras personas del grupo compartieron contigo.</p>
-      </div>
+      <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Compartidas conmigo</h2>
 
       {compartidas.length === 0 ? (
         <p className="rounded-[20px] bg-fondo p-4 text-sm text-texto-tenue">
@@ -300,10 +296,7 @@ export function PantallaConfiguracion(): ReactElement {
 
   return (
     <div className="flex flex-col gap-6 pb-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Configuración</h1>
-        <p className="text-base text-texto-tenue">Tus claves de OpenAI y lo que otras personas compartieron contigo.</p>
-      </div>
+      <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Configuración</h1>
 
       <div className="grid grid-cols-2 gap-4">
         {USOS.map((uso) => (

@@ -88,15 +88,6 @@ describe('Redacción de la pantalla de plantillas', () => {
     expect(screen.getByLabelText('Cargando las plantillas')).toBeInTheDocument()
   })
 
-  it('describe con una línea qué trabajo se hace en la sección', () => {
-    montarListado()
-
-    const encabezado = screen.getByRole('heading', { level: 1, name: 'Plantillas' })
-    const descripcion = encabezado.parentElement?.textContent?.replace('Plantillas', '').trim() ?? ''
-
-    expect(descripcion.length).toBeGreaterThan(30)
-  })
-
   it('no usa lenguaje de obra en curso', async () => {
     montarListado()
     await screen.findByText(PLANTILLA.nombre)

@@ -1,9 +1,8 @@
 import type { ReactElement } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { VistaPreviaDeDocx } from '@/features/plantillas/components'
 import { hayBackend } from '@/shared/api/backend'
 import type { CodigoError } from '@/shared/errors'
-import { mensajeDeError } from '@/shared/errors'
 import type { ResultadoDeMemoria } from '../generarMemoria'
 import { convertirAPdf } from '../redaccion'
 
@@ -51,13 +50,20 @@ type EstadoDelPdf =
   el contenido crece pero no se vuelve a paginar. En la memoria generada, que
   es justo donde importa, su "página 2 de 4" mentiría.
 
-  Si el PDF no sale, la memoria no se pierde: se cae a la vista del Word y su
-  descarga, y se dice por qué.
+  Si el PDF no sale, la memoria no se pierde: se cae a la vista del Word, y
+  el botón de PDF sigue ahí. Pulsarlo vuelve a intentar la conversión y
+  descarga en cuanto sale. Antes el botón desaparecía y en su lugar quedaba
+  un mensaje de error suelto sobre la hoja: la persona perdía justo la
+  acción que venía a hacer.
 */
 function VistaDeMemoriaDocx({ blob, nombre }: { blob: Blob; nombre: string }): ReactElement {
   const [estado, setEstado] = useState<EstadoDelPdf>(() =>
     hayBackend() ? { tipo: 'convirtiendo' } : { tipo: 'sin-backend' },
   )
+
+  /* Cada reintento vuelve a correr la conversión; `descargarAlTerminar` dice si el reintento lo pidió el botón. */
+  const [intento, setIntento] = useState(0)
+  const descargarAlTerminar = useRef(false)
 
   useEffect(() => {
     if (!hayBackend()) {
@@ -77,25 +83,51 @@ function VistaDeMemoriaDocx({ blob, nombre }: { blob: Blob; nombre: string }): R
     return () => {
       cancelado = true
     }
-  }, [blob])
+  }, [blob, intento])
 
   const urlDelWord = useUrlDe(blob)
   const urlDelPdf = useUrlDe(estado.tipo === 'listo' ? estado.pdf : null)
   const base = nombre.trim().length > 0 ? nombre.trim() : 'memoria'
+  const enlaceDelPdf = useRef<HTMLAnchorElement>(null)
+
+  useEffect(() => {
+    if (urlDelPdf !== null && descargarAlTerminar.current) {
+      descargarAlTerminar.current = false
+      enlaceDelPdf.current?.click()
+    }
+  }, [urlDelPdf])
+
+  function descargarPdf(): void {
+    if (urlDelPdf !== null) {
+      enlaceDelPdf.current?.click()
+      return
+    }
+
+    descargarAlTerminar.current = true
+    setIntento((anterior) => anterior + 1)
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        {urlDelPdf === null ? null : (
-          <a
-            href={urlDelPdf}
-            download={`${base}.pdf`}
-            className="flex h-10 items-center gap-2 rounded-full bg-acento px-4 text-sm font-medium text-acento-contraste transition-opacity hover:opacity-85"
+        <button
+          type="button"
+          onClick={descargarPdf}
+          disabled={estado.tipo === 'convirtiendo'}
+          className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-acento px-4 text-sm font-medium text-acento-contraste transition-opacity hover:opacity-85 disabled:cursor-wait disabled:opacity-70"
+        >
+          <span
+            aria-hidden="true"
+            className={`material-symbols-rounded icono-contorno text-lg ${estado.tipo === 'convirtiendo' ? 'animate-spin' : ''}`}
           >
-            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
-              picture_as_pdf
-            </span>
-            Descargar PDF
+            {estado.tipo === 'convirtiendo' ? 'progress_activity' : 'picture_as_pdf'}
+          </span>
+          {estado.tipo === 'convirtiendo' ? 'Preparando el PDF' : 'Descargar PDF'}
+        </button>
+        {/* El enlace real de descarga, oculto: el botón decide si hay que convertir primero. */}
+        {urlDelPdf === null ? null : (
+          <a ref={enlaceDelPdf} href={urlDelPdf} download={`${base}.pdf`} className="hidden" aria-hidden="true" tabIndex={-1}>
+            PDF
           </a>
         )}
 
@@ -111,22 +143,7 @@ function VistaDeMemoriaDocx({ blob, nombre }: { blob: Blob; nombre: string }): R
             Descargar Word
           </a>
         )}
-
-        {estado.tipo === 'convirtiendo' ? (
-          <span className="flex items-center gap-2 px-2 text-sm text-texto-tenue">
-            <span aria-hidden="true" className="material-symbols-rounded icono-contorno animate-spin text-base">
-              progress_activity
-            </span>
-            Preparando el PDF…
-          </span>
-        ) : null}
       </div>
-
-      {estado.tipo === 'fallo' ? (
-        <p role="status" className="text-sm text-texto-tenue">
-          {mensajeDeError(estado.codigo)}
-        </p>
-      ) : null}
 
       <section aria-label="Vista previa de la memoria" className="flex min-h-[70vh] flex-1 flex-col rounded-[24px] bg-panel p-2">
         {urlDelPdf !== null ? (

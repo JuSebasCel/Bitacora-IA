@@ -134,11 +134,6 @@ export function PanelDeGenerarMemoria({
         aria-describedby={error === null ? undefined : ID_ERROR}
         className="flex flex-col gap-6"
       >
-        <p className="text-base leading-relaxed text-texto-tenue">
-          Elige una conferencia ya analizada y la plantilla con la que se escribe. La IA rellena cada campo con lo que
-          se dijo en la charla.
-        </p>
-
         <div className="flex flex-col items-start gap-2">
           {conferenciasProcesadas.length === 0 ? (
             <p className="rounded-[20px] bg-acento-tenue px-4 py-3 text-sm text-texto-tenue">

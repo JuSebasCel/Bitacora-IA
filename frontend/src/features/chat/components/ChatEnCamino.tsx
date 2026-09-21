@@ -49,10 +49,6 @@ export function ChatEnCamino({ alCerrar }: { alCerrar: () => void }): ReactEleme
           <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-texto" />
           Estamos trabajando en el chat
         </span>
-        <p className="max-w-xs text-base leading-relaxed">
-          Vas a poder preguntarle a tus conferencias lo que se dijo en ellas, y recibir la respuesta con las fichas de
-          donde sale.
-        </p>
       </div>
 
       <div className="relative flex items-end gap-3 p-5">

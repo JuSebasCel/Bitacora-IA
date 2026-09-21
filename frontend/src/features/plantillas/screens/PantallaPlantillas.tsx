@@ -184,18 +184,14 @@ export function PantallaPlantillas(): ReactElement {
 
   return (
     <div data-escena-de-aterrizaje className="flex min-h-0 flex-1 flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         {/*
-          Una línea que diga para qué es la sección, siempre. Con la galería
-          llena no queda nada más en pantalla que lo explique, y quien vuelve
-          una semana después ve hojas sin saber qué se hace con ellas.
+          Solo el título, como en Memorias y en la referencia. La línea que
+          explicaba la sección la quitó el usuario: se lee una vez y después
+          solo empuja el contenido. Para quien no sabe qué se hace aquí está
+          el botón "?", con el método entero.
         */}
-        <div className="flex flex-col gap-2">
-          <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Plantillas</h1>
-          <p className="text-base text-texto-tenue">
-            Tus diseños de Word, con lo que debe escribir la IA en cada campo.
-          </p>
-        </div>
+        <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Plantillas</h1>
 
         <div className="flex items-center gap-2">
           {/*
