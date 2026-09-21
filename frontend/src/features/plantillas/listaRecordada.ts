@@ -25,6 +25,36 @@ export function listaRecordada(): readonly Plantilla[] | null {
 
 export function recordarLista(plantillas: readonly Plantilla[]): void {
   ultimaLista = plantillas
+
+  try {
+    localStorage.setItem(CLAVE_DE_CUANTAS, String(plantillas.length))
+  } catch {
+    /* Sin almacenamiento el esqueleto cae a una sola hoja; nada más depende de esto. */
+  }
+}
+
+/*
+  Cuántas plantillas había la última vez, para que el esqueleto dibuje ese
+  número de hojas y no uno fijo.
+
+  La lista recordada muere al recargar la página, que es justo cuando se ve el
+  esqueleto; el número se guarda aparte en `localStorage` para sobrevivir a
+  eso. Solo el número: guardar las plantillas enteras pondría en el navegador
+  datos del grupo que ya viven en Supabase.
+*/
+const CLAVE_DE_CUANTAS = 'menti-vault:cuantas-plantillas'
+
+export function cuantasHabia(): number | null {
+  if (ultimaLista !== null) {
+    return ultimaLista.length
+  }
+
+  try {
+    const guardado = Number.parseInt(localStorage.getItem(CLAVE_DE_CUANTAS) ?? '', 10)
+    return Number.isNaN(guardado) ? null : guardado
+  } catch {
+    return null
+  }
 }
 
 /** Solo para pruebas: cada una empieza sin nada recordado de la anterior. */

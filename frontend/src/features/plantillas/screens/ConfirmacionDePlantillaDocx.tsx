@@ -2,7 +2,7 @@ import type { ReactElement } from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
-import { ModalDeConfirmacion, PanelDeError } from '@/shared/ui'
+import { ModalDeConfirmacion, PanelDeError, useCrecerDesdeOrigen } from '@/shared/ui'
 import { VistaPreviaDeDocx } from '../components'
 import type {
   ComportamientoSiVacio,
@@ -117,6 +117,8 @@ export function ConfirmacionDePlantillaDocx({
   const [urlDeDescarga, setUrlDeDescarga] = useState<string | null>(null)
   const [borradoAbierto, setBorradoAbierto] = useState(false)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
+  const pantalla = useRef<HTMLDivElement>(null)
+  useCrecerDesdeOrigen(pantalla)
 
   const campos = plantilla.marcadores.filter((marcador): marcador is MarcadorSimpleDeDocx => marcador.tipo === 'simple')
   const listos = campos.filter(tieneInstruccion).length
@@ -150,14 +152,13 @@ export function ConfirmacionDePlantillaDocx({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
+    <div ref={pantalla} className="flex min-h-0 flex-1 flex-col gap-6">
       <h1 className="sr-only">Plantilla: {plantilla.nombre}</h1>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Link
             to="/plantillas"
-            viewTransition
             aria-label="Volver a plantillas"
             className="flex w-fit items-center gap-1 rounded-full py-1 pr-2 text-sm text-texto-tenue transition-colors hover:text-texto"
           >
@@ -177,6 +178,12 @@ export function ConfirmacionDePlantillaDocx({
             onChange={(evento) => {
               setNombre(evento.target.value)
               alRenombrar(evento.target.value)
+            }}
+            /* Enter confirma el nombre, como en cualquier título que se edita en su sitio. */
+            onKeyDown={(evento) => {
+              if (evento.key === 'Enter') {
+                evento.currentTarget.blur()
+              }
             }}
             aria-label="Nombre de la plantilla"
             className="-mx-2 min-w-0 rounded-xl bg-transparent px-2 font-titulo text-[32px] leading-tight font-semibold text-texto transition-colors hover:bg-acento-tenue focus:bg-acento-tenue focus:outline-none"
@@ -221,16 +228,7 @@ export function ConfirmacionDePlantillaDocx({
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
         <section
           aria-label="Vista previa"
-          /* Mismo nombre que su miniatura en la galería: el navegador la hace crecer desde allí. */
-          style={{ viewTransitionName: `plantilla-${plantilla.id}` }}
-          className="flex min-h-[28rem] min-w-0 flex-1 flex-col gap-3 rounded-[24px] bg-panel p-4">
-          <p className="flex items-center gap-1.5 px-2 text-sm text-texto-tenue">
-            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
-              visibility
-            </span>
-            Vista previa · solo lectura
-          </p>
-
+          className="flex min-h-[28rem] min-w-0 flex-1 flex-col rounded-[24px] bg-panel p-4">
           <div className="sin-barra-de-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl">
             <VistaPreviaDeDocx blob={archivo} resaltarMarcadores />
           </div>

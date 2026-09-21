@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
 import { mensajeDeError } from '@/shared/errors'
-import { BotonPildora, Esqueleto, Modal, PanelDeError } from '@/shared/ui'
+import { BotonPildora, Esqueleto, Modal, PanelDeError, recordarOrigenDeApertura } from '@/shared/ui'
 import { MiniaturaDeDocx } from '../components'
 import type { Plantilla } from '../data'
 import { importarDocx } from '../editor/importarDocx'
 import { useDocxDePlantilla } from '../useDocxDePlantilla'
+import { cuantasHabia } from '../listaRecordada'
 import { usePlantillas } from '../usePlantillas'
 
 /*
@@ -162,7 +163,8 @@ export function PantallaPlantillas(): ReactElement {
 
     setAyudaAbierta(false)
     /* Recién subida, lo siguiente es decir qué va en cada campo: se entra directo a configurarla. */
-    void navigate(`/plantillas/${creada.plantilla.id}`, { viewTransition: true })
+    recordarOrigenDeApertura(botonDeSubida.current)
+    void navigate(`/plantillas/${creada.plantilla.id}`)
   }
 
   const elegirArchivo = (): void => refInput.current?.click()
@@ -237,7 +239,12 @@ export function PantallaPlantillas(): ReactElement {
       {ayudaAbierta ? null : avisoDeError}
 
       {cargando ? (
-        <Esqueleto filas={3} etiqueta="Cargando las plantillas" variante="galeria" />
+        /*
+          Tantas hojas como había la última vez, no un número fijo: tres
+          marcos para una sola plantilla prometen algo que no llega, y la
+          rejilla se encoge de golpe al cargar.
+        */
+        <Esqueleto filas={Math.max(1, cuantasHabia() ?? 1)} etiqueta="Cargando las plantillas" variante="galeria" />
       ) : codigoDeError !== null ? (
         <PanelDeError mensaje={mensajeDeError(codigoDeError)} />
       ) : plantillas.length === 0 ? (
@@ -285,10 +292,8 @@ export function PantallaPlantillas(): ReactElement {
   campo sin instrucción es uno que la IA solo podría adivinar por su nombre.
   Decirlo en la tarjeta evita tener que entrar a cada una para averiguarlo.
 
-  La hoja lleva un nombre de transición propio, el mismo que la hoja grande de
-  la pantalla de la plantilla: al abrirla, el navegador la hace crecer desde
-  aquí hasta allí en vez de cambiar de pantalla de golpe. Es el mismo gesto que
-  el modal que crece desde su botón, ahora entre dos pantallas.
+  Al pulsarla anota su caja: la pantalla de la plantilla crece desde aquí,
+  igual que un modal crece desde su botón (`shared/ui/crecerDesde.ts`).
 */
 function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement {
   const { archivo } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
@@ -307,7 +312,7 @@ function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement 
   return (
     <Link
       to={`/plantillas/${plantilla.id}`}
-      viewTransition
+      onClick={(evento) => recordarOrigenDeApertura(evento.currentTarget)}
       className="group flex flex-col gap-3 rounded-[24px] bg-panel p-3 transition-colors hover:bg-acento-tenue"
     >
       {/*
@@ -315,9 +320,7 @@ function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement 
         Word es blanco aunque la app esté en oscuro, y verlo así es lo que
         permite reconocerlo.
       */}
-      <div
-        style={{ viewTransitionName: `plantilla-${plantilla.id}` }}
-        className="relative h-56 overflow-hidden rounded-2xl bg-papel shadow-[inset_0_0_0_1px_var(--bitacora-filete)]"
+      <div className="relative h-56 overflow-hidden rounded-2xl bg-papel shadow-[inset_0_0_0_1px_var(--bitacora-filete)]"
       >
         <MiniaturaDeDocx archivo={archivo} />
       </div>
