@@ -46,8 +46,10 @@ por derecho de norma", la idea es que la resolución viene por norma: eso \
 escribes, no lo que crees que quiso decir además.
 2. Conserva las cifras, los nombres y los matices exactos. "Casi el 40%" no es \
 "alrededor del 40%", y "creemos que" no es "es".
-3. Si el texto ya se entiende bien leído, devuélvelo igual. No hay premio por \
-cambiar algo que no lo necesitaba.
+3. Devuelve SIEMPRE una versión escrita para leerse, nunca vacía. Aunque el \
+texto ya se entienda, déjalo como frase completa: mayúscula al empezar, \
+puntuación, y sin las muletillas o titubeos que traiga. Si de verdad no hay \
+nada que quitar, esa limpieza de forma es el condensado.
 4. Una o dos frases. Si hacen falta más, es que estás explicando en vez de \
 condensar.
 5. Escribe en tercera persona o impersonal solo si el original lo estaba; si \
@@ -161,13 +163,26 @@ def condensar_fichas(fichas: Sequence[Ficha], condensar: Condensador) -> tuple[F
             resultado.extend(lote)
             continue
 
+        """
+        Las que el modelo se saltó se piden una segunda vez, solas. Toda ficha
+        tiene que quedar condensada: una sin condensar se lee con los
+        titubeos del habla al lado de las demás, y el usuario lo pidió así
+        explícitamente. Antes, además, se descartaba el condensado idéntico
+        al original, y la instrucción permitía devolverlo igual: las dos
+        cosas juntas dejaban fichas sin condensar a propósito.
+        """
+        faltan = [indice for indice, condensado in enumerate(condensados) if condensado == ""]
+        if faltan:
+            try:
+                segunda = condensar([lote[indice].fragmento for indice in faltan])
+                completados = list(condensados)
+                for indice, condensado in zip(faltan, segunda):
+                    completados[indice] = condensado
+                condensados = tuple(completados)
+            except Exception as fallo:  # noqa: BLE001
+                registro.warning("condensacion: segundo intento fallido tipo=%s", type(fallo).__name__)
+
         for ficha, condensado in zip(lote, condensados):
-            """
-            Solo se guarda si de verdad cambia algo. Un condensado identico al
-            original ocupa sitio y obliga a la interfaz a decidir entre dos
-            textos iguales.
-            """
-            distinto = condensado != "" and condensado.strip() != ficha.fragmento.strip()
-            resultado.append(replace(ficha, condensado=condensado) if distinto else ficha)
+            resultado.append(replace(ficha, condensado=condensado) if condensado != "" else ficha)
 
     return tuple(resultado)
