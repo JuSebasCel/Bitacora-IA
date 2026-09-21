@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent, ReactElement, ReactNode, RefObject } from 'react'
 import { nombreDeTema } from '@/features/taxonomia'
@@ -858,6 +858,7 @@ export function PantallaArchivo({
   const [literalAbierta, setLiteralAbierta] = useState(false)
   /* La barra de audio de la ficha abierta, y el borrador de la versión escrita a mano. */
   const [audioAbierto, setAudioAbierto] = useState(false)
+  const reducirMovimiento = useReducedMotion()
   const [borrador, setBorrador] = useState('')
   const [guardandoEdicion, setGuardandoEdicion] = useState(false)
 
@@ -1418,14 +1419,30 @@ export function PantallaArchivo({
                 <span className="min-w-0 truncate">{activa.conferencia.titulo}</span>
               </p>
 
-              {puedeEscuchar && audioAbierto ? (
-                <FragmentoDeAudio
-                  idDueno={activa.conferencia.idDueno}
-                  idConferencia={activa.conferencia.id}
-                  inicio={activa.ficha.segundoInicio}
-                  fin={activa.ficha.segundoFin}
-                />
-              ) : null}
+              {/*
+                Abrir y cerrar son el mismo recorrido: la barra despliega su
+                alto al aparecer y lo recoge al irse, en vez de desaparecer de
+                golpe al pulsar la ✕.
+              */}
+              <AnimatePresence initial={false}>
+                {puedeEscuchar && audioAbierto ? (
+                  <motion.div
+                    key={activa.ficha.id}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: reducirMovimiento ? 0 : 0.32, ease: [0.37, 0.35, 0, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <FragmentoDeAudio
+                      idDueno={activa.conferencia.idDueno}
+                      idConferencia={activa.conferencia.id}
+                      inicio={activa.ficha.segundoInicio}
+                      fin={activa.ficha.segundoFin}
+                    />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
             </blockquote>
 
             {/*

@@ -52,6 +52,13 @@ export type PropsSelectorDeOpciones<T extends string> = {
    * "Proyecto" al crear una tarea). Se lee como un campo más de la columna.
    */
   completo?: boolean
+  /**
+   * Solo con `completo`: lo que se configura ("Extensión"), escrito en el
+   * campo, con el valor elegido en tenue a la derecha. Sin rótulo el campo
+   * enseña solo el valor, y en un formulario de varias opciones parecidas
+   * no se sabía cuál era cuál.
+   */
+  rotulo?: string
 }
 
 export function SelectorDeOpciones<T extends string>({
@@ -66,6 +73,7 @@ export function SelectorDeOpciones<T extends string>({
   alCrear,
   textoDeCreacion = 'Crear',
   completo = false,
+  rotulo,
 }: PropsSelectorDeOpciones<T>): ReactElement {
   const [nombre, setNombre] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -120,13 +128,20 @@ export function SelectorDeOpciones<T extends string>({
               : 'flex h-11 min-w-0 max-w-full items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion'
           }
         >
-          {/* El icono de la opción elegida si trae uno: así el campo dice qué es sin un rótulo encima. */}
-          {(elegida?.icono ?? icono) === undefined ? null : (
+          {/* Con rótulo, el icono es el del campo; sin él, el de la opción elegida si trae uno. */}
+          {(rotulo === undefined ? (elegida?.icono ?? icono) : icono) === undefined ? null : (
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
-              {elegida?.icono ?? icono}
+              {rotulo === undefined ? (elegida?.icono ?? icono) : icono}
             </span>
           )}
-          <span className="truncate">{elegida?.etiqueta ?? vacio}</span>
+          {rotulo === undefined ? (
+            <span className="truncate">{elegida?.etiqueta ?? vacio}</span>
+          ) : (
+            <>
+              <span className="shrink-0">{rotulo}</span>
+              <span className="ml-auto truncate pl-3 text-texto-tenue">{elegida?.etiqueta ?? vacio}</span>
+            </>
+          )}
           <span
             aria-hidden="true"
             className={`material-symbols-rounded icono-contorno shrink-0 text-lg opacity-60 ${completo ? 'ml-auto' : ''}`}

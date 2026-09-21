@@ -130,8 +130,8 @@ describe('ConfirmacionDePlantillaDocx', () => {
     montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE]), { alCambiarMarcadores })
 
     /* Es un campo desplegable: se abre y se elige la opción. */
-    await userEvent.click(screen.getByRole('button', { name: /^Si la charla no da para esto/ }))
-    await userEvent.click(screen.getByRole('button', { name: 'Si falta material, quitar el renglón' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Si falta material/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el renglón' }))
 
     expect(alCambiarMarcadores).toHaveBeenLastCalledWith([expect.objectContaining({ id: 'mar-1', siVacio: 'quitar' })])
   })

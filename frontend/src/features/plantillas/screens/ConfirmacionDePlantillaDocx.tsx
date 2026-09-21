@@ -54,26 +54,25 @@ const CAMPO =
 
 /*
   Las opciones de cada campo, como campos desplegables de ancho completo (los
-  de la referencia) en vez de filas de pastillas: cuatro filas de pastillas
-  con una línea de ayuda debajo de cada una saturaban el panel. Cada opción
-  se entiende sola y trae su icono, así que no hace falta rótulo encima ni
-  explicación debajo.
+  de la referencia) en vez de filas de pastillas con una línea de ayuda bajo
+  cada una, que saturaban el panel. El campo dice qué se configura
+  ("Extensión") y enseña el valor elegido en tenue; adentro se elige.
 */
 const MODOS: readonly OpcionDeSelector<ModoDeCampo>[] = [
   { valor: 'redactar', etiqueta: 'Redactado por la IA', icono: 'auto_awesome' },
-  { valor: 'cita', etiqueta: 'Cita literal de la charla', icono: 'format_quote' },
+  { valor: 'cita', etiqueta: 'Cita literal', icono: 'format_quote' },
 ]
 
 const EXTENSIONES: readonly OpcionDeSelector<ExtensionDeCampo>[] = [
-  { valor: 'breve', etiqueta: 'Texto breve', icono: 'short_text' },
+  { valor: 'breve', etiqueta: 'Breve', icono: 'short_text' },
   { valor: 'media', etiqueta: 'Un párrafo', icono: 'notes' },
   { valor: 'extensa', etiqueta: 'Varios párrafos', icono: 'article' },
 ]
 
 const FORMATOS: readonly OpcionDeSelector<FormatoDeMarcador>[] = [
-  { valor: 'parrafo', etiqueta: 'En párrafo', icono: 'subject' },
-  { valor: 'lista_vinetas', etiqueta: 'Con viñetas', icono: 'format_list_bulleted' },
-  { valor: 'lista_numerada', etiqueta: 'Numerado', icono: 'format_list_numbered' },
+  { valor: 'parrafo', etiqueta: 'Párrafo', icono: 'subject' },
+  { valor: 'lista_vinetas', etiqueta: 'Viñetas', icono: 'format_list_bulleted' },
+  { valor: 'lista_numerada', etiqueta: 'Numerada', icono: 'format_list_numbered' },
 ]
 
 /*
@@ -82,9 +81,9 @@ const FORMATOS: readonly OpcionDeSelector<FormatoDeMarcador>[] = [
   marcador `[[SI: ...]]` de Word, que envuelve lo que haga falta.
 */
 const SI_VACIO: readonly OpcionDeSelector<ComportamientoSiVacio>[] = [
-  { valor: 'dejar-vacio', etiqueta: 'Si falta material, dejarlo en blanco', icono: 'check_box_outline_blank' },
-  { valor: 'quitar', etiqueta: 'Si falta material, quitar el renglón', icono: 'backspace' },
-  { valor: 'avisar', etiqueta: 'Si falta material, avisarme', icono: 'notifications' },
+  { valor: 'dejar-vacio', etiqueta: 'Dejarlo en blanco', icono: 'check_box_outline_blank' },
+  { valor: 'quitar', etiqueta: 'Quitar el renglón', icono: 'backspace' },
+  { valor: 'avisar', etiqueta: 'Avisarme', icono: 'notifications' },
 ]
 
 /*
@@ -434,16 +433,23 @@ function CampoConfigurable({
 
           {/* Solo con la caja vacía: con algo escrito, una sugerencia pisaría el trabajo de alguien. */}
           {(marcador.instruccion ?? '').trim() === '' ? (
-            <div className="flex flex-wrap gap-1.5">
+            /*
+              Con su rótulo y con forma de botón: en color se leían como
+              etiquetas informativas, no como algo que se pulsa. El "+" y el
+              negro al pasar por encima dicen que escriben en la caja.
+            */
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="px-1 text-xs text-texto-tenue">Sugerencias</span>
               {SUGERENCIAS.map((sugerencia) => (
                 <button
                   key={sugerencia.etiqueta}
                   type="button"
                   onClick={() => alCambiar({ instruccion: sugerencia.texto })}
-                  className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
-                    CLASES_DE_PILDORA[colorPorClave(sugerencia.etiqueta)]
-                  }`}
+                  className="flex cursor-pointer items-center gap-1 rounded-full bg-acento-tenue py-1 pr-3 pl-2 text-xs font-medium text-texto transition-colors hover:bg-acento hover:text-acento-contraste"
                 >
+                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-sm">
+                    add
+                  </span>
                   {sugerencia.etiqueta}
                 </button>
               ))}
@@ -452,6 +458,8 @@ function CampoConfigurable({
 
           <SelectorDeOpciones
             completo
+            rotulo="Tipo de texto"
+            icono="edit_note"
             etiquetaAccesible="Tipo de texto"
             opciones={MODOS}
             valor={modo}
@@ -463,6 +471,8 @@ function CampoConfigurable({
             <>
               <SelectorDeOpciones
                 completo
+                rotulo="Extensión"
+                icono="straighten"
                 etiquetaAccesible="Extensión"
                 opciones={EXTENSIONES}
                 valor={marcador.extension ?? 'media'}
@@ -470,7 +480,9 @@ function CampoConfigurable({
               />
               <SelectorDeOpciones
                 completo
-                etiquetaAccesible="Cómo se presenta"
+                rotulo="Presentación"
+                icono="format_list_bulleted"
+                etiquetaAccesible="Presentación"
                 opciones={FORMATOS}
                 valor={marcador.formato}
                 alCambiar={(formato) => alCambiar({ formato })}
@@ -480,7 +492,9 @@ function CampoConfigurable({
 
           <SelectorDeOpciones
             completo
-            etiquetaAccesible="Si la charla no da para esto"
+            rotulo="Si falta material"
+            icono="report"
+            etiquetaAccesible="Si falta material"
             opciones={SI_VACIO}
             valor={siVacio}
             alCambiar={(valor) => alCambiar({ siVacio: valor })}

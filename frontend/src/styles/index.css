@@ -1051,10 +1051,6 @@
   anterior, y la que suena late. Con reducir movimiento, la regla global las
   deja quietas.
 */
-.entrada-de-fragmento {
-  animation: fragmento-entra 0.35s var(--ease-entrada) both;
-}
-
 .barra-de-onda {
   transform-origin: center;
   animation: onda-entra 0.5s cubic-bezier(0.38, 0.49, 0, 1.5) backwards;
@@ -1062,13 +1058,6 @@
 
 .barra-sonando {
   animation: onda-late 0.45s ease-in-out infinite alternate;
-}
-
-@keyframes fragmento-entra {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
 }
 
 @keyframes onda-entra {

@@ -159,7 +159,7 @@ export function FragmentoDeAudio({ idDueno, idConferencia, inicio, fin }: PropsF
   }
 
   return (
-    <div className="entrada-de-fragmento flex items-center gap-3 rounded-[24px] bg-acento-tenue py-2 pr-4 pl-2">
+    <div className="flex items-center gap-3 rounded-[24px] bg-acento-tenue py-2 pr-4 pl-2">
       <audio ref={audio} preload="none" onEnded={() => setEstado('quieto')} />
 
       <button
