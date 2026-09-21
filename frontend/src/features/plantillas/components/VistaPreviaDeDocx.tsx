@@ -7,6 +7,8 @@ export type PropsVistaPreviaDeDocx = {
   blob: Blob | null
   /** Resaltar los `[[marcadores]]` dentro de la hoja. Para configurar una plantilla, no para ver una memoria. */
   resaltarMarcadores?: boolean
+  /** Acercar y alejar la hoja: botones en la esquina y Control + rueda. Para leer una plantilla, no para una miniatura. */
+  conZoom?: boolean
 }
 
 const NOMBRE_DEL_RESALTE = 'marcadores-de-plantilla'
@@ -77,12 +79,16 @@ function resaltarMarcadoresEn(contenedor: HTMLElement): void {
   aviso: la descarga del archivo generado sigue disponible en la pantalla
   que monta este componente, así que nunca es la única salida.
 */
-export function VistaPreviaDeDocx({ blob, resaltarMarcadores = false }: PropsVistaPreviaDeDocx): ReactElement | null {
+export function VistaPreviaDeDocx({
+  blob,
+  resaltarMarcadores = false,
+  conZoom = false,
+}: PropsVistaPreviaDeDocx): ReactElement | null {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const [fallo, setFallo] = useState(false)
   const [pintada, setPintada] = useState(false)
   /* 16 px de aire: el `p-4` del contenedor, que `clientWidth` cuenta como espacio disponible. */
-  useAjusteDeHoja(contenedorRef, pintada, 'ancho', 16)
+  const { zoom, escalar, ajustar } = useAjusteDeHoja(contenedorRef, pintada, 'ancho', 16, { conRueda: conZoom })
 
   useEffect(() => {
     const contenedor = contenedorRef.current
@@ -135,10 +141,61 @@ export function VistaPreviaDeDocx({ blob, resaltarMarcadores = false }: PropsVis
     )
   }
 
-  return (
+  const hoja = (
     <div
       ref={contenedorRef}
       className="vista-previa-docx elevacion max-h-[70vh] overflow-auto rounded-sm border border-filete bg-fondo p-4"
     />
+  )
+
+  if (!conZoom) {
+    return hoja
+  }
+
+  /*
+    El control flota sobre la hoja, fuera de la caja que se desplaza: si
+    fuera dentro, al bajar por la página se iría con ella. Los botones
+    acercan en pasos de un 20 %, lo mismo que una muesca de la rueda con
+    Control, y el porcentaje, al pulsarlo, vuelve a encajar la hoja al
+    ancho.
+  */
+  return (
+    <div className="relative">
+      {hoja}
+
+      {zoom === null ? null : (
+        <div className="elevacion absolute right-3 bottom-3 flex items-center gap-0.5 rounded-full bg-panel p-1">
+          <BotonDeZoom icono="remove" etiqueta="Alejar" alPulsar={() => escalar(1 / PASO_DE_ZOOM)} />
+          <button
+            type="button"
+            onClick={ajustar}
+            aria-label="Ajustar la hoja al ancho"
+            title="Ajustar al ancho"
+            className="h-8 min-w-14 cursor-pointer rounded-full px-2 text-sm tabular-nums text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto"
+          >
+            {Math.round(zoom * 100)} %
+          </button>
+          <BotonDeZoom icono="add" etiqueta="Acercar" alPulsar={() => escalar(PASO_DE_ZOOM)} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+const PASO_DE_ZOOM = 1.2
+
+function BotonDeZoom({ icono, etiqueta, alPulsar }: { icono: string; etiqueta: string; alPulsar: () => void }): ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={alPulsar}
+      aria-label={etiqueta}
+      title={`${etiqueta} (Control + rueda)`}
+      className="flex size-8 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto"
+    >
+      <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+        {icono}
+      </span>
+    </button>
   )
 }

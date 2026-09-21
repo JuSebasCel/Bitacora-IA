@@ -230,7 +230,7 @@ export function ConfirmacionDePlantillaDocx({
           aria-label="Vista previa"
           className="flex min-h-[28rem] min-w-0 flex-1 flex-col rounded-[24px] bg-panel p-4">
           <div className="sin-barra-de-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl">
-            <VistaPreviaDeDocx blob={archivo} resaltarMarcadores />
+            <VistaPreviaDeDocx blob={archivo} resaltarMarcadores conZoom />
           </div>
         </section>
 
