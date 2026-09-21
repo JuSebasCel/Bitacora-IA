@@ -8,7 +8,14 @@ import { mensajeDeError } from '@/shared/errors'
 import { ModalDeCarga, useConferenciasVisibles } from '../components'
 import type { ResultadoCreacion } from '../components'
 import { ModalDeCompartir } from '@/features/configuracion/components'
-import { escribirCriterios, leerCriterios, listarConferencias, privacidadEfectiva } from '../query'
+import {
+  escribirCriterios,
+  invitacionesPendientes,
+  leerCriterios,
+  listarConferencias,
+  privacidadEfectiva,
+} from '../query'
+import { responderComparticion } from '@/features/configuracion/comparticiones/repositorio'
 import type { CriteriosDeListado } from '../query'
 import { actualizarConferencia, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
 import { useEtiquetas } from '../tags'
@@ -35,7 +42,13 @@ import { PantallaArchivo } from './PantallaArchivo'
 export function PantallaConferencias(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { carga, visibles, fichas, error, recargar } = useConferenciasVisibles(idUsuario)
+  const { carga, visibles, todas, fichas, error, recargar } = useConferenciasVisibles(idUsuario)
+  /*
+    Lo que te compartieron y no contestaste todavía. Vive también en la
+    campana, pero aquí es donde se buscan las conferencias: una invitación
+    que solo existe en un aviso se pierde en cuanto se cierra.
+  */
+  const invitaciones = useMemo(() => invitacionesPendientes(todas, idUsuario), [todas, idUsuario])
   const { temas, recargar: recargarTemas } = useTemas()
   const { espacio, visiblesDe, crear, asignar, quitar, eliminar } = useEtiquetas(idUsuario)
   const [params, setParams] = useSearchParams()
@@ -165,6 +178,10 @@ export function PantallaConferencias(): ReactElement {
       {/* El título y los controles viven dentro del archivo, en el mismo renglón. */}
       <PantallaArchivo
         visibles={listadas}
+        invitaciones={invitaciones}
+        alResponderInvitacion={(idConferencia, aceptar) => {
+          void responderComparticion(idConferencia, idUsuario, aceptar ? 'aceptada' : 'rechazada').then(recargar)
+        }}
         fichas={fichas}
         temas={temas}
         cargando={carga === 'cargando'}

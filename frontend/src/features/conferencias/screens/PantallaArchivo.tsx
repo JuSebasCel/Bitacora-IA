@@ -22,7 +22,7 @@ import type { ResultadoCreacion } from '../components'
 import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
-import type { Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
+import type { Conferencia, Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
 import { densidadDe } from '../carga'
 import { useDirectorio } from '../directorio'
 import {
@@ -766,6 +766,9 @@ export type PropsPantallaArchivo = {
   cargando: boolean
   error: string | null
   alCargarConferencia: () => void
+  /** Lo que te compartieron y no contestaste: se ofrece arriba de la lista, con aceptar y rechazar. */
+  invitaciones?: readonly Conferencia[]
+  alResponderInvitacion?: (idConferencia: string, aceptar: boolean) => void
   criterios: CriteriosDeListado
   /** Las etiquetas propias, que son las únicas que se pueden poner y quitar. */
   etiquetas: readonly Etiqueta[]
@@ -797,6 +800,8 @@ export function PantallaArchivo({
   cargando,
   error,
   alCargarConferencia,
+  invitaciones = [],
+  alResponderInvitacion,
   criterios,
   etiquetas,
   etiquetasDe,
@@ -847,7 +852,7 @@ export function PantallaArchivo({
   const marco = useRef<HTMLDivElement>(null)
 
   /* Sin conferencias no hay recorrido que ofrecer: ni eventos, ni temas, ni fichas. */
-  const archivoVacio = !hayConferenciasSinFiltrar && visibles.length === 0
+  const archivoVacio = !hayConferenciasSinFiltrar && visibles.length === 0 && invitaciones.length === 0
 
   const filtrosActivos = contarFiltros(criterios)
 
@@ -1122,6 +1127,43 @@ export function PantallaArchivo({
           }}
         />
       </div>
+
+      {/*
+        Las invitaciones sin contestar, arriba de todo y con su superficie de
+        acento: son lo único de la columna que pide una decisión. Hasta
+        aceptarla no se ve el contenido —RLS no deja leer sus fichas—, así
+        que no entran a la lista como una conferencia más.
+      */}
+      {eje === 'conferencias' && alResponderInvitacion !== undefined
+        ? invitaciones.map((conferencia) => (
+            <div key={conferencia.id} className="mb-2 flex flex-col gap-3 rounded-[20px] bg-ilustracion p-4">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <p className="text-sm font-medium text-ilustracion-texto">Te la compartieron</p>
+                <p className="text-base leading-snug text-texto">{conferencia.titulo}</p>
+                <p className="truncate text-sm text-texto-tenue">
+                  {conferencia.ponente} · {conferencia.evento}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => alResponderInvitacion(conferencia.id, true)}
+                  className="h-9 cursor-pointer rounded-full bg-acento px-4 text-sm font-medium text-acento-contraste"
+                >
+                  Aceptar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => alResponderInvitacion(conferencia.id, false)}
+                  className="h-9 cursor-pointer rounded-full px-4 text-sm text-texto-tenue transition-colors hover:text-texto"
+                >
+                  Rechazar
+                </button>
+              </div>
+            </div>
+          ))
+        : null}
 
       <Fila
         icono="inventory_2"
