@@ -61,8 +61,18 @@
   */
   --bitacora-fondo: oklch(0.966 0.008 85);
   --bitacora-panel: oklch(0.922 0.012 85);
-  --bitacora-filete: oklch(0.86 0.015 85);
-  --bitacora-filete-fuerte: oklch(0.7 0.018 85);
+  /*
+    Los filetes van casi sin croma, y no por gusto: el mismo matiz cálido que
+    en una superficie a L 0.96 solo dice "esto no es blanco", a L 0.70 se lee
+    como tostado. En un filete de 1px sobre campo beige eso salía como una
+    línea naranja alrededor de las columnas — se veía sobre todo en las
+    esquinas de arriba, que es donde un contorno redondeado más se nota.
+
+    La regla: el beige vive en las superficies, donde es claro y ancho; los
+    bordes lo acompañan en matiz pero casi sin saturación.
+  */
+  --bitacora-filete: oklch(0.86 0.005 85);
+  --bitacora-filete-fuerte: oklch(0.7 0.006 85);
 
   /*
     Texto. El secundario sube de contraste: a 0,43 sobre el fondo se quedaba
@@ -76,7 +86,7 @@
   --bitacora-acento: #000000;
   --bitacora-acento-fuerte: #000000;
   /* Las pastillas y los campos: se tienen que ver sobre el panel, no solo sobre el fondo. */
-  --bitacora-acento-tenue: oklch(0.885 0.014 85);
+  --bitacora-acento-tenue: oklch(0.885 0.011 85);
   --bitacora-acento-contraste: oklch(0.985 0.005 85);
 
   /*

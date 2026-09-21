@@ -5,6 +5,7 @@ import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import {
   BotonPildora,
+  Popover,
   EstadoVacioIlustrado,
   Esqueleto,
   Modal,
@@ -652,12 +653,6 @@ export function PantallaArchivo({
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   /*
-    A que conferencia se le ponen etiquetas. Por id y no por bandera, por lo
-    mismo que el detalle: el asignador se abre desde el modal de una
-    conferencia cualquiera, que no tiene por que ser la rama activa.
-  */
-  const [idParaEtiquetar, setIdParaEtiquetar] = useState<string | null>(null)
-  /*
     La conferencia abierta en su modal, por id y no por bandera: el modal se
     abre desde la fila y puede ser cualquiera, no solo la de la rama activa.
   */
@@ -708,14 +703,15 @@ export function PantallaArchivo({
     setIdEnDetalle(visible.conferencia.id)
   }
 
-  const etiquetasPropiasDeLaEtiquetada = useMemo(
+  /* Las etiquetas propias de la conferencia abierta en el modal. */
+  const etiquetasPropiasDelDetalle = useMemo(
     () =>
-      idParaEtiquetar === null
+      idEnDetalle === null
         ? []
-        : etiquetasDe(idParaEtiquetar)
+        : etiquetasDe(idEnDetalle)
             .filter((visible) => visible.propia)
             .map((visible) => visible.etiqueta.id),
-    [idParaEtiquetar, etiquetasDe],
+    [idEnDetalle, etiquetasDe],
   )
 
   const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
@@ -1572,16 +1568,53 @@ export function PantallaArchivo({
                 </AccionDeColumna>
               ) : null}
 
-              <AccionDeColumna
-                icono="label"
-                insignia={etiquetasDe(conferenciaEnDetalle.conferencia.id).filter((e) => e.propia).length}
-                onClick={() => {
-                  setIdParaEtiquetar(conferenciaEnDetalle.conferencia.id)
-                  setIdEnDetalle(null)
-                }}
+              {/*
+                Las etiquetas salen en un panel sobre el modal, no en otro
+                modal que lo sustituya.
+
+                Antes esto cerraba el detalle y abría un segundo modal: se
+                perdía de vista la conferencia que se estaba editando, y como
+                el botón que lo pidió acababa de desmontarse, el panel no tenía
+                a qué anclarse y aparecía suelto a media pantalla. Un `Popover`
+                se queda colgado de su propio botón —que sigue ahí— y se dibuja
+                por encima (z 60 contra el 50 del modal), así que poner una
+                etiqueta ya no cuesta salir de donde estabas.
+              */}
+              <Popover
+                alinear="izquierda"
+                etiquetaAccesible="Etiquetas de la conferencia"
+                claseDelBoton={`${FILA} text-texto transition-colors hover:bg-acento-tenue`}
+                claseDelPanel="w-[22rem] max-w-[90vw] p-3"
+                boton={
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-rounded icono-contorno shrink-0 text-xl"
+                    >
+                      label
+                    </span>
+                    Etiquetas
+                    {etiquetasPropiasDelDetalle.length === 0 ? null : (
+                      <span className="ml-auto rounded-full bg-acento px-2 text-sm text-acento-contraste">
+                        {etiquetasPropiasDelDetalle.length}
+                      </span>
+                    )}
+                  </>
+                }
               >
-                Etiquetas
-              </AccionDeColumna>
+                {() => (
+                  <SelectorDeEtiquetas
+                    etiquetas={etiquetas}
+                    marcadas={etiquetasPropiasDelDetalle}
+                    alAlternar={(idEtiqueta) =>
+                      alAlternarAsignacion(idEtiqueta, conferenciaEnDetalle.conferencia.id)
+                    }
+                    alCrear={alCrearEtiqueta}
+                    {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
+                    vacio="Todavía no tienes etiquetas. Crea la primera aquí abajo."
+                  />
+                )}
+              </Popover>
 
               {alEliminarConferencia === undefined ||
               conferenciaEnDetalle.procedencia !== 'propia' ? null : (
@@ -1642,38 +1675,6 @@ export function PantallaArchivo({
           «{conferenciaParaBorrar?.conferencia.titulo ?? ''}»
         </p>
       </ModalDeConfirmacion>
-
-      {/* Poner y quitar etiquetas sobre la conferencia elegida. */}
-      <Modal
-        abierto={idParaEtiquetar !== null}
-        alCerrar={() => setIdParaEtiquetar(null)}
-        titulo="Etiquetas"
-        anclaje="disparador"
-        /*
-          Se ancla al «···» de la fila y no al botón de dentro del detalle.
-
-          Ese botón se desmonta al cerrarse el detalle, y anclarse a un nodo
-          suelto da una caja de ceros: el panel aparecía pegado a la esquina de
-          arriba en vez de crecer desde algún sitio. El «···» sigue en su fila,
-          que es además de donde se viene.
-        */
-        anclaEn={botonDeDetalle}
-        ancho="angosto"
-        limites={marco}
-      >
-        <SelectorDeEtiquetas
-          etiquetas={etiquetas}
-          marcadas={etiquetasPropiasDeLaEtiquetada}
-          alAlternar={(idEtiqueta) => {
-            if (idParaEtiquetar !== null) {
-              alAlternarAsignacion(idEtiqueta, idParaEtiquetar)
-            }
-          }}
-          alCrear={alCrearEtiqueta}
-          {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
-          vacio="Todavía no tienes etiquetas. Crea la primera aquí abajo."
-        />
-      </Modal>
 
       {/*
         Lo literal frente a lo condensado, en un modal centrado que crece desde

@@ -270,16 +270,21 @@ describe('PantallaConferencias, etiquetas', () => {
         name: /Opciones de «Modelos de lenguaje aplicados a la revisión sistemática/,
       }),
     )
-    await userEvent.click(
-      await within(await screen.findByRole('dialog', { name: 'Conferencia' })).findByRole('button', {
-        name: /Etiquetas/,
-      }),
-    )
+    const detalle = await screen.findByRole('dialog', { name: 'Conferencia' })
 
-    const asignador = await screen.findByRole('dialog', { name: 'Etiquetas' })
-    const casilla = within(asignador).getByRole('checkbox', { name: 'revisión 2026' })
+    /*
+      Las etiquetas salen en un panel sobre el modal, no en otro modal: el
+      detalle sigue abierto detrás mientras se marcan. Por eso se busca la
+      casilla en el documento y no dentro de un diálogo propio — el panel no
+      lo es, y convertirlo en uno volvería a tapar la conferencia que se está
+      editando.
+    */
+    await userEvent.click(await within(detalle).findByRole('button', { name: /Etiquetas/ }))
+
+    const casilla = await screen.findByRole('checkbox', { name: 'revisión 2026' })
 
     expect(casilla).not.toBeChecked()
+    expect(detalle).toBeInTheDocument()
 
     mockearFilaDe('etiquetas_asignaciones', {
       id_etiqueta: 'etq-zul-revision',
@@ -288,7 +293,7 @@ describe('PantallaConferencias, etiquetas', () => {
     await userEvent.click(casilla)
 
     await waitFor(() => {
-      expect(within(asignador).getByRole('checkbox', { name: 'revisión 2026' })).toBeChecked()
+      expect(screen.getByRole('checkbox', { name: 'revisión 2026' })).toBeChecked()
     })
   })
 

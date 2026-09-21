@@ -69,6 +69,30 @@ const ANCHO: Record<'angosto' | 'normal', string> = {
 const MARGEN = 16
 const DURACION = 300
 
+/*
+  El disparador solo sirve de ancla si sigue vivo y ocupa espacio.
+
+  Un nodo que ya salió del documento —porque su fila se volvió a montar
+  mientras el modal estaba abierto: un guardado que recarga la lista, el sondeo
+  del análisis, un reordenamiento— devuelve `getBoundingClientRect()` con todo
+  a cero. Y cero no es un valor neutro aquí: el FLIP lo lee como "el botón está
+  en la esquina superior izquierda y mide nada", así que al cerrar el modal se
+  encogía hacia esa esquina, que es justo donde está el título de la pantalla.
+  Parecía que el modal se metiera dentro del cabezal.
+
+  Sin ancla utilizable no se inventa una: el modal se funde donde está, que es
+  el comportamiento honesto cuando ya no se sabe de dónde vino.
+*/
+function anclaUtilizable(elemento: HTMLElement | null | undefined): DOMRect | null {
+  if (!elemento || !elemento.isConnected) {
+    return null
+  }
+
+  const caja = elemento.getBoundingClientRect()
+
+  return caja.width > 0 && caja.height > 0 ? caja : null
+}
+
 export function Modal({
   abierto,
   alCerrar,
@@ -102,10 +126,10 @@ export function Modal({
     ventana.style.filter = ''
     ventana.style.opacity = ''
 
-    const disparador = anclaEn?.current
+    const ancla = anclaUtilizable(anclaEn?.current)
 
-    if (anclaje === 'disparador' && disparador) {
-      const caja = disparador.getBoundingClientRect()
+    if (anclaje === 'disparador' && ancla !== null) {
+      const caja = ancla
       ventana.style.position = 'absolute'
       ventana.style.top = `${caja.top}px`
       ventana.style.right = `${window.innerWidth - caja.right}px`
@@ -122,12 +146,12 @@ export function Modal({
       }
     }
 
-    if (!disparador) {
+    if (ancla === null) {
       return
     }
 
     const destino = ventana.getBoundingClientRect()
-    const origen = disparador.getBoundingClientRect()
+    const origen = ancla
 
     if (destino.width === 0 || destino.height === 0) {
       return
@@ -178,15 +202,14 @@ export function Modal({
       ventana.style.transform = ''
       void ventana.offsetWidth
 
-      const disparador = anclaEn?.current
+      const origen = anclaUtilizable(anclaEn?.current)
       const destino = ventana.getBoundingClientRect()
 
       ventana.style.transition = `transform ${duracion}ms var(--ease-entrada), filter ${duracion}ms ease, opacity ${duracion}ms ease`
       ventana.style.filter = 'blur(32px)'
       ventana.style.opacity = '0'
 
-      if (disparador) {
-        const origen = disparador.getBoundingClientRect()
+      if (origen !== null && destino.width > 0 && destino.height > 0) {
         const dx = origen.left + origen.width / 2 - (destino.left + destino.width / 2)
         const dy = origen.top + origen.height / 2 - (destino.top + destino.height / 2)
         ventana.style.transform = `translate(${dx}px, ${dy}px) scale(${origen.width / destino.width}, ${origen.height / destino.height})`
@@ -194,7 +217,20 @@ export function Modal({
     }
 
     if (!sinMovimiento && velo !== null) {
-      velo.style.transition = `opacity ${duracion}ms ease, backdrop-filter ${duracion}ms ease`
+      /*
+        El velo se va DESPUÉS que la ventana, no a la vez.
+
+        Yéndose juntos, el desenfoque del fondo se levantaba mientras el modal
+        todavía estaba encogiéndose encima: durante un instante se veía el
+        título de la pantalla nítido y medio tapado por un modal a medio
+        cerrar. Se retrasa el arranque del velo la mayor parte del recorrido y
+        luego se va rápido, así que el fondo solo se destapa cuando ya no hay
+        nada delante. El total no cambia.
+      */
+      const espera = Math.round(duracion * 0.55)
+      const fundido = duracion - espera
+
+      velo.style.transition = `opacity ${fundido}ms ease ${espera}ms, backdrop-filter ${fundido}ms ease ${espera}ms`
       velo.style.opacity = '0'
       velo.style.backdropFilter = 'blur(0px)'
     }
