@@ -18,13 +18,20 @@ import type { Plantilla } from './data'
   las pruebas de plantillas terminaban hablando con un Supabase inexistente.
 */
 let ultimaLista: readonly Plantilla[] | null = null
+/*
+  De quién es la lista recordada. Desde que las plantillas son privadas por
+  cuenta, al cambiar de cuenta en la misma pestaña la lista de la anterior
+  no puede asomarse ni un instante.
+*/
+let duenoDeLaLista: string | null = null
 
-export function listaRecordada(): readonly Plantilla[] | null {
-  return ultimaLista
+export function listaRecordada(idUsuario: string): readonly Plantilla[] | null {
+  return duenoDeLaLista === idUsuario ? ultimaLista : null
 }
 
-export function recordarLista(plantillas: readonly Plantilla[]): void {
+export function recordarLista(idUsuario: string, plantillas: readonly Plantilla[]): void {
   ultimaLista = plantillas
+  duenoDeLaLista = idUsuario
 
   try {
     localStorage.setItem(CLAVE_DE_CUANTAS, String(plantillas.length))
@@ -40,7 +47,7 @@ export function recordarLista(plantillas: readonly Plantilla[]): void {
   La lista recordada muere al recargar la página, que es justo cuando se ve el
   esqueleto; el número se guarda aparte en `localStorage` para sobrevivir a
   eso. Solo el número: guardar las plantillas enteras pondría en el navegador
-  datos del grupo que ya viven en Supabase.
+  datos de la cuenta que ya viven en Supabase.
 */
 const CLAVE_DE_CUANTAS = 'menti-vault:cuantas-plantillas'
 
@@ -60,4 +67,5 @@ export function cuantasHabia(): number | null {
 /** Solo para pruebas: cada una empieza sin nada recordado de la anterior. */
 export function olvidarPlantillasPorPruebas(): void {
   ultimaLista = null
+  duenoDeLaLista = null
 }

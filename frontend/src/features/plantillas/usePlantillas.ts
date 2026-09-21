@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { ContextoSesion } from '@/features/auth/session/contexto'
 import type { CodigoError } from '@/shared/errors'
 import type { MarcadorDeDocx, Plantilla } from './data'
 import {
@@ -19,10 +20,11 @@ import {
 import { listaRecordada, recordarLista } from './listaRecordada'
 
 /*
-  Estado de las plantillas del grupo contra Supabase (B6). Sigue apoyándose en
+  Estado de las plantillas de quien mira contra Supabase (B6). Sigue apoyándose en
   las funciones puras de `plantillas.ts` para decidir *qué* queda guardado, y
   solo cambia *dónde*: antes `almacenamiento.ts` sobre `sessionStorage`, ahora
-  `repositorio.ts`. Sin `idUsuario`: las plantillas son del grupo entero.
+  `repositorio.ts`. Sin filtrar por cuenta aquí: desde que son privadas, RLS
+  ya devuelve solo las de quien pregunta.
 
   Estado `cargando` explícito, mismo motivo que `useApiKey` en B2 y que
   `SessionProvider` en B1: la lectura pasó a ser de red, y sin este estado el
@@ -67,9 +69,16 @@ export type ValorDePlantillas = {
 }
 
 export function usePlantillas(): ValorDePlantillas {
-  const [plantillas, setPlantillas] = useState<readonly Plantilla[]>(() => listaRecordada() ?? [])
+  /*
+    El contexto directo y no `useSession()`: este gancho también se prueba
+    suelto, sin proveedor, y ahí basta con un dueño vacío. RLS ya limita la
+    lista a las plantillas de quien pregunta; el id solo separa la lista
+    recordada de una cuenta de la de otra.
+  */
+  const idUsuario = useContext(ContextoSesion)?.usuario?.id ?? ''
+  const [plantillas, setPlantillas] = useState<readonly Plantilla[]>(() => listaRecordada(idUsuario) ?? [])
   /* Con algo recordado no hay nada que esperar: se enseña y se relee detrás. */
-  const [cargando, setCargando] = useState(listaRecordada() === null)
+  const [cargando, setCargando] = useState(listaRecordada(idUsuario) === null)
   const [codigoDeError, setCodigoDeError] = useState<CodigoError | null>(null)
 
   /*
@@ -111,14 +120,14 @@ export function usePlantillas(): ValorDePlantillas {
     return () => {
       cancelado = true
     }
-  }, [])
+  }, [idUsuario])
 
   /* Lo que se ve es lo que se recuerda, también tras cada escritura optimista. */
   useEffect(() => {
     if (!cargando) {
-      recordarLista(plantillas)
+      recordarLista(idUsuario, plantillas)
     }
-  }, [plantillas, cargando])
+  }, [plantillas, cargando, idUsuario])
 
   /*
     Al desmontar se manda de inmediato lo que quedara pendiente, sin esperar al
