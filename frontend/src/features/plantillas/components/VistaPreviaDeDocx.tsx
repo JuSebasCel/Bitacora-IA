@@ -74,8 +74,8 @@ function marcadoresEn(contenedor: HTMLElement): Range[] {
 }
 
 /* Aire de la píldora alrededor del texto, en píxeles de la hoja a tamaño real. */
-const HOLGURA_HORIZONTAL = 5
-const HOLGURA_VERTICAL = 1
+const HOLGURA_HORIZONTAL = 8
+const HOLGURA_VERTICAL = 3
 
 /*
   Una píldora detrás de cada marcador, como capa aparte dentro de la hoja.
@@ -83,9 +83,15 @@ const HOLGURA_VERTICAL = 1
   `::highlight` solo deja cambiar colores: sin radio ni relleno, el fondo era
   un rectángulo pegado a las letras, y se veía como texto subrayado a
   rotulador. Las píldoras se miden sobre los rangos ya pintados y se colocan
-  en coordenadas de la hoja a tamaño real, dividiendo por el zoom que tenga
+  en coordenadas de la hoja a tamaño real, dividiendo por la escala que tenga
   en ese momento: así acompañan a la hoja cuando se acerca o se aleja sin
-  tener que volver a medirlas. Van detrás del texto (`z-index: -1`, con la
+  tener que volver a medirlas.
+
+  La escala se saca por eje, comparando la caja en pantalla con
+  `offsetWidth`/`offsetHeight`, que no ven ni el zoom ni las
+  transformaciones. Con una sola escala salían píldoras de 52 px de alto:
+  la hoja suele terminar de pintarse mientras la pantalla todavía crece
+  desde su tarjeta, y ese crecimiento escala distinto en ancho y en alto. Van detrás del texto (`z-index: -1`, con la
   hoja aislada como contexto de apilamiento; ver `index.css`).
 
   Un marcador que Word partió en varios tramos da un rectángulo por tramo; se
@@ -96,14 +102,14 @@ function dibujarPildoras(contenedor: HTMLElement, rangos: readonly Range[]): voi
 
   for (const rango of rangos) {
     const hoja = rango.startContainer.parentElement?.closest<HTMLElement>('section.docx')
-    const anchoNatural = Number.parseFloat(hoja?.style.width ?? '')
-    if (hoja === null || hoja === undefined || !Number.isFinite(anchoNatural) || anchoNatural <= 0) {
+    if (hoja === null || hoja === undefined || hoja.offsetWidth === 0 || hoja.offsetHeight === 0) {
       continue
     }
 
     const caja = hoja.getBoundingClientRect()
-    const escala = caja.width / (hoja.style.width.endsWith('pt') ? (anchoNatural * 96) / 72 : anchoNatural)
-    if (escala <= 0) {
+    const escalaX = caja.width / hoja.offsetWidth
+    const escalaY = caja.height / hoja.offsetHeight
+    if (escalaX <= 0 || escalaY <= 0) {
       continue
     }
 
@@ -123,10 +129,10 @@ function dibujarPildoras(contenedor: HTMLElement, rangos: readonly Range[]): voi
     for (const renglon of renglones) {
       const pildora = document.createElement('div')
       pildora.className = 'pildora-de-marcador'
-      pildora.style.left = `${(renglon.left - caja.left) / escala - HOLGURA_HORIZONTAL}px`
-      pildora.style.top = `${(renglon.top - caja.top) / escala - HOLGURA_VERTICAL}px`
-      pildora.style.width = `${renglon.width / escala + HOLGURA_HORIZONTAL * 2}px`
-      pildora.style.height = `${renglon.height / escala + HOLGURA_VERTICAL * 2}px`
+      pildora.style.left = `${(renglon.left - caja.left) / escalaX - HOLGURA_HORIZONTAL}px`
+      pildora.style.top = `${(renglon.top - caja.top) / escalaY - HOLGURA_VERTICAL}px`
+      pildora.style.width = `${renglon.width / escalaX + HOLGURA_HORIZONTAL * 2}px`
+      pildora.style.height = `${renglon.height / escalaY + HOLGURA_VERTICAL * 2}px`
       hoja.appendChild(pildora)
     }
   }

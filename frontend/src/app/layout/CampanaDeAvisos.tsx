@@ -76,6 +76,52 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
 
   const total = invitaciones.length + respuestas.length
 
+  /*
+    Cuando llega algo nuevo, la campana suena: se balancea como colgada de
+    su argolla y suelta una onda en el azul de acento. Una vez por llegada,
+    no en bucle: un aviso que se mueve sin parar se deja de mirar, y además
+    distrae de lo que se está haciendo. Por eso solo se dispara cuando el
+    total sube, no cada vez que se vuelve a consultar el mismo número.
+
+    El primer recuento también cuenta como llegada si trae algo: al entrar
+    en la app con avisos pendientes, es la forma de enterarse.
+  */
+  const icono = useRef<HTMLSpanElement>(null)
+  const onda = useRef<HTMLSpanElement>(null)
+  const totalAnterior = useRef(0)
+
+  useEffect(() => {
+    const subio = total > totalAnterior.current
+    totalAnterior.current = total
+
+    const sinMovimiento =
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!subio || sinMovimiento || typeof icono.current?.animate !== 'function') {
+      return
+    }
+
+    icono.current.animate(
+      [
+        { transform: 'rotate(0deg)' },
+        { transform: 'rotate(16deg)', offset: 0.15 },
+        { transform: 'rotate(-13deg)', offset: 0.32 },
+        { transform: 'rotate(9deg)', offset: 0.5 },
+        { transform: 'rotate(-5deg)', offset: 0.68 },
+        { transform: 'rotate(2deg)', offset: 0.84 },
+        { transform: 'rotate(0deg)' },
+      ],
+      { duration: 700, easing: 'ease-out' },
+    )
+
+    onda.current?.animate(
+      [
+        { transform: 'scale(0.7)', opacity: 0.55 },
+        { transform: 'scale(1.9)', opacity: 0 },
+      ],
+      { duration: 750, easing: 'cubic-bezier(0.2, 0.6, 0.3, 1)' },
+    )
+  }, [total])
+
   async function responder(idConferencia: string, aceptar: boolean): Promise<void> {
     if (respondiendo.has(idConferencia)) {
       return
@@ -107,9 +153,21 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
           setAbierta(true)
         }}
         aria-label={total === 0 ? 'Notificaciones' : `Notificaciones, ${total} sin leer`}
-        className="relative mt-2 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto"
+        className="relative flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto"
       >
-        <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
+        {/* La onda, quieta e invisible hasta que suena: `opacity-0` es su estado de reposo. */}
+        <span
+          ref={onda}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-full border-2 border-[color:var(--bitacora-ilustracion-texto)] opacity-0"
+        />
+
+        {/* El eje del balanceo, arriba: una campana se mueve desde la argolla, no desde el centro. */}
+        <span
+          ref={icono}
+          aria-hidden="true"
+          className="material-symbols-rounded icono-contorno origin-top text-xl"
+        >
           notifications
         </span>
 

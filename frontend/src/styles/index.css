@@ -484,6 +484,14 @@
     z-index: -1;
     border-radius: 9999px;
     background: var(--bitacora-ilustracion);
+    /*
+      Un borde fino del mismo azul, más hondo, y una sombra corta: la píldora
+      se lee como una pieza puesta sobre la hoja, un hueco por rellenar, y no
+      como texto pintado con rotulador.
+    */
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklch, var(--bitacora-ilustracion-texto) 22%, transparent),
+      0 1px 3px oklch(0 0 0 / 0.14);
     pointer-events: none;
   }
 
