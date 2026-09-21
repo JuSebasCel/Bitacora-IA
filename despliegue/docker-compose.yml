@@ -1,0 +1,36 @@
+# El backend en el servidor: la API y Caddy delante, con HTTPS automático.
+#
+# Se levanta desde esta carpeta con `docker compose up -d --build`. Caddy
+# pide y renueva solo el certificado de Let's Encrypt para el dominio de la
+# API (`DOMINIO_API` en despliegue/.env), así que no hay que tocar
+# certificados nunca.
+
+services:
+  api:
+    build: ../backend
+    env_file: ../backend/.env
+    restart: unless-stopped
+    # Solo la ve Caddy, por la red interna: el puerto 8000 no se abre al mundo.
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO_API: ${DOMINIO_API}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - datos_de_caddy:/data
+      - configuracion_de_caddy:/config
+    depends_on:
+      - api
+
+volumes:
+  # Aquí vive el certificado: sin volumen, cada reinicio pediría uno nuevo
+  # y Let's Encrypt limita cuántos se pueden pedir por semana.
+  datos_de_caddy:
+  configuracion_de_caddy:

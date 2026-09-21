@@ -1,0 +1,8 @@
+# Nada de esto hace falta dentro de la imagen, y .env no debe entrar nunca:
+# las variables llegan por `env_file` en docker-compose, no horneadas.
+.venv
+.env
+__pycache__
+**/__pycache__
+.pytest_cache
+tests

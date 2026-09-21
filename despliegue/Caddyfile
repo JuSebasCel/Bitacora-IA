@@ -1,0 +1,11 @@
+# HTTPS automático para la API. El dominio llega por la variable DOMINIO_API
+# (por ejemplo, api.mentivault.com), definida en despliegue/.env.
+{$DOMINIO_API} {
+	# Un audio de conferencia no pasa por aquí (va directo a Supabase), pero
+	# el .docx de una memoria para convertir a PDF sí: hasta 25 MB.
+	request_body {
+		max_size 30MB
+	}
+
+	reverse_proxy api:8000
+}
