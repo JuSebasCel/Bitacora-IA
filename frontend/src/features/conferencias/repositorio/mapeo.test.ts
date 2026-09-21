@@ -210,6 +210,8 @@ describe('mapearFicha', () => {
       fragmento: 'El dato nunca es neutral.',
       /* La fila no trae la columna: es una escrita antes de que existiera, y cae a vacio. */
       condensado: '',
+      editado: '',
+      editadaEl: null,
       hablante: 'Mariana Escobar',
       segundoInicio: 120,
       segundoFin: 148,

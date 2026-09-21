@@ -3,6 +3,7 @@
 export { AsignadorDeEtiquetas } from './AsignadorDeEtiquetas'
 export type { ResultadoCreacion } from './CreadorDeEtiqueta'
 export { CreadorDeEtiqueta } from './CreadorDeEtiqueta'
+export { FragmentoDeAudio } from './FragmentoDeAudio'
 export { ModalDeCarga } from './ModalDeCarga'
 export type { PropsModalDeCarga } from './ModalDeCarga'
 export { SelectorDeEtiquetas } from './SelectorDeEtiquetas'

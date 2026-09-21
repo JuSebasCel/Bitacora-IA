@@ -44,3 +44,5 @@ export type { OpcionDeSelector, PropsSelectorDeOpciones } from './SelectorDeOpci
 export { SelectorDeVista } from './SelectorDeVista'
 export type { OpcionDeVista, PropsSelectorDeVista } from './SelectorDeVista'
 export { Logo, MarcaDeMenti } from './Logo'
+export { CLASES_DE_PILDORA, colorPorClave } from './colorDePildora'
+export type { ColorDePildora } from './colorDePildora'

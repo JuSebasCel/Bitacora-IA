@@ -69,6 +69,9 @@ export type FilaDeFicha = {
   readonly fragmento: string
   /* Ausente en las filas escritas antes de la migración que añadió la columna. */
   readonly condensado?: string | null
+  /* Ausentes antes de la migración 20260922120000. */
+  readonly editado?: string | null
+  readonly editada_el?: string | null
   readonly hablante: string
   readonly segundo_inicio: number
   readonly segundo_fin: number
@@ -193,6 +196,8 @@ export function mapearFicha(fila: FilaDeFicha): Ficha | null {
     idConferencia: fila.id_conferencia,
     fragmento: fila.fragmento,
     condensado: fila.condensado ?? '',
+    editado: fila.editado ?? '',
+    editadaEl: fila.editada_el ?? null,
     hablante: fila.hablante,
     segundoInicio: fila.segundo_inicio,
     segundoFin: fila.segundo_fin,

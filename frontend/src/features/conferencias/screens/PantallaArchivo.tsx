@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent, ReactElement, ReactNode, RefObject } from 'react'
 import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
@@ -7,6 +7,8 @@ import {
   BotonPildora,
   Popover,
   EstadoVacioIlustrado,
+  CLASES_DE_PILDORA,
+  colorPorClave,
   Esqueleto,
   hoyEnIso,
   Modal,
@@ -16,10 +18,10 @@ import {
   PanelDeError,
   SelectorDeVista,
 } from '@/shared/ui'
-import type { OpcionDeVista } from '@/shared/ui'
+import type { ColorDePildora, OpcionDeVista } from '@/shared/ui'
 import { mensajeDeError } from '@/shared/errors'
 import type { ResultadoCreacion } from '../components'
-import { SelectorDeEtiquetas } from '../components'
+import { FragmentoDeAudio, SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Conferencia, Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
@@ -29,6 +31,7 @@ import {
   CRITERIOS_POR_DEFECTO,
   fichasDelCatalogo,
   fueCondensada,
+  fueEditada,
   ordenarEventos,
   ordenarFichas,
   textoDeFicha,
@@ -294,6 +297,21 @@ const ORDENES_DE_FICHAS: readonly { valor: OrdenDeFichas; etiqueta: string }[] =
   { valor: 'tipo', etiqueta: 'Por tipo' },
 ]
 
+/*
+  El color de cada tipo de ficha, por lo que significa y siempre el mismo:
+  así se reconoce el tipo de un vistazo antes de leer el rótulo. El ámbar va
+  al dato de impacto (la cifra que se busca) y el rosa a la cita literal (lo
+  que no se puede tocar).
+*/
+const COLOR_DE_TIPO: Record<Ficha['tipoDeUnidad'], ColorDePildora> = {
+  metodo: 'azul',
+  estrategia: 'verde',
+  'dato-de-impacto': 'ambar',
+  'cita-textual': 'rosa',
+  postura: 'violeta',
+  'fase-del-trabajo': 'turquesa',
+}
+
 /* Cinco opciones son demasiadas para un segmentado: van como pastillas de una sola elección. */
 const ESTADOS: readonly { valor: FiltroDeEstado; etiqueta: string }[] = [
   { valor: 'todos', etiqueta: 'Cualquier estado' },
@@ -505,9 +523,7 @@ function Fila({
               */
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
-                  activa
-                    ? 'bg-ilustracion-texto/15'
-                    : 'text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete-fuerte)]'
+                  activa ? 'bg-ilustracion-texto/15' : CLASES_DE_PILDORA.violeta
                 }`}
               >
                 {cuota}
@@ -522,7 +538,7 @@ function Fila({
                   activa
                     ? 'bg-ilustracion-texto/15'
                     : propia
-                      ? 'bg-acento-tenue text-texto-tenue'
+                      ? CLASES_DE_PILDORA[colorPorClave(etiqueta.id)]
                       : 'text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete)]'
                 }`}
               >
@@ -791,6 +807,8 @@ export type PropsPantallaArchivo = {
     cambio: { titulo: string; ponente: string; fechaDelEvento: string; descripcion: string },
   ) => void
   alEliminarConferencia?: (idConferencia: string) => void
+  /** Guarda la versión escrita a mano de una ficha (texto vacío la quita). Solo sobre las propias. */
+  alEditarFicha?: (idFicha: string, texto: string) => Promise<boolean>
 }
 
 export function PantallaArchivo({
@@ -817,6 +835,7 @@ export function PantallaArchivo({
   alAnalizar,
   alRenombrarConferencia,
   alEliminarConferencia,
+  alEditarFicha,
 }: PropsPantallaArchivo): ReactElement {
   const [evento, setEvento] = useState<string>(TODOS_EVENTOS)
   const [eje, setEje] = useState<Eje>('conferencias')
@@ -836,6 +855,14 @@ export function PantallaArchivo({
   const [idParaBorrar, setIdParaBorrar] = useState<string | null>(null)
   const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '', descripcion: '' })
   const [literalAbierta, setLiteralAbierta] = useState(false)
+  /* La barra de audio de la ficha abierta, y el borrador de la versión escrita a mano. */
+  const [audioAbierto, setAudioAbierto] = useState(false)
+  const [borrador, setBorrador] = useState('')
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
+
+  useEffect(() => {
+    setAudioAbierto(false)
+  }, [idFicha])
   const [vista, setVista] = useState<Vista>('columnas')
   /* Los ponentes ya creados, para cambiar el de una conferencia eligiéndolo en vez de reescribir su nombre. */
   const { eventos: eventosDelDirectorio, ponentes: ponentesDelDirectorio, crearPonente } = useDirectorio()
@@ -1004,6 +1031,15 @@ export function PantallaArchivo({
   }
 
   const activa: FichaDelCatalogo | undefined = fichasListadas.find((e) => e.ficha.id === idFicha)
+  /*
+    Solo sobre las propias: el audio vive en la carpeta del dueño, que un
+    invitado no puede leer, y editar una ficha ajena lo impide RLS. Ofrecer
+    cualquiera de las dos cosas a un invitado sería prometer algo que falla.
+  */
+  const activaEsPropia =
+    activa !== undefined &&
+    visibles.find((visible) => visible.conferencia.id === activa.conferencia.id)?.procedencia === 'propia'
+  const puedeEscuchar = activaEsPropia && activa.conferencia.fuente === 'audio'
 
   /* En columnas, la de eventos se aparta al bajar al tercer nivel. En completa se ocultan todas menos la del nivel. */
   const enCompleta = vista === 'completa'
@@ -1287,7 +1323,8 @@ export function PantallaArchivo({
         fichasListadas.map((entrada) => (
           <Fila
             key={entrada.ficha.id}
-            icono={ICONO_DE_FICHA}
+            /* Una ficha corregida a mano se distingue en la lista, sin tener que abrirla. */
+            icono={fueEditada(entrada.ficha) ? 'edit_note' : ICONO_DE_FICHA}
             /* Buscando en todo el archivo hace falta saber de dónde sale cada resultado. */
             secundario={
               buscandoEnTodo
@@ -1356,10 +1393,38 @@ export function PantallaArchivo({
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-texto-tenue">
                 <span className="text-texto">{activa.ficha.hablante}</span>
                 <span aria-hidden="true">·</span>
-                <span className="coordenada">{formatearTimestamp(activa.ficha.segundoInicio)}</span>
+                {/*
+                  El minuto se escucha: pulsarlo abre la barra con el tramo de
+                  audio de esta ficha. Es la prueba más directa de lo que se
+                  dijo, más que cualquier transcripción.
+                */}
+                {puedeEscuchar ? (
+                  <button
+                    type="button"
+                    onClick={() => setAudioAbierto((abierto) => !abierto)}
+                    aria-expanded={audioAbierto}
+                    className="coordenada flex cursor-pointer items-center gap-1 rounded-full bg-acento-tenue px-2.5 py-0.5 text-texto transition-colors hover:bg-ilustracion"
+                  >
+                    <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
+                      {audioAbierto ? 'close' : 'play_arrow'}
+                    </span>
+                    {formatearTimestamp(activa.ficha.segundoInicio)}
+                  </button>
+                ) : (
+                  <span className="coordenada">{formatearTimestamp(activa.ficha.segundoInicio)}</span>
+                )}
                 <span aria-hidden="true">·</span>
                 <span className="min-w-0 truncate">{activa.conferencia.titulo}</span>
               </p>
+
+              {puedeEscuchar && audioAbierto ? (
+                <FragmentoDeAudio
+                  idDueno={activa.conferencia.idDueno}
+                  idConferencia={activa.conferencia.id}
+                  inicio={activa.ficha.segundoInicio}
+                  fin={activa.ficha.segundoFin}
+                />
+              ) : null}
             </blockquote>
 
             {/*
@@ -1372,40 +1437,23 @@ export function PantallaArchivo({
               para que se siga leyendo primero el valor.
             */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
-                <span className="text-texto-tenue">Tipo · </span>
+              <span className={`rounded-full px-3 py-1.5 text-sm ${CLASES_DE_PILDORA[COLOR_DE_TIPO[activa.ficha.tipoDeUnidad]]}`}>
+                <span className="opacity-70">Tipo · </span>
                 {TIPO_EN_SINGULAR[activa.ficha.tipoDeUnidad]}
               </span>
-              <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
-                <span className="text-texto-tenue">Tema · </span>
+              <span className={`rounded-full px-3 py-1.5 text-sm ${CLASES_DE_PILDORA[colorPorClave(activa.ficha.idTema)]}`}>
+                <span className="opacity-70">Tema · </span>
                 {nombreDeTema(temas, activa.ficha.idTema)}
               </span>
 
-              {/*
-                Siempre, en toda ficha.
-
-                Antes salía solo si el análisis había reescrito la frase, y eso
-                dejaba fichas —las analizadas antes de que la condensación
-                existiera, y las que ya se entendían leídas— sin manera de ver
-                en qué contexto se dijo la cita. Poder volver a lo que se dijo
-                no es una consecuencia de que hubiera algo que condensar: es la
-                promesa del producto, y tiene que estar en todas.
-
-                Y se ve pulsable: relleno de acento en vez del gris de las
-                otras dos. Al lado de dos pastillas que solo informan, una que
-                además abre algo tiene que decirlo por su forma.
-              */}
-              <button
-                ref={botonDeLiteral}
-                type="button"
-                onClick={() => setLiteralAbierta(true)}
-                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-acento px-3 text-sm font-medium text-acento-contraste transition-opacity hover:opacity-85"
-              >
-                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
-                  format_quote
+              {fueEditada(activa.ficha) ? (
+                <span className="flex items-center gap-1 rounded-full bg-pildora-ambar px-3 py-1.5 text-sm text-pildora-ambar-texto">
+                  <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
+                    edit
+                  </span>
+                  Modificada
                 </span>
-                Cómo se dijo
-              </button>
+              ) : null}
             </div>
 
           </article>
@@ -1414,6 +1462,28 @@ export function PantallaArchivo({
 
       {activa === undefined ? null : (
         <div className="flex flex-col pt-4">
+          {/*
+            La transcripción original, en un sitio fijo: el pie del detalle.
+            Iba en la fila de pastillas, justo debajo del texto, y como cada
+            ficha mide distinto el botón cambiaba de altura de una a otra.
+            Aquí está siempre donde se lo dejó. Siempre, en toda ficha: volver
+            a lo que se dijo es la promesa del producto, haya o no condensado.
+          */}
+          <button
+            ref={botonDeLiteral}
+            type="button"
+            onClick={() => {
+              setBorrador(textoDeFicha(activa.ficha))
+              setLiteralAbierta(true)
+            }}
+            className="mb-2 flex h-10 w-fit cursor-pointer items-center gap-2 rounded-full bg-acento px-4 text-sm font-medium text-acento-contraste transition-opacity hover:opacity-85"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+              format_quote
+            </span>
+            Transcripción original
+          </button>
+
           {/*
             "Ir a la conferencia" no navega fuera: lleva el propio explorador a
             esa charla. Antes salía a otra ruta y se perdía todo el recorrido,
@@ -1961,22 +2031,21 @@ export function PantallaArchivo({
       </ModalDeConfirmacion>
 
       {/*
-        Lo literal frente a lo condensado, en un modal centrado que crece desde
-        el propio boton.
+        La transcripción original frente a lo que se lee, en un modal centrado
+        que crece desde su botón. Se llamaba "Cómo se dijo", y no decía que ahí
+        estaba el texto de la transcripción.
 
-        Va en este orden y no al reves: primero lo que se dijo, y despues lo
-        que se lee. Quien abre esto viene a comprobar que el condensado no le
-        anadio nada, y para eso hace falta leer el original antes que la
-        version. Lo literal conserva las comillas y su contexto alrededor; lo
-        condensado no lleva comillas porque nadie lo dijo asi.
+        Tres versiones, en el orden en que se revisan: lo que se dijo
+        (intocable, con su contexto alrededor), lo que condensó el análisis, y
+        la versión escrita a mano. La tercera es la única que se edita, y
+        convive con las otras dos en vez de pisarlas: el día que alguien quiera
+        saber qué se dijo o qué entendió el análisis, sigue ahí.
       */}
       <Modal
         abierto={literalAbierta}
         alCerrar={() => setLiteralAbierta(false)}
-        titulo="Cómo se dijo"
-        /* Ancho, no angosto: son dos textos que se comparan, y en una columna
-           de 440px la literal quedaba como una cinta altisima que obligaba a
-           desplazarse para llegar a lo que se compara con ella. */
+        titulo="Transcripción original"
+        /* Ancho, no angosto: son textos que se comparan. */
         ancho="normal"
         anclaEn={botonDeLiteral}
         limites={marco}
@@ -1990,26 +2059,71 @@ export function PantallaArchivo({
               </div>
             </section>
 
-            {/*
-              La segunda mitad solo existe si de verdad hay dos versiones.
-              Cuando la frase ya se entendía leída, el análisis la devolvió
-              igual, y enseñar el mismo texto dos veces no compara nada: lo que
-              se viene a ver entonces es el contexto de arriba.
-            */}
             {fueCondensada(activa.ficha) ? (
               <section className="flex flex-col gap-2">
-                <h3 className="text-sm font-medium text-texto-tenue">Cómo se lee aquí</h3>
+                <h3 className="text-sm font-medium text-texto-tenue">Condensada por el análisis</h3>
                 <div className="rounded-[20px] bg-acento-tenue p-4">
                   <p className="text-[19px] leading-relaxed text-texto">{activa.ficha.condensado}</p>
                 </div>
               </section>
             ) : null}
 
-            <p className="text-sm leading-relaxed text-texto-tenue">
-              {fueCondensada(activa.ficha)
-                ? 'La versión de arriba es la que se cita: el análisis tiene prohibido tocarla. La de abajo es la misma idea sin las repeticiones del habla, y es la que se enseña por defecto.'
-                : 'Esta ficha se lee igual que se dijo: el análisis no necesitó reescribirla. En negrita, lo citado; alrededor, lo que se dijo antes y después.'}
-            </p>
+            {activaEsPropia && alEditarFicha !== undefined ? (
+              <section className="flex flex-col gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-texto-tenue">
+                  Tu versión
+                  {fueEditada(activa.ficha) ? (
+                    <span className="rounded-full bg-pildora-ambar px-2 py-0.5 text-xs text-pildora-ambar-texto">
+                      Modificada
+                    </span>
+                  ) : null}
+                </h3>
+                <textarea
+                  value={borrador}
+                  onChange={(evento) => setBorrador(evento.target.value)}
+                  rows={4}
+                  aria-label="Tu versión de la ficha"
+                  className="w-full resize-none rounded-[20px] bg-acento-tenue p-4 text-[19px] leading-relaxed text-texto focus:outline-2 focus:outline-offset-2 focus:outline-acento"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={guardandoEdicion || borrador.trim() === '' || borrador.trim() === textoDeFicha(activa.ficha)}
+                    onClick={() => {
+                      setGuardandoEdicion(true)
+                      void alEditarFicha(activa.ficha.id, borrador).then(() => setGuardandoEdicion(false))
+                    }}
+                    className="h-10 cursor-pointer rounded-full bg-acento px-4 text-sm font-medium text-acento-contraste transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Guardar mi versión
+                  </button>
+                  {/* Quitarla no borra nada más: la ficha vuelve a leerse como la dejó el análisis. */}
+                  {fueEditada(activa.ficha) ? (
+                    <button
+                      type="button"
+                      disabled={guardandoEdicion}
+                      onClick={() => {
+                        setGuardandoEdicion(true)
+                        void alEditarFicha(activa.ficha.id, '').then(() => {
+                          setGuardandoEdicion(false)
+                          setBorrador(activa.ficha.condensado === '' ? activa.ficha.fragmento : activa.ficha.condensado)
+                        })
+                      }}
+                      className="h-10 cursor-pointer rounded-full px-4 text-sm text-texto-tenue transition-colors hover:text-texto"
+                    >
+                      Volver a la del análisis
+                    </button>
+                  ) : null}
+                </div>
+              </section>
+            ) : fueEditada(activa.ficha) ? (
+              <section className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium text-texto-tenue">Versión de quien la subió</h3>
+                <div className="rounded-[20px] bg-acento-tenue p-4">
+                  <p className="text-[19px] leading-relaxed text-texto">{activa.ficha.editado}</p>
+                </div>
+              </section>
+            ) : null}
           </div>
         )}
       </Modal>

@@ -17,7 +17,7 @@ import {
 } from '../query'
 import { responderComparticion } from '@/features/configuracion/comparticiones/repositorio'
 import type { CriteriosDeListado } from '../query'
-import { actualizarConferencia, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
+import { actualizarConferencia, editarFicha, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
 import { useEtiquetas } from '../tags'
 import { PantallaArchivo } from './PantallaArchivo'
 
@@ -206,6 +206,11 @@ export function PantallaConferencias(): ReactElement {
             recargar()
             recargarTemas()
           })
+        }}
+        alEditarFicha={async (idFicha, texto) => {
+          const resultado = await editarFicha(idFicha, texto)
+          recargar()
+          return resultado.ok
         }}
         alRenombrarConferencia={(idConferencia, cambio) => {
           void actualizarConferencia(idConferencia, cambio).then(recargar)

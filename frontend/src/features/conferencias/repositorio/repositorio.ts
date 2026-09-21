@@ -125,6 +125,65 @@ export async function actualizarEstadoDeValidacion(
     : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_FALLO_INESPERADO' }))
 }
 
+/*
+  Guarda la versión escrita a mano de una ficha, o la quita con un texto
+  vacío. Nunca toca `fragmento` ni `condensado`: las tres versiones conviven
+  (ver la migración 20260922120000). RLS solo deja escribir al dueño de la
+  conferencia.
+*/
+export async function editarFicha(idFicha: string, texto: string): Promise<ResultadoDeConsulta<null>> {
+  const limpio = texto.trim()
+  const { error } = await supabase
+    .from('fichas')
+    .update({ editado: limpio, editada_el: limpio === '' ? null : new Date().toISOString() })
+    .eq('id', idFicha)
+
+  return error === null
+    ? { ok: true, datos: null }
+    : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_FALLO_INESPERADO' }))
+}
+
+/*
+  Una dirección temporal para escuchar el audio de una conferencia.
+
+  El nombre del archivo no se guarda en ninguna parte (ver
+  `nombreParaAlmacenamiento`), así que se lista la carpeta y se toma lo que
+  haya. Firmada y de una hora: el bucket es privado, y una dirección pública
+  dejaría el audio de una charla al alcance de cualquiera que la tuviera.
+  Solo el dueño puede listar su carpeta; para una conferencia compartida no
+  hay audio que ofrecer, y se devuelve `null` en vez de un error.
+
+  Se recuerda por conferencia mientras dure la sesión: escuchar tres fichas
+  de la misma charla no tiene por qué firmar tres veces.
+*/
+const direccionesDeAudio = new Map<string, { url: string; vence: number }>()
+const VIGENCIA_DE_LA_FIRMA_S = 3600
+
+export async function urlDelAudio(idDueno: string, idConferencia: string): Promise<string | null> {
+  const recordada = direccionesDeAudio.get(idConferencia)
+  if (recordada !== undefined && recordada.vence > Date.now()) {
+    return recordada.url
+  }
+
+  const carpeta = `${idDueno}/${idConferencia}`
+  const almacen = supabase.storage.from(BUCKET_DE_AUDIO)
+  const { data: objetos } = await almacen.list(carpeta)
+  const archivo = objetos?.find((objeto) => objeto.name !== '.emptyFolderPlaceholder')
+
+  if (archivo === undefined) {
+    return null
+  }
+
+  const { data } = await almacen.createSignedUrl(`${carpeta}/${archivo.name}`, VIGENCIA_DE_LA_FIRMA_S)
+  if (data?.signedUrl === undefined) {
+    return null
+  }
+
+  /* Un minuto antes de que venza, para no entregar una firma que caduca a mitad de escuchar. */
+  direccionesDeAudio.set(idConferencia, { url: data.signedUrl, vence: Date.now() + (VIGENCIA_DE_LA_FIRMA_S - 60) * 1000 })
+  return data.signedUrl
+}
+
 /** Ruta del audio dentro del bucket. El primer segmento es el dueño porque la política de Storage lo exige. */
 /*
   Supabase Storage no acepta cualquier nombre como clave de objeto: su

@@ -130,6 +130,26 @@
   --bitacora-ilustracion-texto: oklch(0.34 0.09 262);
 
   /*
+    Pastillas de color, fuera del acento. Seis tonos suaves que conviven con
+    cualquier primario —el día que el acento se pueda cambiar, estos no
+    chocan con ninguno—: mucha luz y poca croma para el fondo, el mismo
+    matiz hondo para el texto. Se reparten por significado (el tipo de una
+    ficha) o por clave (una etiqueta, un tema), ver `shared/ui/colorDePildora.ts`.
+  */
+  --bitacora-pildora-azul: oklch(0.92 0.05 245);
+  --bitacora-pildora-azul-texto: oklch(0.42 0.11 250);
+  --bitacora-pildora-verde: oklch(0.92 0.05 155);
+  --bitacora-pildora-verde-texto: oklch(0.42 0.11 155);
+  --bitacora-pildora-ambar: oklch(0.92 0.05 80);
+  --bitacora-pildora-ambar-texto: oklch(0.42 0.11 65);
+  --bitacora-pildora-rosa: oklch(0.92 0.05 15);
+  --bitacora-pildora-rosa-texto: oklch(0.42 0.11 15);
+  --bitacora-pildora-violeta: oklch(0.92 0.05 300);
+  --bitacora-pildora-violeta-texto: oklch(0.42 0.11 300);
+  --bitacora-pildora-turquesa: oklch(0.92 0.05 195);
+  --bitacora-pildora-turquesa-texto: oklch(0.42 0.11 200);
+
+  /*
     Velo de los modales. Aquí nos apartamos de la referencia a propósito:
     medida, usa `rgba(0, 0, 0, 0.1)` y ningún desenfoque, y con eso el modal
     apenas se despega del fondo. Para volver a ella: 0.1 y 0.
@@ -216,6 +236,18 @@
 
   --bitacora-ilustracion: oklch(0.32 0.03 262);
   --bitacora-ilustracion-texto: #c3c9db;
+  --bitacora-pildora-azul: oklch(0.31 0.055 245);
+  --bitacora-pildora-azul-texto: oklch(0.87 0.07 250);
+  --bitacora-pildora-verde: oklch(0.31 0.055 155);
+  --bitacora-pildora-verde-texto: oklch(0.87 0.07 155);
+  --bitacora-pildora-ambar: oklch(0.31 0.055 80);
+  --bitacora-pildora-ambar-texto: oklch(0.87 0.07 65);
+  --bitacora-pildora-rosa: oklch(0.31 0.055 15);
+  --bitacora-pildora-rosa-texto: oklch(0.87 0.07 15);
+  --bitacora-pildora-violeta: oklch(0.31 0.055 300);
+  --bitacora-pildora-violeta-texto: oklch(0.87 0.07 300);
+  --bitacora-pildora-turquesa: oklch(0.31 0.055 195);
+  --bitacora-pildora-turquesa-texto: oklch(0.87 0.07 200);
 
   --bitacora-validado: oklch(0.76 0.14 155);
   --bitacora-pendiente: oklch(0.79 0.14 70);
@@ -265,6 +297,18 @@
 
     --bitacora-ilustracion: oklch(0.32 0.03 262);
     --bitacora-ilustracion-texto: #c3c9db;
+    --bitacora-pildora-azul: oklch(0.31 0.055 245);
+    --bitacora-pildora-azul-texto: oklch(0.87 0.07 250);
+    --bitacora-pildora-verde: oklch(0.31 0.055 155);
+    --bitacora-pildora-verde-texto: oklch(0.87 0.07 155);
+    --bitacora-pildora-ambar: oklch(0.31 0.055 80);
+    --bitacora-pildora-ambar-texto: oklch(0.87 0.07 65);
+    --bitacora-pildora-rosa: oklch(0.31 0.055 15);
+    --bitacora-pildora-rosa-texto: oklch(0.87 0.07 15);
+    --bitacora-pildora-violeta: oklch(0.31 0.055 300);
+    --bitacora-pildora-violeta-texto: oklch(0.87 0.07 300);
+    --bitacora-pildora-turquesa: oklch(0.31 0.055 195);
+    --bitacora-pildora-turquesa-texto: oklch(0.87 0.07 200);
 
     --bitacora-validado: oklch(0.76 0.14 155);
     --bitacora-pendiente: oklch(0.79 0.14 70);
@@ -353,6 +397,18 @@
 
   --color-ilustracion: var(--bitacora-ilustracion);
   --color-ilustracion-texto: var(--bitacora-ilustracion-texto);
+  --color-pildora-azul: var(--bitacora-pildora-azul);
+  --color-pildora-azul-texto: var(--bitacora-pildora-azul-texto);
+  --color-pildora-verde: var(--bitacora-pildora-verde);
+  --color-pildora-verde-texto: var(--bitacora-pildora-verde-texto);
+  --color-pildora-ambar: var(--bitacora-pildora-ambar);
+  --color-pildora-ambar-texto: var(--bitacora-pildora-ambar-texto);
+  --color-pildora-rosa: var(--bitacora-pildora-rosa);
+  --color-pildora-rosa-texto: var(--bitacora-pildora-rosa-texto);
+  --color-pildora-violeta: var(--bitacora-pildora-violeta);
+  --color-pildora-violeta-texto: var(--bitacora-pildora-violeta-texto);
+  --color-pildora-turquesa: var(--bitacora-pildora-turquesa);
+  --color-pildora-turquesa-texto: var(--bitacora-pildora-turquesa-texto);
 }
 
 /*

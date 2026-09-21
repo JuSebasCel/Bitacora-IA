@@ -39,7 +39,7 @@ export {
   palabrasDe,
 } from './filtros'
 
-export { fueCondensada, textoDeFicha } from './lectura'
+export { fueCondensada, fueEditada, textoDeFicha } from './lectura'
 
 export type { ConteoPorEstado, ConteoPorTipo, ResumenDeFichas } from './resumen'
 export { resumirFichas } from './resumen'

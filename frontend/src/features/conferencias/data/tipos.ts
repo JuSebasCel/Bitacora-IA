@@ -43,6 +43,15 @@ export type Ficha = {
    * dos casos se enseña la literal.
    */
   readonly condensado: string
+  /**
+   * La versión escrita a mano por el dueño, si la corrigió. No pisa ni a
+   * `fragmento` ni a `condensado`: las tres conviven, y la que se lee es esta
+   * cuando existe. Opcional porque las fichas de ejemplo y las filas viejas
+   * no la traen; vacía o ausente es lo mismo: sin editar.
+   */
+  readonly editado?: string
+  /** Cuándo se editó. Es lo que marca la ficha como modificada. */
+  readonly editadaEl?: string | null
   /** Quién lo dijo. Puede no ser el ponente principal cuando la charla fue un panel. */
   readonly hablante: string
   /** Trazabilidad al segundo exacto, requisito no funcional del PRD sección 9. */

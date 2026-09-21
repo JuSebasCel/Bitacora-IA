@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router'
 import { useSession } from '@/features/auth/session'
@@ -7,7 +7,8 @@ import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { nombreDePersona } from '@/features/conferencias/data'
 import { privacidadEfectiva } from '@/features/conferencias/query'
 import type { ConferenciaVisible } from '@/features/conferencias/query'
-import { Button, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import { Button, CLASES_DE_PILDORA, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import type { ColorDePildora } from '@/shared/ui'
 import type { PropositoDeClave } from '../contextoApiKey'
 import { useApiKey } from '../useApiKey'
 
@@ -98,11 +99,13 @@ function TarjetaDeClave({
 
   const estado =
     cargando ? null : clave !== null ? (
-      <Estado punto="bg-texto">Guardada · {claveAbreviada(clave)}</Estado>
+      <Estado color="verde">Guardada · {claveAbreviada(clave)}</Estado>
     ) : proposito === 'chat' ? (
-      <Estado punto="bg-texto-tenue/40">{claveDeAnalisis === null ? 'Sin clave' : 'Usa la de análisis'}</Estado>
+      <Estado color={claveDeAnalisis === null ? 'rosa' : 'azul'}>
+        {claveDeAnalisis === null ? 'Sin clave' : 'Usa la de análisis'}
+      </Estado>
     ) : (
-      <Estado punto="bg-pendiente">Falta</Estado>
+      <Estado color="rosa">Falta</Estado>
     )
 
   return (
@@ -185,10 +188,11 @@ function TarjetaDeClave({
   )
 }
 
-function Estado({ punto, children }: { punto: string; children: string | (string | ReactElement)[] }): ReactElement {
+/* El estado de cada clave en su color: verde lista, rosa falta, azul prestada de la de análisis. */
+function Estado({ color, children }: { color: ColorDePildora; children: ReactNode }): ReactElement {
   return (
-    <span className="flex items-center gap-1.5 rounded-full bg-acento-tenue px-3 py-1 text-sm text-texto-tenue">
-      <span aria-hidden="true" className={`size-1.5 rounded-full ${punto}`} />
+    <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ${CLASES_DE_PILDORA[color]}`}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {children}
     </span>
   )

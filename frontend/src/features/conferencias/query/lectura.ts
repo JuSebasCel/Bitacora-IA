@@ -18,9 +18,22 @@ import type { Ficha } from '../data'
   textos distintos para la misma ficha, sin nada que explique por que.
 */
 
-/** El texto que se lee: el condensado si lo hay, la literal si no. */
+/**
+ * El texto que se lee: la versión editada si la hay, el condensado si no, y
+ * la literal si tampoco. La editada gana porque es una decisión explícita
+ * de quien es dueño de la ficha; el condensado solo es la lectura del análisis.
+ */
 export function textoDeFicha(ficha: Ficha): string {
+  if (fueEditada(ficha)) {
+    return ficha.editado ?? ''
+  }
+
   return ficha.condensado === '' ? ficha.fragmento : ficha.condensado
+}
+
+/** Si el dueño la corrigió a mano. Es lo que la marca como "Modificada". */
+export function fueEditada(ficha: Ficha): boolean {
+  return (ficha.editado ?? '').trim() !== ''
 }
 
 /**
