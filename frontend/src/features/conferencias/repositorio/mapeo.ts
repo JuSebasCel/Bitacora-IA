@@ -55,6 +55,8 @@ export type FilaDeConferencia = {
   readonly estado: string
   readonly id_tema_principal: string | null
   readonly resumen: string
+  /* Ausente en las filas escritas antes de la migracion que anadio la columna. */
+  readonly descripcion?: string | null
   readonly fuente: string
   readonly cargada_el: string | null
   /* Viaja embebida al pedir `comparticiones(...)` en el select; ausente si no se pidió. */
@@ -169,6 +171,7 @@ export function mapearConferencia(fila: FilaDeConferencia): Conferencia | null {
     */
     idTemaPrincipal: fila.id_tema_principal ?? '',
     resumen: fila.resumen,
+    descripcion: fila.descripcion ?? '',
     fuente: fila.fuente as FuenteDeConferencia,
     comparticiones: (fila.comparticiones ?? []).map(mapearComparticion),
   }

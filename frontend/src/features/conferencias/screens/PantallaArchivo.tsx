@@ -1,5 +1,6 @@
+import { motion, useReducedMotion } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
-import type { ReactElement, ReactNode, RefObject } from 'react'
+import type { MouseEvent, ReactElement, ReactNode, RefObject } from 'react'
 import { nombreDeTema } from '@/features/taxonomia'
 import type { Tema } from '@/features/taxonomia'
 import {
@@ -18,6 +19,7 @@ import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
+import { densidadDe } from '../carga'
 import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo, fueCondensada, textoDeFicha } from '../query'
 import type { ConferenciaVisible, CriteriosDeListado, FichaDelCatalogo, FiltroDeEstado, Segmento } from '../query'
 import type { EtiquetaVisible } from '../tags'
@@ -174,40 +176,21 @@ function CitaEnContexto({ contexto, fragmento }: { contexto: string; fragmento: 
 }
 
 /*
-  Cuantas fichas se pidieron y cuantas hay.
+  Como se dice en la fila cuantas fichas se pidieron.
 
-  Cuando coinciden basta con decir el numero: el tope se respeto y no hay nada
-  que explicar. Cuando no coinciden se dicen los dos, porque el desajuste es
-  informacion — significa que el analisis devolvio menos de lo que cabia (la
-  charla no daba para mas) o que el tope no llego a aplicarse.
+  Con la densidad reconstruida se dice la palabra que se eligio ("pocas"), que
+  es lo que la persona recuerda haber pulsado. Cuando no se puede reconstruir
+  se dice el numero, que nunca miente — pasa con las transcripciones, donde al
+  cargarlas no habia duracion con la que calcular el techo.
 */
-function ResumenDeLaCuota({
-  pedidas,
-  guardadas,
-}: {
-  pedidas: number | null
-  guardadas: number
-}): ReactElement {
-  if (pedidas === null) {
-    return (
-      <p className="px-4 pt-2 text-xs text-texto-tenue">
-        {guardadas} fichas · sin tope al cargarla
-      </p>
-    )
+function etiquetaDeCuota(maximoDeFichas: number | null, duracionEnSegundos: number): string {
+  const densidad = densidadDe(maximoDeFichas, duracionEnSegundos)
+
+  if (densidad === 'libre' || maximoDeFichas === null) {
+    return 'sin tope'
   }
 
-  return (
-    <p className="px-4 pt-2 text-xs text-texto-tenue">
-      Pediste hasta {pedidas} ·{' '}
-      {guardadas === pedidas ? (
-        <span>las {guardadas} que hay</span>
-      ) : guardadas < pedidas ? (
-        <span>hay {guardadas}, no dio para mas</span>
-      ) : (
-        <span className="text-texto">hay {guardadas}: el tope no se aplicó</span>
-      )}
-    </p>
-  )
+  return densidad === null ? `hasta ${maximoDeFichas}` : densidad
 }
 
 /** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
@@ -381,6 +364,8 @@ function Fila({
   icono,
   secundario,
   etiquetas,
+  cuota,
+  accion,
   trabajando = false,
   onClick,
   children,
@@ -390,17 +375,33 @@ function Fila({
   secundario?: string
   /* Solo texto: la fila entera ya es un botón y anidar otro dentro no es válido. */
   etiquetas?: readonly EtiquetaVisible[]
+  /**
+   * Cuantas fichas se pidieron al cargarla ("pocas", "hasta 26"…).
+   *
+   * Va junto a las etiquetas pero se distingue de ellas: una etiqueta la pone
+   * una persona para organizarse, esto es un dato de la conferencia. Por eso
+   * lleva icono y contorno en vez del relleno de las etiquetas propias.
+   */
+  cuota?: string
+  /**
+   * Control propio, fuera del boton de la fila.
+   *
+   * Va como hermano y no dentro: un `<button>` anidado en otro no es HTML
+   * valido, y el navegador lo desanida por su cuenta dejando el marcado y los
+   * eventos en un sitio que no es el que se escribio.
+   */
+  accion?: ReactNode
   /** Barrido de luz mientras el análisis corre: es la única señal de que algo se mueve. */
   trabajando?: boolean
   onClick?: () => void
   children: ReactNode
 }): ReactElement {
-  return (
+  const fila = (
     <button
       type="button"
       onClick={onClick}
       aria-current={activa ? 'true' : undefined}
-      className={`${FILA} transition-colors ${
+      className={`${FILA} transition-colors ${accion === undefined ? '' : 'pr-14'} ${
         trabajando ? 'barrido-de-carga relative overflow-hidden' : ''
       } ${activa ? 'bg-ilustracion text-ilustracion-texto' : 'text-texto hover:bg-acento-tenue'}`}
     >
@@ -418,9 +419,24 @@ function Fila({
           <span className={`truncate text-sm ${activa ? 'opacity-80' : 'text-texto-tenue'}`}>{secundario}</span>
         )}
 
-        {etiquetas === undefined || etiquetas.length === 0 ? null : (
-          <span className="mt-1 flex flex-wrap gap-1">
-            {etiquetas.map(({ etiqueta, propia }) => (
+        {cuota === undefined && (etiquetas === undefined || etiquetas.length === 0) ? null : (
+          <span className="mt-1 flex flex-wrap items-center gap-1">
+            {cuota === undefined ? null : (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+                  activa
+                    ? 'bg-ilustracion-texto/15'
+                    : 'text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete-fuerte)]'
+                }`}
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-sm">
+                  tune
+                </span>
+                {cuota}
+              </span>
+            )}
+
+            {(etiquetas ?? []).map(({ etiqueta, propia }) => (
               <span
                 key={etiqueta.id}
                 /* Las ajenas van en contorno: son de quien compartió, no se pueden quitar desde aquí. */
@@ -440,6 +456,89 @@ function Fila({
       </span>
     </button>
   )
+
+  if (accion === undefined) {
+    return fila
+  }
+
+  return (
+    <div className="relative">
+      {fila}
+      <div className="absolute top-1.5 right-3">{accion}</div>
+    </div>
+  )
+}
+
+/*
+  Deslizar una fila hacia la izquierda para descubrir la papelera.
+
+  Solo envuelve las conferencias propias: en una ajena el gesto descubriria un
+  boton que RLS va a rechazar, y prometer una accion que no se puede hacer es
+  peor que no ofrecerla.
+
+  Descubrir NO borra. El tiron deja la papelera a la vista y es pulsarla lo
+  que abre la confirmacion de siempre, la que dice cuantas fichas se pierden:
+  un gesto que se dispara sin querer al desplazarse no puede ser el que borra
+  una charla de hora y media de analisis.
+*/
+const ANCHO_DE_LA_PAPELERA = 76
+
+function FilaDeslizable({
+  alBorrar,
+  children,
+}: {
+  alBorrar: () => void
+  children: ReactNode
+}): ReactElement {
+  const [revelada, setRevelada] = useState(false)
+  const reducirMovimiento = useReducedMotion()
+
+  /*
+    Sin arrastre no hay gesto, y sin gesto la papelera no tendria como salir:
+    con `prefers-reduced-motion` la fila se queda quieta y el borrado sigue
+    estando donde siempre estuvo, en el modal de la conferencia.
+  */
+  if (reducirMovimiento) {
+    return <>{children}</>
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      <button
+        type="button"
+        onClick={alBorrar}
+        tabIndex={revelada ? 0 : -1}
+        aria-hidden={!revelada}
+        aria-label="Borrar la conferencia"
+        /*
+          `acento-contraste` y no blanco: en claro el rojo del sistema es
+          oscuro y el blanco encima funciona, pero en oscuro es un rojo claro
+          y el blanco encima se pierde. El token ya es "lo que contrasta con
+          la superficie" en cada tema.
+        */
+        className="absolute inset-y-0 right-0 flex cursor-pointer items-center justify-center rounded-r-2xl bg-error text-acento-contraste"
+        style={{ width: ANCHO_DE_LA_PAPELERA }}
+      >
+        <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-2xl">
+          delete
+        </span>
+      </button>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -ANCHO_DE_LA_PAPELERA, right: 0 }}
+        dragElastic={0.04}
+        dragMomentum={false}
+        animate={{ x: revelada ? -ANCHO_DE_LA_PAPELERA : 0 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 42 }}
+        onDragEnd={(_, info) => setRevelada(info.offset.x < -ANCHO_DE_LA_PAPELERA / 2)}
+        /* Sobre el fondo de la columna: sin esto la papelera se ve por debajo de la fila. */
+        className="relative bg-panel"
+      >
+        {children}
+      </motion.div>
+    </div>
+  )
 }
 
 function AccionDeColumna({
@@ -451,7 +550,8 @@ function AccionDeColumna({
 }: {
   icono: string
   children: string
-  onClick?: () => void
+  /* Recibe el evento porque hay modales que se anclan al boton que los abrio. */
+  onClick?: (evento: MouseEvent<HTMLButtonElement>) => void
   ref?: RefObject<HTMLButtonElement | null>
   insignia?: number
 }): ReactElement {
@@ -498,7 +598,10 @@ export type PropsPantallaArchivo = {
   alEliminarEtiqueta?: (idEtiqueta: string) => void
   /** Vuelve a pedirle al backend que analice esa conferencia. */
   alAnalizar?: (idConferencia: string) => void
-  alRenombrarConferencia?: (idConferencia: string, cambio: { titulo: string; ponente: string; fechaDelEvento: string }) => void
+  alRenombrarConferencia?: (
+    idConferencia: string,
+    cambio: { titulo: string; ponente: string; fechaDelEvento: string; descripcion: string },
+  ) => void
   alEliminarConferencia?: (idConferencia: string) => void
 }
 
@@ -534,20 +637,31 @@ export function PantallaArchivo({
   const [ambito, setAmbito] = useState<Ambito>('seleccion')
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
-  const [asignadorAbierto, setAsignadorAbierto] = useState(false)
-  const [opcionesAbiertas, setOpcionesAbiertas] = useState(false)
-  const [edicionAbierta, setEdicionAbierta] = useState(false)
-  const [borradoAbierto, setBorradoAbierto] = useState(false)
-  const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '' })
+  /*
+    A que conferencia se le ponen etiquetas. Por id y no por bandera, por lo
+    mismo que el detalle: el asignador se abre desde el modal de una
+    conferencia cualquiera, que no tiene por que ser la rama activa.
+  */
+  const [idParaEtiquetar, setIdParaEtiquetar] = useState<string | null>(null)
+  /*
+    La conferencia abierta en su modal, por id y no por bandera: el modal se
+    abre desde la fila y puede ser cualquiera, no solo la de la rama activa.
+  */
+  const [idEnDetalle, setIdEnDetalle] = useState<string | null>(null)
+  /* A cual apunta la confirmacion de borrado: la del modal o la que se deslizo. */
+  const [idParaBorrar, setIdParaBorrar] = useState<string | null>(null)
+  const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '', descripcion: '' })
   const [literalAbierta, setLiteralAbierta] = useState(false)
   const [vista, setVista] = useState<Vista>('columnas')
 
   const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
   const botonDeFiltros = useRef<HTMLButtonElement>(null)
-  const botonDeEtiquetas = useRef<HTMLButtonElement>(null)
-  const botonDeOpciones = useRef<HTMLButtonElement>(null)
-  const botonDeEdicion = useRef<HTMLButtonElement>(null)
-  const botonDeBorrado = useRef<HTMLButtonElement>(null)
+  /*
+    Anclas vivas, no fijas: hay un boton por fila, asi que el disparador se
+    guarda en el momento de pulsarlo. El modal solo lee la ref al abrirse.
+  */
+  const botonDeDetalle = useRef<HTMLButtonElement | null>(null)
+  const botonDeBorrado = useRef<HTMLButtonElement | null>(null)
   const botonDeLiteral = useRef<HTMLButtonElement>(null)
   const marco = useRef<HTMLDivElement>(null)
 
@@ -556,22 +670,38 @@ export function PantallaArchivo({
 
   const filtrosActivos = contarFiltros(criterios)
 
-  /* Solo hay conferencia concreta sobre la que etiquetar si el eje es el de conferencias. */
-  const idConferenciaSeleccionada = eje === 'conferencias' && rama !== null && rama !== TODOS ? rama : null
+  const conferenciaEnDetalle =
+    idEnDetalle === null ? undefined : visibles.find((v) => v.conferencia.id === idEnDetalle)
 
-  const conferenciaSeleccionada =
-    idConferenciaSeleccionada === null
-      ? undefined
-      : visibles.find((v) => v.conferencia.id === idConferenciaSeleccionada)
+  const conferenciaParaBorrar =
+    idParaBorrar === null ? undefined : visibles.find((v) => v.conferencia.id === idParaBorrar)
 
-  const etiquetasPropiasDeLaSeleccionada = useMemo(
+  /*
+    Abrir el modal carga el formulario con lo que hay.
+
+    Se hace al abrir y no con un efecto sobre `idEnDetalle` porque el
+    formulario es estado propio: un efecto lo pisaria mientras se escribe si
+    algo mas provocara un render con el modal ya abierto.
+  */
+  function abrirDetalle(visible: ConferenciaVisible, disparador: HTMLButtonElement): void {
+    botonDeDetalle.current = disparador
+    setEdicion({
+      titulo: visible.conferencia.titulo,
+      ponente: visible.conferencia.ponente,
+      fechaDelEvento: visible.conferencia.fechaDelEvento,
+      descripcion: visible.conferencia.descripcion,
+    })
+    setIdEnDetalle(visible.conferencia.id)
+  }
+
+  const etiquetasPropiasDeLaEtiquetada = useMemo(
     () =>
-      idConferenciaSeleccionada === null
+      idParaEtiquetar === null
         ? []
-        : etiquetasDe(idConferenciaSeleccionada)
+        : etiquetasDe(idParaEtiquetar)
             .filter((visible) => visible.propia)
             .map((visible) => visible.etiqueta.id),
-    [idConferenciaSeleccionada, etiquetasDe],
+    [idParaEtiquetar, etiquetasDe],
   )
 
   const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
@@ -808,26 +938,67 @@ export function PantallaArchivo({
               {t.nombre}
             </Fila>
           ))
-        : conferenciasDelEvento.map((v) => (
-            <Fila
-              key={v.conferencia.id}
-              icono="mic"
-              secundario={
-                ESTADO_DEL_ANALISIS[v.conferencia.estado] ??
-                `${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`
-              }
-              etiquetas={etiquetasDe(v.conferencia.id)}
-              {...(v.conferencia.estado === 'procesada' ? {} : { icono: ICONO_DE_ESTADO[v.conferencia.estado] })}
-              trabajando={v.conferencia.estado === 'procesando'}
-              activa={rama === v.conferencia.id}
-              onClick={() => {
-                setRama(v.conferencia.id)
-                setIdFicha(null)
-              }}
-            >
-              {v.conferencia.titulo}
-            </Fila>
-          ))}
+        : conferenciasDelEvento.map((v) => {
+            const fila = (
+              <Fila
+                icono="mic"
+                secundario={
+                  ESTADO_DEL_ANALISIS[v.conferencia.estado] ??
+                  `${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`
+                }
+                etiquetas={etiquetasDe(v.conferencia.id)}
+                cuota={etiquetaDeCuota(
+                  v.conferencia.maximoDeFichas,
+                  v.conferencia.duracionEnSegundos,
+                )}
+                {...(v.conferencia.estado === 'procesada'
+                  ? {}
+                  : { icono: ICONO_DE_ESTADO[v.conferencia.estado] })}
+                trabajando={v.conferencia.estado === 'procesando'}
+                activa={rama === v.conferencia.id}
+                onClick={() => {
+                  setRama(v.conferencia.id)
+                  setIdFicha(null)
+                }}
+                /*
+                  El clic en la fila sigue entrando a las fichas: es la
+                  navegacion del explorador y cambiarla habria costado un paso
+                  en el camino mas recorrido. Lo que abre la conferencia es
+                  este boton, y va aparte para que las dos cosas se puedan
+                  pulsar sin ambiguedad.
+                */
+                accion={
+                  <button
+                    type="button"
+                    aria-label={`Opciones de «${v.conferencia.titulo}»`}
+                    onClick={(evento) => abrirDetalle(v, evento.currentTarget)}
+                    className="flex size-8 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-fondo hover:text-texto"
+                  >
+                    <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                      more_horiz
+                    </span>
+                  </button>
+                }
+              >
+                {v.conferencia.titulo}
+              </Fila>
+            )
+
+            /* Solo las propias se deslizan: en una ajena el borrado no existe. */
+            return v.procedencia === 'propia' && alEliminarConferencia !== undefined ? (
+              <FilaDeslizable
+                key={v.conferencia.id}
+                alBorrar={() => {
+                  botonDeBorrado.current = null
+                  setIdParaBorrar(v.conferencia.id)
+                }}
+              >
+                {fila}
+              </FilaDeslizable>
+            ) : (
+              <div key={v.conferencia.id}>{fila}</div>
+            )
+          })}
     </Columna>
   )
 
@@ -838,58 +1009,6 @@ export function PantallaArchivo({
       colapsada={(rama === null && !buscandoEnTodo) || (enCompleta && nivelActual !== 'fichas')}
       pie={
         <>
-          {/*
-            Todo lo que se le hace a la conferencia vive detras de un solo
-            boton, y no como cuatro filas sueltas.
-
-            Sueltas usaban el mismo molde que las fichas —icono, radio 16,
-            ancho completo— y el pie parecia la continuacion de la lista: se
-            leia "Borrar la conferencia" como si fuera una ficha mas. Aqui el
-            boton es de otra forma (pastilla con superficie propia, separada
-            por un filete) y las acciones viven dentro de un modal, donde ya
-            no compiten con nada.
-
-            "Volver" se queda fuera porque no es una opcion de la conferencia:
-            es navegacion, y esa si pertenece al recorrido de las columnas.
-          */}
-          {conferenciaSeleccionada === undefined ? null : (
-            <div className="mb-2 border-b border-filete pb-2">
-              <button
-                ref={botonDeOpciones}
-                type="button"
-                onClick={() => setOpcionesAbiertas(true)}
-                className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-full bg-fondo px-4 text-sm text-texto-tenue transition-colors hover:text-texto"
-              >
-                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
-                  tune
-                </span>
-                Opciones de la conferencia
-                {etiquetasPropiasDeLaSeleccionada.length === 0 ? null : (
-                  <span className="ml-auto rounded-full bg-acento-tenue px-2 text-xs">
-                    {etiquetasPropiasDeLaSeleccionada.length} etiquetas
-                  </span>
-                )}
-              </button>
-
-              {/*
-                Cuantas se pidieron, dicho aqui y no escondido en un panel.
-
-                La eleccion del momento de cargar no se vela en ninguna parte
-                despues: una charla con ciento cuarenta y nueve fichas se lee
-                igual tanto si es lo que se pidio como si el tope se perdio por
-                el camino, y no habia forma de distinguir los dos casos. Si lo
-                guardado no coincide con lo pedido se dice en vez de callarlo:
-                es el unico sitio donde ese desajuste puede notarse.
-              */}
-              <ResumenDeLaCuota
-                pedidas={conferenciaSeleccionada.conferencia.maximoDeFichas}
-                guardadas={
-                  entradas.filter((e) => e.conferencia.id === conferenciaSeleccionada.conferencia.id).length
-                }
-              />
-            </div>
-          )}
-
           {/* Buscando en todo el archivo no hay rama a la que volver: lo que cierra el paso es limpiar. */}
           {buscandoEnTodo ? (
             <AccionDeColumna icono="close" onClick={limpiarBusqueda}>
@@ -1330,179 +1449,181 @@ export function PantallaArchivo({
       </Modal>
 
       {/*
-        Las acciones de la conferencia, agrupadas. Dentro de un modal ya no
-        compiten visualmente con las fichas, asi que aqui si pueden usar el
-        molde de fila completa sin confundirse con nada.
+        La conferencia entera en un modal central: sus datos y lo que se le
+        puede hacer, en el mismo sitio.
+
+        Antes estaban repartidos en dos pasos anclados —"Opciones" y dentro de
+        el "Corregir los datos"— colgando de un boton en el pie de la columna
+        de fichas. Eso ponia la conferencia a dos clics de donde se la ve, y
+        el pie de una columna es el peor sitio para editarla: no es donde esta
+        la conferencia, es donde estan sus fichas.
+
+        El evento no se edita aqui: cambiarlo moveria la charla de carpeta, que
+        es una reorganizacion del archivo y no una correccion de datos.
       */}
       <Modal
-        abierto={opcionesAbiertas}
-        alCerrar={() => setOpcionesAbiertas(false)}
-        titulo="Opciones"
+        abierto={conferenciaEnDetalle !== undefined}
+        alCerrar={() => setIdEnDetalle(null)}
+        titulo="Conferencia"
         ancho="angosto"
-        anclaje="disparador"
-        anclaEn={botonDeOpciones}
+        anclaEn={botonDeDetalle}
         limites={marco}
       >
-        <p className="-mt-2 px-1 text-sm text-texto-tenue">
-          {conferenciaSeleccionada?.conferencia.titulo ?? ''}
-        </p>
+        {conferenciaEnDetalle === undefined ? null : (
+          <>
+            <div className="flex flex-col gap-3">
+              <input
+                value={edicion.titulo}
+                onChange={(cambio) => setEdicion((a) => ({ ...a, titulo: cambio.target.value }))}
+                aria-label="Titulo de la conferencia"
+                placeholder="Titulo"
+                className={CAMPO_DE_TEXTO}
+              />
+              <input
+                value={edicion.ponente}
+                onChange={(cambio) => setEdicion((a) => ({ ...a, ponente: cambio.target.value }))}
+                aria-label="Ponente"
+                placeholder="Ponente"
+                className={CAMPO_DE_TEXTO}
+              />
+              <SelectorDeFecha
+                etiquetaAccesible="Fecha del evento"
+                vacio="Fecha del evento"
+                valor={edicion.fechaDelEvento === '' ? null : edicion.fechaDelEvento}
+                alElegir={(iso) => setEdicion((a) => ({ ...a, fechaDelEvento: iso }))}
+              />
 
-        <div className="flex flex-col">
-          {conferenciaSeleccionada !== undefined &&
-          alAnalizar !== undefined &&
-          sePuedeAnalizar(conferenciaSeleccionada.conferencia.estado) ? (
-            <AccionDeColumna
-              icono="auto_awesome"
-              onClick={() => {
-                alAnalizar(conferenciaSeleccionada.conferencia.id)
-                setOpcionesAbiertas(false)
-              }}
-            >
-              {conferenciaSeleccionada.conferencia.estado === 'fallida'
-                ? 'Reintentar el analisis'
-                : 'Analizar ahora'}
-            </AccionDeColumna>
-          ) : null}
+              {/*
+                La descripcion es de quien la subio, no del analisis.
 
-          {idConferenciaSeleccionada === null ? null : (
-            <AccionDeColumna
-              ref={botonDeEtiquetas}
-              icono="label"
-              insignia={etiquetasPropiasDeLaSeleccionada.length}
-              onClick={() => {
-                setOpcionesAbiertas(false)
-                setAsignadorAbierto(true)
-              }}
-            >
-              Etiquetas
-            </AccionDeColumna>
-          )}
+                `resumen` lo escribe el modelo y lo reescribe en cada analisis,
+                asi que no se puede escribir ahi nada que deba sobrevivir. Esto
+                es para lo que el analisis no puede saber: por que esta charla
+                importa o para que articulo se guardo.
+              */}
+              <textarea
+                value={edicion.descripcion}
+                onChange={(cambio) => setEdicion((a) => ({ ...a, descripcion: cambio.target.value }))}
+                aria-label="Descripcion"
+                placeholder="Descripcion · opcional"
+                rows={3}
+                className={`${CAMPO_DE_TEXTO} h-auto resize-none py-3 leading-relaxed`}
+              />
+            </div>
 
-          {conferenciaSeleccionada === undefined || alRenombrarConferencia === undefined ? null : (
-            <AccionDeColumna
-              ref={botonDeEdicion}
-              icono="edit"
+            <button
+              type="button"
+              disabled={edicion.titulo.trim() === '' || edicion.ponente.trim() === ''}
               onClick={() => {
-                setEdicion({
-                  titulo: conferenciaSeleccionada.conferencia.titulo,
-                  ponente: conferenciaSeleccionada.conferencia.ponente,
-                  fechaDelEvento: conferenciaSeleccionada.conferencia.fechaDelEvento,
-                })
-                setOpcionesAbiertas(false)
-                setEdicionAbierta(true)
+                alRenombrarConferencia?.(conferenciaEnDetalle.conferencia.id, edicion)
+                setIdEnDetalle(null)
               }}
+              className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-40"
             >
-              Corregir los datos
-            </AccionDeColumna>
-          )}
+              Guardar
+            </button>
 
-          {conferenciaSeleccionada === undefined ||
-          alEliminarConferencia === undefined ||
-          conferenciaSeleccionada.procedencia !== 'propia' ? null : (
-            <AccionDeColumna
-              ref={botonDeBorrado}
-              icono="delete"
-              onClick={() => {
-                setOpcionesAbiertas(false)
-                setBorradoAbierto(true)
-              }}
-            >
-              Borrar la conferencia
-            </AccionDeColumna>
-          )}
-        </div>
+            <div className="mt-2 flex flex-col border-t border-filete pt-2">
+              {alAnalizar !== undefined && sePuedeAnalizar(conferenciaEnDetalle.conferencia.estado) ? (
+                <AccionDeColumna
+                  icono="auto_awesome"
+                  onClick={() => {
+                    alAnalizar(conferenciaEnDetalle.conferencia.id)
+                    setIdEnDetalle(null)
+                  }}
+                >
+                  {conferenciaEnDetalle.conferencia.estado === 'fallida'
+                    ? 'Reintentar el analisis'
+                    : 'Analizar ahora'}
+                </AccionDeColumna>
+              ) : null}
+
+              <AccionDeColumna
+                icono="label"
+                insignia={etiquetasDe(conferenciaEnDetalle.conferencia.id).filter((e) => e.propia).length}
+                onClick={() => {
+                  setIdParaEtiquetar(conferenciaEnDetalle.conferencia.id)
+                  setIdEnDetalle(null)
+                }}
+              >
+                Etiquetas
+              </AccionDeColumna>
+
+              {alEliminarConferencia === undefined ||
+              conferenciaEnDetalle.procedencia !== 'propia' ? null : (
+                <AccionDeColumna
+                  icono="delete"
+                  /*
+                    Sin ancla a proposito. El modal de detalle se cierra al
+                    pulsar aqui, asi que este boton se desmonta: anclarse a el
+                    daria una caja de ceros y la confirmacion creceria desde la
+                    esquina de la pantalla. Centrada es lo correcto.
+                  */
+                  onClick={() => {
+                    botonDeBorrado.current = null
+                    setIdParaBorrar(conferenciaEnDetalle.conferencia.id)
+                    setIdEnDetalle(null)
+                  }}
+                >
+                  Borrar la conferencia
+                </AccionDeColumna>
+              )}
+            </div>
+          </>
+        )}
       </Modal>
 
-      {/* Corregir lo que se escribio mal al cargar. El evento no se toca aqui: cambiarlo movería la charla de sitio. */}
-      <Modal
-        abierto={edicionAbierta}
-        alCerrar={() => setEdicionAbierta(false)}
-        titulo="Corregir los datos"
-        ancho="angosto"
-        anclaje="disparador"
-        anclaEn={botonDeEdicion}
-        limites={marco}
-      >
-        <div className="flex flex-col gap-3">
-          <input
-            value={edicion.titulo}
-            onChange={(cambio) => setEdicion((a) => ({ ...a, titulo: cambio.target.value }))}
-            aria-label="Título de la conferencia"
-            placeholder="Título"
-            className={CAMPO_DE_TEXTO}
-          />
-          <input
-            value={edicion.ponente}
-            onChange={(cambio) => setEdicion((a) => ({ ...a, ponente: cambio.target.value }))}
-            aria-label="Ponente"
-            placeholder="Ponente"
-            className={CAMPO_DE_TEXTO}
-          />
-          <SelectorDeFecha
-            etiquetaAccesible="Fecha del evento"
-            vacio="Fecha del evento"
-            valor={edicion.fechaDelEvento === '' ? null : edicion.fechaDelEvento}
-            alElegir={(iso) => setEdicion((a) => ({ ...a, fechaDelEvento: iso }))}
-          />
-        </div>
-
-        <button
-          type="button"
-          disabled={edicion.titulo.trim() === '' || edicion.ponente.trim() === ''}
-          onClick={() => {
-            if (idConferenciaSeleccionada !== null) {
-              alRenombrarConferencia?.(idConferenciaSeleccionada, edicion)
-            }
-            setEdicionAbierta(false)
-          }}
-          className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-40"
-        >
-          Guardar
-        </button>
-      </Modal>
-
+      {/*
+        Apunta a `idParaBorrar` y no a la rama activa: ahora se puede pedir el
+        borrado desde el modal de la conferencia o deslizando su fila, y en el
+        segundo caso puede no ser la que esta abierta en las columnas.
+      */}
       <ModalDeConfirmacion
-        abierto={borradoAbierto}
-        alCerrar={() => setBorradoAbierto(false)}
+        abierto={conferenciaParaBorrar !== undefined}
+        alCerrar={() => setIdParaBorrar(null)}
         titulo="Borrar la conferencia"
         accion="Borrar"
         anclaEn={botonDeBorrado}
         limites={marco}
         consecuencias={[
-          `Se pierden sus ${porEvento.filter((e) => e.conferencia.id === idConferenciaSeleccionada).length} fichas y habría que volver a analizarla desde cero.`,
+          `Se pierden sus ${porEvento.filter((e) => e.conferencia.id === idParaBorrar).length} fichas y habría que volver a analizarla desde cero.`,
           'Se borra el audio o la transcripción que subiste.',
           'Quien la tuviera compartida deja de verla.',
         ]}
         alConfirmar={() => {
-          if (idConferenciaSeleccionada !== null) {
-            alEliminarConferencia?.(idConferenciaSeleccionada)
+          if (idParaBorrar !== null) {
+            alEliminarConferencia?.(idParaBorrar)
+
+            /* Solo se sale de la rama si lo borrado era justo lo que se estaba mirando. */
+            if (idParaBorrar === rama) {
+              setRama(null)
+              setIdFicha(null)
+            }
           }
-          setBorradoAbierto(false)
-          setRama(null)
-          setIdFicha(null)
+
+          setIdParaBorrar(null)
         }}
       >
         <p className="text-base text-texto">
-          «{conferenciaSeleccionada?.conferencia.titulo ?? ''}»
+          «{conferenciaParaBorrar?.conferencia.titulo ?? ''}»
         </p>
       </ModalDeConfirmacion>
 
       {/* Poner y quitar etiquetas sobre la conferencia elegida. */}
       <Modal
-        abierto={asignadorAbierto}
-        alCerrar={() => setAsignadorAbierto(false)}
+        abierto={idParaEtiquetar !== null}
+        alCerrar={() => setIdParaEtiquetar(null)}
         titulo="Etiquetas"
         anclaje="disparador"
-        anclaEn={botonDeEtiquetas}
         ancho="angosto"
         limites={marco}
       >
         <SelectorDeEtiquetas
           etiquetas={etiquetas}
-          marcadas={etiquetasPropiasDeLaSeleccionada}
+          marcadas={etiquetasPropiasDeLaEtiquetada}
           alAlternar={(idEtiqueta) => {
-            if (idConferenciaSeleccionada !== null) {
-              alAlternarAsignacion(idEtiqueta, idConferenciaSeleccionada)
+            if (idParaEtiquetar !== null) {
+              alAlternarAsignacion(idEtiqueta, idParaEtiquetar)
             }
           }}
           alCrear={alCrearEtiqueta}

@@ -5,5 +5,5 @@ export {
 } from './validacion'
 export type { ResultadoDeCarga } from './validacion'
 export { duracionDeArchivo, fuenteDeArchivo, tituloSugerido } from './archivo'
-export { fichasPedidas, maximoDeFichasPara } from './cuota'
+export { densidadDe, fichasPedidas, maximoDeFichasPara } from './cuota'
 export type { Densidad } from './cuota'

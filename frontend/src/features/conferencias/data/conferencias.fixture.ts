@@ -33,6 +33,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Recorrido por el uso de modelos de lenguaje para el cribado de títulos y resúmenes, con énfasis en dónde el criterio humano sigue siendo insustituible.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [
       {
         idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
@@ -69,6 +70,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Cómo sostener la cadena de procedencia de una variable a lo largo de diez años de seguimiento, cuando cambian los instrumentos y el personal que los aplica.',
     fuente: 'transcripcion',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -86,6 +88,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Análisis de tres programas de transferencia condicionada donde el puntaje de focalización reprodujo desigualdades ya presentes en los registros de origen.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [
       {
         idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
@@ -113,6 +116,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Protocolo de anotación con hablantes nativos como jueces, y qué se pierde cuando la transcripción la hace alguien ajeno a la comunidad de habla.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -130,6 +134,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Cinco años de mediciones de caudal y turbidez con equipos de bajo costo, y las dos razones por las que la mitad de los nodos dejó de reportar.',
     fuente: 'transcripcion',
+    descripcion: '',
     comparticiones: [
       {
         idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
@@ -157,6 +162,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Qué hace falta para que una política de datos abiertos sobreviva al cambio de rectoría, más allá del repositorio y del acto administrativo que lo crea.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [
       {
         idInvitado: 'ad474b7c-4a6e-4092-8c7e-ccf8701d9178',
@@ -184,6 +190,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Por qué una métrica agregada de exactitud oculta el error que importa, y cómo se ve el mismo modelo evaluado por cohorte de ingreso.',
     fuente: 'transcripcion',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -201,6 +208,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Modelo de gobierno de un clúster compartido entre seis grupos, con reglas de prioridad acordadas antes de que apareciera la primera disputa por turnos.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -218,6 +226,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Combinación de encuesta panel y entrevistas en profundidad para explicar por qué la adopción declarada y la observada difieren de forma sistemática.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -235,6 +244,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Diagnóstico de completitud y consistencia sobre catorce millones de registros, y el costo real de limpiar lo que nunca se capturó bien en el punto de atención.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [
       {
         idInvitado: '1ba5af9a-f6a2-4504-ab60-1f018c21290a',
@@ -262,6 +272,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Intento de reejecutar el código de sesenta artículos publicados en revistas del área, con el detalle de en qué punto exacto se rompió cada uno.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -279,6 +290,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Tres talleres de codiseño con usuarios de un trámite municipal, y cómo cambió el formulario cuando quienes lo llenan participaron en definirlo.',
     fuente: 'transcripcion',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -296,6 +308,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Pronóstico de demanda por estación con datos de validación de tarjeta, y el efecto de los días atípicos sobre modelos entrenados sin marcarlos.',
     fuente: 'transcripcion',
+    descripcion: '',
     comparticiones: [],
   },
   {
@@ -313,6 +326,7 @@ export const CONFERENCIAS_DE_EJEMPLO: readonly Conferencia[] = [
     resumen:
       'Revisión de sistemas de preselección de hojas de vida en el sector público, con foco en qué decisiones quedan sin responsable identificable.',
     fuente: 'audio',
+    descripcion: '',
     comparticiones: [],
   },
 ]

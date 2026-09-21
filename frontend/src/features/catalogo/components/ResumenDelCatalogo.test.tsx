@@ -22,6 +22,7 @@ const CONFERENCIA: Conferencia = {
   estado: 'procesada',
   idTemaPrincipal: 'tem-modelos-de-lenguaje',
   resumen: 'Resumen de prueba.',
+  descripcion: '',
   fuente: 'audio',
   comparticiones: [],
 }

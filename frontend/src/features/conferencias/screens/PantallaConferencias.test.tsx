@@ -78,14 +78,37 @@ async function esperarAlArchivo(): Promise<void> {
 }
 
 /** Títulos de las conferencias que el explorador está mostrando. */
+/*
+  Las filas de la columna, sin los controles que viven encima de ellas.
+
+  Cada conferencia lleva ahora su boton de opciones dentro de la fila, y ese
+  si tiene `aria-label`; el de la fila toma su nombre del contenido. Filtrar
+  por ahi separa "la lista" de "los controles de la lista" sin depender de
+  como esten escritos los rotulos.
+*/
+function filasDeConferencia(): HTMLElement[] {
+  return within(columnaDeConferencias())
+    .getAllByRole('button')
+    .filter((boton) => !boton.hasAttribute('aria-label'))
+    .filter((boton) => !/^(Conferencias|Temas)$/.test((boton.textContent ?? '').trim()))
+    .filter((boton) => !(boton.textContent ?? '').includes('Todas las conferencias'))
+}
+
 async function conferenciasListadas(): Promise<string[]> {
   await esperarAlArchivo()
 
-  return within(columnaDeConferencias())
-    .getAllByRole('button')
-    .map((boton) => boton.textContent ?? '')
-    .filter((texto) => !/^(Conferencias|Temas)$/.test(texto.trim()))
-    .filter((texto) => !texto.includes('Todas las conferencias'))
+  return filasDeConferencia().map((boton) => boton.textContent ?? '')
+}
+
+/** La fila cuyo titulo coincide, ya descartados los controles. */
+function filaDeConferencia(titulo: RegExp): HTMLElement {
+  const fila = filasDeConferencia().find((boton) => titulo.test(boton.textContent ?? ''))
+
+  if (fila === undefined) {
+    throw new Error(`No hay ninguna fila de conferencia que case con ${titulo}`)
+  }
+
+  return fila
 }
 
 async function abrirFiltros(): Promise<HTMLElement> {
@@ -226,9 +249,7 @@ describe('PantallaConferencias, etiquetas', () => {
 
     await esperarAlArchivo()
 
-    const fila = within(columnaDeConferencias()).getByRole('button', {
-      name: /Modelos de lenguaje aplicados a la revisión sistemática/,
-    })
+    const fila = filaDeConferencia(/Modelos de lenguaje aplicados a la revisión sistemática/)
 
     /* Camila le puso "IA" a cnf-alc-01, que no es suya. */
     expect(fila.textContent).toContain('IA')
@@ -239,20 +260,18 @@ describe('PantallaConferencias, etiquetas', () => {
 
     await esperarAlArchivo()
 
+    /*
+      Las acciones de la conferencia viven en su propio modal, y se llega por
+      el boton de opciones de la fila. El clic en la fila es navegacion: entra
+      a las fichas y no abre nada.
+    */
     await userEvent.click(
       within(columnaDeConferencias()).getByRole('button', {
-        name: /Modelos de lenguaje aplicados a la revisión sistemática/,
+        name: /Opciones de «Modelos de lenguaje aplicados a la revisión sistemática/,
       }),
     )
-
-    /*
-      Las acciones de la conferencia viven ahora detras de "Opciones": sueltas
-      en el pie usaban el mismo molde que las fichas y el pie parecia la
-      continuacion de la lista.
-    */
-    await userEvent.click(await screen.findByRole('button', { name: /Opciones de la conferencia/ }))
     await userEvent.click(
-      await within(await screen.findByRole('dialog', { name: 'Opciones' })).findByRole('button', {
+      await within(await screen.findByRole('dialog', { name: 'Conferencia' })).findByRole('button', {
         name: /Etiquetas/,
       }),
     )

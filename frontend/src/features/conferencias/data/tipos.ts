@@ -133,6 +133,14 @@ export type Conferencia = {
   /** Tema dominante de la charla, referenciado por id igual que `Ficha.idTema`. */
   readonly idTemaPrincipal: string
   readonly resumen: string
+  /**
+   * Nota escrita a mano por quien la subio. Vacia es lo normal.
+   *
+   * No es `resumen`: ese lo escribe el analisis y lo reescribe cada vez que
+   * se reanaliza, asi que lo que una persona pusiera ahi se perderia sin
+   * avisar. Esta no la toca el backend nunca.
+   */
+  readonly descripcion: string
   readonly fuente: FuenteDeConferencia
   readonly comparticiones: readonly Comparticion[]
   /**

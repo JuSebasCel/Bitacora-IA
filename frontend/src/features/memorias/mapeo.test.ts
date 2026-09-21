@@ -16,6 +16,7 @@ const CONFERENCIA: Conferencia = {
   estado: 'procesada',
   idTemaPrincipal: 'tem-de-prueba',
   resumen: 'Resumen general de la charla.',
+  descripcion: '',
   fuente: 'audio',
   comparticiones: [],
 }

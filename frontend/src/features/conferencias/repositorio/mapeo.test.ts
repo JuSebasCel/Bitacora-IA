@@ -143,6 +143,8 @@ describe('mapearConferencia', () => {
       estado: 'procesada',
       idTemaPrincipal: 'tema-1',
       resumen: 'Resumen de la charla.',
+      /* La fila no trae la columna: se cargó antes de que existiera, y cae a vacía. */
+      descripcion: '',
       fuente: 'audio',
       comparticiones: [],
     })

@@ -42,6 +42,32 @@ const FRACCION: Record<Exclude<Densidad, 'libre'>, number> = {
   muchas: 1,
 }
 
+/*
+  El camino de vuelta: de cuantas fichas se guardaron a que opcion se eligio.
+
+  No se guarda la densidad en la base, solo el numero, y esto lo reconstruye
+  probando las tres contra la duracion. Se hace asi y no con una columna nueva
+  porque el numero es el dato que manda —es lo que el backend obedece— y una
+  segunda columna con la etiqueta podria contradecirlo.
+
+  Devuelve `null` cuando ninguna encaja, y pasa de verdad: si se subio una
+  transcripcion, al cargarla la duracion era 0 y el tope se calculo sobre tres
+  fichas; el backend luego escribe la duracion real y las cuentas ya no dan.
+  En ese caso quien llama enseña el numero, que nunca miente.
+*/
+export function densidadDe(
+  maximoDeFichas: number | null,
+  duracionEnSegundos: number,
+): Densidad | null {
+  if (maximoDeFichas === null) {
+    return 'libre'
+  }
+
+  const candidatas: readonly Exclude<Densidad, 'libre'>[] = ['pocas', 'equilibrado', 'muchas']
+
+  return candidatas.find((d) => fichasPedidas(d, duracionEnSegundos) === maximoDeFichas) ?? null
+}
+
 /** `null` cuando se deja libre: el análisis devuelve lo que encuentre. */
 export function fichasPedidas(densidad: Densidad, duracionEnSegundos: number): number | null {
   if (densidad === 'libre') {

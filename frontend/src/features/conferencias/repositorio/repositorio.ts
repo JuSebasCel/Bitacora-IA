@@ -255,6 +255,7 @@ export type CambioDeConferencia = {
   readonly titulo?: string
   readonly ponente?: string
   readonly fechaDelEvento?: string
+  readonly descripcion?: string
 }
 
 export async function actualizarConferencia(
@@ -266,6 +267,12 @@ export async function actualizarConferencia(
   if (cambio.titulo !== undefined) fila.titulo = cambio.titulo.trim()
   if (cambio.ponente !== undefined) fila.ponente = cambio.ponente.trim()
   if (cambio.fechaDelEvento !== undefined) fila.fecha_del_evento = cambio.fechaDelEvento
+  /*
+    La descripcion se manda tal cual, sin `trim` que la borre por accidente ni
+    comprobacion de vacio: vaciarla a proposito es una edicion legitima, y
+    `undefined` (no se toca) ya es distinto de `''` (se quiso dejar vacia).
+  */
+  if (cambio.descripcion !== undefined) fila.descripcion = cambio.descripcion.trim()
 
   if (Object.keys(fila).length === 0) {
     return { ok: true, datos: null }
