@@ -120,9 +120,10 @@ export function SelectorDeOpciones<T extends string>({
               : 'flex h-11 min-w-0 max-w-full items-center gap-2 rounded-full bg-acento-tenue px-4 text-base text-texto transition-colors hover:bg-ilustracion'
           }
         >
-          {icono === undefined ? null : (
+          {/* El icono de la opción elegida si trae uno: así el campo dice qué es sin un rótulo encima. */}
+          {(elegida?.icono ?? icono) === undefined ? null : (
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
-              {icono}
+              {elegida?.icono ?? icono}
             </span>
           )}
           <span className="truncate">{elegida?.etiqueta ?? vacio}</span>

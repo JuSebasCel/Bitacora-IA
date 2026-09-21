@@ -1,8 +1,16 @@
 import type { ReactElement } from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
-import { ModalDeConfirmacion, PanelDeError, useCrecerDesdeOrigen } from '@/shared/ui'
+import {
+  CLASES_DE_PILDORA,
+  colorPorClave,
+  ModalDeConfirmacion,
+  PanelDeError,
+  SelectorDeOpciones,
+  useCrecerDesdeOrigen,
+} from '@/shared/ui'
+import type { OpcionDeSelector } from '@/shared/ui'
 import { VistaPreviaDeDocx } from '../components'
 import type {
   ComportamientoSiVacio,
@@ -44,37 +52,45 @@ export type PropsConfirmacionDePlantillaDocx = {
 const CAMPO =
   'w-full rounded-2xl bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-2 focus:outline-offset-2 focus:outline-acento'
 
-const FORMATOS: readonly { valor: FormatoDeMarcador; etiqueta: string }[] = [
-  { valor: 'parrafo', etiqueta: 'Párrafo' },
-  { valor: 'lista_vinetas', etiqueta: 'Viñetas' },
-  { valor: 'lista_numerada', etiqueta: 'Numerada' },
-]
-
 /*
-  Las opciones de cada campo, cada una con la línea que dice qué hace.
-
-  Sin esa línea eran botones con una palabra —"Párrafo", "Quitar el
-  renglón"— y quedaba a la intuición de cada uno qué cambiaba al pulsarlos.
-  Una configuración que se hace una vez y vale para todas las memorias es
-  justo la que tiene que entenderse sin probar.
+  Las opciones de cada campo, como campos desplegables de ancho completo (los
+  de la referencia) en vez de filas de pastillas: cuatro filas de pastillas
+  con una línea de ayuda debajo de cada una saturaban el panel. Cada opción
+  se entiende sola y trae su icono, así que no hace falta rótulo encima ni
+  explicación debajo.
 */
-const MODOS: readonly { valor: ModoDeCampo; etiqueta: string }[] = [
-  { valor: 'redactar', etiqueta: 'Redactado por la IA' },
-  { valor: 'cita', etiqueta: 'Cita literal' },
+const MODOS: readonly OpcionDeSelector<ModoDeCampo>[] = [
+  { valor: 'redactar', etiqueta: 'Redactado por la IA', icono: 'auto_awesome' },
+  { valor: 'cita', etiqueta: 'Cita literal de la charla', icono: 'format_quote' },
 ]
 
-const EXTENSIONES: readonly { valor: ExtensionDeCampo; etiqueta: string }[] = [
-  { valor: 'breve', etiqueta: 'Breve' },
-  { valor: 'media', etiqueta: 'Un párrafo' },
-  { valor: 'extensa', etiqueta: 'Extensa' },
+const EXTENSIONES: readonly OpcionDeSelector<ExtensionDeCampo>[] = [
+  { valor: 'breve', etiqueta: 'Texto breve', icono: 'short_text' },
+  { valor: 'media', etiqueta: 'Un párrafo', icono: 'notes' },
+  { valor: 'extensa', etiqueta: 'Varios párrafos', icono: 'article' },
+]
+
+const FORMATOS: readonly OpcionDeSelector<FormatoDeMarcador>[] = [
+  { valor: 'parrafo', etiqueta: 'En párrafo', icono: 'subject' },
+  { valor: 'lista_vinetas', etiqueta: 'Con viñetas', icono: 'format_list_bulleted' },
+  { valor: 'lista_numerada', etiqueta: 'Numerado', icono: 'format_list_numbered' },
 ]
 
 /*
-  Puntos de partida para la instrucción, no plantillas cerradas.
+  "Quitar el renglón" y no "quitar la sección": un marcador simple ocupa un
+  párrafo, y eso es lo que se va; para quitar un tramo más largo está el
+  marcador `[[SI: ...]]` de Word, que envuelve lo que haga falta.
+*/
+const SI_VACIO: readonly OpcionDeSelector<ComportamientoSiVacio>[] = [
+  { valor: 'dejar-vacio', etiqueta: 'Si falta material, dejarlo en blanco', icono: 'check_box_outline_blank' },
+  { valor: 'quitar', etiqueta: 'Si falta material, quitar el renglón', icono: 'backspace' },
+  { valor: 'avisar', etiqueta: 'Si falta material, avisarme', icono: 'notifications' },
+]
 
-  Una caja de texto vacía es donde más se atasca quien configura: no sabe qué
-  nivel de detalle espera la IA. Pulsar una sugerencia la escribe y se sigue
-  editando; con eso se ve también cómo se redacta una buena instrucción.
+/*
+  Puntos de partida para la instrucción, no plantillas cerradas: una caja
+  vacía es donde más se atasca quien configura. Pulsar una la escribe y se
+  sigue editando.
 */
 const SUGERENCIAS: readonly { etiqueta: string; texto: string }[] = [
   { etiqueta: 'La tesis', texto: 'Resume la tesis principal que defendió el ponente y el argumento con que la sostuvo.' },
@@ -82,25 +98,6 @@ const SUGERENCIAS: readonly { etiqueta: string; texto: string }[] = [
   { etiqueta: 'Las cifras', texto: 'Recoge los datos y cifras concretos que dio, con su contexto.' },
   { etiqueta: 'Las conclusiones', texto: 'Resume las conclusiones y las recomendaciones con que cerró.' },
 ]
-
-/*
-  Qué pasa si la conferencia no da material para este campo.
-
-  "Quitar el renglón" y no "quitar la sección": un marcador simple ocupa un
-  párrafo, y eso es lo que se va — para quitar un tramo más largo está el
-  marcador `[[SI: …]]` de Word, que envuelve lo que haga falta.
-*/
-const SI_VACIO: readonly { valor: ComportamientoSiVacio; etiqueta: string }[] = [
-  { valor: 'dejar-vacio', etiqueta: 'Dejarlo en blanco' },
-  { valor: 'quitar', etiqueta: 'Quitar el renglón' },
-  { valor: 'avisar', etiqueta: 'Avisarme' },
-]
-
-const AYUDA_DE_SI_VACIO: Record<ComportamientoSiVacio, string> = {
-  'dejar-vacio': 'El campo queda vacío y el resto de la hoja no se mueve.',
-  quitar: 'Se borra el renglón entero, con su rótulo, para que no quede un título sin nada debajo.',
-  avisar: 'Queda vacío y, al abrir la memoria, te avisamos para que lo revises antes de enviarla.',
-}
 
 function tieneInstruccion(marcador: MarcadorDeDocx): boolean {
   return marcador.tipo === 'simple' && (marcador.instruccion ?? '').trim() !== ''
@@ -275,7 +272,11 @@ export function ConfirmacionDePlantillaDocx({
           <div className="flex items-baseline justify-between gap-3 px-2">
             <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Qué va en cada campo</h2>
             {campos.length === 0 ? null : (
-              <span className="shrink-0 text-sm text-texto-tenue">
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                  listos === campos.length ? CLASES_DE_PILDORA.verde : CLASES_DE_PILDORA.ambar
+                }`}
+              >
                 {listos} de {campos.length} listos
               </span>
             )}
@@ -368,21 +369,34 @@ function CampoConfigurable({
   const modo = marcador.modo ?? 'redactar'
   const siVacio = marcador.siVacio ?? 'dejar-vacio'
 
+  /* Un color por campo, siempre el mismo: su disco en la lista y su marcador en el contexto. */
+  const color = colorPorClave(marcador.id)
+
   return (
     <li className={`flex flex-col rounded-[20px] transition-colors ${abierto ? 'bg-fondo' : ''}`}>
       <button
         type="button"
         onClick={alAlternar}
         aria-expanded={abierto}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-colors ${
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-[20px] px-3 py-2.5 text-left transition-colors ${
           abierto ? '' : 'hover:bg-acento-tenue'
         }`}
       >
+        <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${CLASES_DE_PILDORA[color]}`}>
+          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-lg">
+            {modo === 'cita' ? 'format_quote' : 'data_object'}
+          </span>
+        </span>
+
         <span className="min-w-0 flex-1 truncate text-base text-texto">{nombreDeMarcador(marcador.textoOriginal)}</span>
 
-        <span className={`flex shrink-0 items-center gap-1 text-sm ${listo ? 'text-texto' : 'text-texto-tenue'}`}>
-          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
-            {listo ? 'check_circle' : 'radio_button_unchecked'}
+        <span
+          className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+            listo ? CLASES_DE_PILDORA.verde : CLASES_DE_PILDORA.ambar
+          }`}
+        >
+          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-sm">
+            {listo ? 'check_circle' : 'pending'}
           </span>
           {listo ? 'Listo' : 'Falta'}
         </span>
@@ -396,78 +410,67 @@ function CampoConfigurable({
       </button>
 
       {abierto ? (
-        <div className="flex flex-col gap-5 px-4 pb-5">
-          <p className="text-sm leading-relaxed text-texto-tenue">
+        <div className="flex flex-col gap-3 px-3 pb-4">
+          <p className="px-1 text-sm leading-relaxed text-texto-tenue">
             {indice === -1 ? (
               marcador.contexto
             ) : (
               <>
                 {marcador.contexto.slice(0, indice)}
-                <mark className="rounded bg-ilustracion px-1 font-mono text-ilustracion-texto">{marcador.textoOriginal}</mark>
+                <mark className={`rounded-md px-1 font-mono ${CLASES_DE_PILDORA[color]}`}>{marcador.textoOriginal}</mark>
                 {marcador.contexto.slice(indice + marcador.textoOriginal.length)}
               </>
             )}
           </p>
 
-          <div className="flex flex-col gap-2">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-texto">Qué debe ir aquí</span>
-              <textarea
-                value={marcador.instruccion ?? ''}
-                onChange={(evento) => alCambiar({ instruccion: evento.target.value })}
-                rows={3}
-                placeholder="Ej. Resume en dos párrafos la tesis principal del ponente."
-                className={`${CAMPO} resize-none py-3 leading-relaxed`}
-              />
-            </label>
+          <textarea
+            value={marcador.instruccion ?? ''}
+            onChange={(evento) => alCambiar({ instruccion: evento.target.value })}
+            rows={3}
+            aria-label="Qué debe escribir la IA aquí"
+            placeholder="Qué debe escribir la IA aquí"
+            className={`${CAMPO} resize-none py-3 leading-relaxed`}
+          />
 
-            {/* Solo con la caja vacía: con algo escrito, una sugerencia pisaría el trabajo de alguien. */}
-            {(marcador.instruccion ?? '').trim() === '' ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-texto-tenue">Empezar con:</span>
-                {SUGERENCIAS.map((sugerencia) => (
-                  <button
-                    key={sugerencia.etiqueta}
-                    type="button"
-                    onClick={() => alCambiar({ instruccion: sugerencia.texto })}
-                    className="cursor-pointer rounded-full bg-acento-tenue px-2.5 py-1 text-xs text-texto-tenue transition-colors hover:text-texto"
-                  >
-                    {sugerencia.etiqueta}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs leading-relaxed text-texto-tenue">
-                Cuanto más concreta, mejor: di qué parte de la charla buscar y para quién se escribe.
-              </p>
-            )}
-          </div>
+          {/* Solo con la caja vacía: con algo escrito, una sugerencia pisaría el trabajo de alguien. */}
+          {(marcador.instruccion ?? '').trim() === '' ? (
+            <div className="flex flex-wrap gap-1.5">
+              {SUGERENCIAS.map((sugerencia) => (
+                <button
+                  key={sugerencia.etiqueta}
+                  type="button"
+                  onClick={() => alCambiar({ instruccion: sugerencia.texto })}
+                  className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
+                    CLASES_DE_PILDORA[colorPorClave(sugerencia.etiqueta)]
+                  }`}
+                >
+                  {sugerencia.etiqueta}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
-          <GrupoDePastillas
-            titulo="Tipo de texto"
-            ayuda={
-              modo === 'cita'
-                ? 'Copia palabra por palabra el fragmento de la charla que mejor responda. No lo reescribe.'
-                : 'La IA lo escribe con sus palabras a partir de lo que se dijo, sin añadir nada que no esté.'
-            }
+          <SelectorDeOpciones
+            completo
+            etiquetaAccesible="Tipo de texto"
             opciones={MODOS}
             valor={modo}
             alCambiar={(valor) => alCambiar({ modo: valor })}
           />
 
+          {/* Extensión y formato no aplican a una cita: mide lo que mide, y en viñetas se desfiguraría. */}
           {modo === 'cita' ? null : (
             <>
-              <GrupoDePastillas
-                titulo="Extensión"
-                ayuda="Cuánto ocupa en la hoja. Si el campo tiene poco sitio en tu diseño, elige breve: un texto largo empuja todo lo de debajo."
+              <SelectorDeOpciones
+                completo
+                etiquetaAccesible="Extensión"
                 opciones={EXTENSIONES}
                 valor={marcador.extension ?? 'media'}
                 alCambiar={(valor) => alCambiar({ extension: valor })}
               />
-
-              <GrupoDePastillas
-                titulo="Cómo se presenta"
-                ayuda="Las viñetas y la numeración las pone la app, con el formato que el campo tiene en Word."
+              <SelectorDeOpciones
+                completo
+                etiquetaAccesible="Cómo se presenta"
                 opciones={FORMATOS}
                 valor={marcador.formato}
                 alCambiar={(formato) => alCambiar({ formato })}
@@ -475,9 +478,9 @@ function CampoConfigurable({
             </>
           )}
 
-          <GrupoDePastillas
-            titulo="Si la charla no da para esto"
-            ayuda={AYUDA_DE_SI_VACIO[siVacio]}
+          <SelectorDeOpciones
+            completo
+            etiquetaAccesible="Si la charla no da para esto"
             opciones={SI_VACIO}
             valor={siVacio}
             alCambiar={(valor) => alCambiar({ siVacio: valor })}
@@ -507,53 +510,5 @@ function SeccionDeWord({ marcador }: { marcador: Exclude<MarcadorDeDocx, Marcado
         </span>
       </span>
     </li>
-  )
-}
-
-function GrupoDePastillas<T extends string>({
-  titulo,
-  ayuda,
-  opciones,
-  valor,
-  alCambiar,
-}: {
-  titulo: string
-  /* Lo que hace la opción elegida, dicho en una línea. Cambia con la elección. */
-  ayuda?: string
-  opciones: readonly { valor: T; etiqueta: string }[]
-  valor: T
-  alCambiar: (valor: T) => void
-}): ReactElement {
-  /* Un nombre por grupo: sin él, las flechas del teclado no saltan entre las opciones de un mismo grupo. */
-  const nombre = useId()
-
-  return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-medium text-texto">{titulo}</legend>
-      <div className="flex flex-wrap gap-1.5">
-        {opciones.map((opcion) => {
-          const activa = opcion.valor === valor
-
-          return (
-            <label
-              key={opcion.valor}
-              className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
-                activa ? 'bg-acento text-acento-contraste' : 'bg-acento-tenue text-texto-tenue hover:text-texto'
-              }`}
-            >
-              <input
-                type="radio"
-                name={nombre}
-                checked={activa}
-                onChange={() => alCambiar(opcion.valor)}
-                className="absolute inset-0 cursor-pointer appearance-none opacity-0"
-              />
-              {opcion.etiqueta}
-            </label>
-          )
-        })}
-      </div>
-      {ayuda === undefined ? null : <p className="text-xs leading-relaxed text-texto-tenue">{ayuda}</p>}
-    </fieldset>
   )
 }

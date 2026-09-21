@@ -92,7 +92,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
 
     expect(screen.getByText('Cita opcional')).toBeInTheDocument()
     expect(screen.getByText(/aparece solo si hay datos/i)).toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: /qué debe ir aquí/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /qué debe escribir la ia/i })).not.toBeInTheDocument()
   })
 
   /* El título se edita con doble clic, y entra con todo seleccionado: lo que se teclea lo sustituye. */
@@ -118,7 +118,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
       alCambiarMarcadores,
     })
 
-    await userEvent.type(screen.getByRole('textbox', { name: /qué debe ir aquí/i }), 'R')
+    await userEvent.type(screen.getByRole('textbox', { name: /qué debe escribir la ia/i }), 'R')
 
     const marcadores = alCambiarMarcadores.mock.lastCall?.[0] as MarcadorDeDocx[]
     expect(marcadores.find((m) => m.id === 'mar-1')).toMatchObject({ instruccion: 'R' })
@@ -129,7 +129,9 @@ describe('ConfirmacionDePlantillaDocx', () => {
     const alCambiarMarcadores = vi.fn()
     montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE]), { alCambiarMarcadores })
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Quitar el renglón' }))
+    /* Es un campo desplegable: se abre y se elige la opción. */
+    await userEvent.click(screen.getByRole('button', { name: /^Si la charla no da para esto/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Si falta material, quitar el renglón' }))
 
     expect(alCambiarMarcadores).toHaveBeenLastCalledWith([expect.objectContaining({ id: 'mar-1', siVacio: 'quitar' })])
   })

@@ -1044,3 +1044,46 @@
     ease,
     cubic-bezier(0.38, 0.49, 0, 1.5);
 }
+
+/*
+  La onda del fragmento de audio (`FragmentoDeAudio`): la barra entra
+  creciendo desde su centro, cada una unos milisegundos después de la
+  anterior, y la que suena late. Con reducir movimiento, la regla global las
+  deja quietas.
+*/
+.entrada-de-fragmento {
+  animation: fragmento-entra 0.35s var(--ease-entrada) both;
+}
+
+.barra-de-onda {
+  transform-origin: center;
+  animation: onda-entra 0.5s cubic-bezier(0.38, 0.49, 0, 1.5) backwards;
+}
+
+.barra-sonando {
+  animation: onda-late 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes fragmento-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes onda-entra {
+  from {
+    transform: scaleY(0.08);
+    opacity: 0;
+  }
+}
+
+@keyframes onda-late {
+  from {
+    transform: scaleY(1);
+  }
+
+  to {
+    transform: scaleY(1.35);
+  }
+}
