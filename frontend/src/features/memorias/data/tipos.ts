@@ -21,4 +21,13 @@ export type Memoria = {
   readonly idDueno: string
   readonly nombre: string
   readonly generadaEl: string
+  /**
+   * Lo que la IA escribió en cada hueco, por id de marcador.
+   *
+   * Se guarda porque regenerar al abrir, que era como funcionaba cuando los
+   * huecos se llenaban copiando datos, ahora sería volver a pagar la llamada
+   * al modelo en cada visita y obtener un texto distinto cada vez. Ausente en
+   * las memorias hechas antes de la redacción con IA y cuando no hay backend.
+   */
+  readonly secciones?: Readonly<Record<string, string | null>>
 }

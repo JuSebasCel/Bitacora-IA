@@ -11,6 +11,7 @@ import type {
   MarcadorSimpleDeDocx,
   PlantillaDesdeDocx,
 } from '../data'
+import { nombreDeMarcador } from '../plantillas'
 import { useDocxDePlantilla } from '../useDocxDePlantilla'
 
 /*
@@ -59,11 +60,6 @@ const SI_VACIO: readonly { valor: ComportamientoSiVacio; etiqueta: string }[] = 
   { valor: 'quitar', etiqueta: 'Quitar el renglón' },
   { valor: 'avisar', etiqueta: 'Avisarme' },
 ]
-
-/** `[[Resumen de la tesis]]` → `Resumen de la tesis`. */
-function etiquetaLegible(textoOriginal: string): string {
-  return textoOriginal.replace(/^\[\[/, '').replace(/\]\]$/, '').trim()
-}
 
 function tieneInstruccion(marcador: MarcadorDeDocx): boolean {
   return marcador.tipo === 'simple' && (marcador.instruccion ?? '').trim() !== ''
@@ -293,7 +289,7 @@ function HuecoConfigurable({
           abierto ? '' : 'hover:bg-acento-tenue'
         }`}
       >
-        <span className="min-w-0 flex-1 truncate text-base text-texto">{etiquetaLegible(marcador.textoOriginal)}</span>
+        <span className="min-w-0 flex-1 truncate text-base text-texto">{nombreDeMarcador(marcador.textoOriginal)}</span>
 
         <span
           className={`flex shrink-0 items-center gap-1 text-sm ${listo ? 'text-texto' : 'text-texto-tenue'}`}

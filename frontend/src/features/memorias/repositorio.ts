@@ -8,12 +8,16 @@ import type { Memoria } from './data'
   contrato que `plantillas/repositorio.ts`: funciones asíncronas planas que
   devuelven `ResultadoDeConsulta`, y ninguna pantalla toca `supabase.from`.
 
-  Lo que se guarda sigue siendo la referencia liviana y nunca el documento
-  generado: `id_conferencia` + `id_plantilla` + nombre. La tabla no tiene
-  dónde poner un `.docx` congelado y eso es deliberado (PLAN.md 1.3) -- la
-  memoria se vuelve a generar al abrirla, así que refleja siempre las fichas
-  validadas de hoy y no las del día en que se pulsó "Generar". Si el documento
-  se guardara, una ficha corregida dejaría a la memoria mintiendo en silencio.
+  Se guarda la referencia —`id_conferencia` + `id_plantilla` + nombre— y,
+  desde la redacción con IA, el texto que el modelo escribió en cada hueco
+  (`secciones`). El documento no: el `.docx` se sigue armando al abrir, a partir
+  de esos textos y de la plantilla, así que una plantilla corregida en Word se
+  nota en las memorias ya hechas.
+
+  Antes no se guardaba ni el texto, para que la memoria reflejara siempre las
+  fichas de hoy. Con la IA de por medio eso habría significado pagar una
+  llamada al modelo en cada apertura y leer un texto distinto cada vez; si las
+  fichas cambian, la memoria se vuelve a generar a propósito.
 
   Sin `update`: una memoria no se edita después de generarse. Solo se crea, se
   lista y se elimina.
@@ -29,10 +33,11 @@ type FilaDeMemoria = {
   readonly id_dueno: string
   readonly nombre: string
   readonly generada_el: string
+  readonly secciones?: Record<string, string | null> | null
 }
 
 function memoriaDesdeFila(fila: FilaDeMemoria): Memoria {
-  return {
+  const memoria: Memoria = {
     id: fila.id,
     idConferencia: fila.id_conferencia,
     idPlantilla: fila.id_plantilla,
@@ -40,6 +45,9 @@ function memoriaDesdeFila(fila: FilaDeMemoria): Memoria {
     nombre: fila.nombre,
     generadaEl: fila.generada_el,
   }
+
+  /* Opcional en el dominio: se omite en vez de viajar como nulo. */
+  return fila.secciones == null ? memoria : { ...memoria, secciones: fila.secciones }
 }
 
 function filaDesdeMemoria(memoria: Memoria): Record<string, unknown> {
@@ -50,6 +58,7 @@ function filaDesdeMemoria(memoria: Memoria): Record<string, unknown> {
     id_dueno: memoria.idDueno,
     nombre: memoria.nombre,
     generada_el: memoria.generadaEl,
+    secciones: memoria.secciones ?? null,
   }
 }
 

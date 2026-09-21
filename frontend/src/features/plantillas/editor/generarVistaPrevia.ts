@@ -23,6 +23,7 @@ export async function generarVistaPrevia(
   bytesDelOriginal: ArrayBuffer,
   marcadores: readonly MarcadorDeDocx[],
   datosReales?: RegistroDeDatosDeCampo,
+  secciones?: Readonly<Record<string, string | null>>,
 ): Promise<Blob> {
   const zip = await JSZip.loadAsync(bytesDelOriginal)
 
@@ -31,7 +32,7 @@ export async function generarVistaPrevia(
     throw new Error('El .docx no tiene un word/document.xml válido')
   }
 
-  const { documentXml, datos } = prepararComandos(documentXmlOriginal, marcadores, datosReales)
+  const { documentXml, datos } = prepararComandos(documentXmlOriginal, marcadores, datosReales, secciones)
   zip.file('word/document.xml', documentXml)
 
   const bufferDeComandos = await zip.generateAsync({ type: 'arraybuffer' })

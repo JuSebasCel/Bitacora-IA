@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
+import { huecosDePlantilla } from '../redaccion'
+import type { HuecoParaRedactar } from '../redaccion'
 import { mensajeDeError } from '@/shared/errors'
 import { Button, Field, Input, MensajeDeFormulario, Select } from '@/shared/ui'
 import type { OpcionDeSelect } from '@/shared/ui'
@@ -18,7 +20,12 @@ export type PropsPanelDeGenerarMemoria = {
   /** Preselecciona una conferencia — punto de entrada desde el detalle de una conferencia específica. */
   idConferenciaPreseleccionada?: string
   /** Se pasa desde la pantalla que ya tiene montado `useMemorias()`, para que el listado se actualice sin un segundo estado desincronizado. */
-  generar: (idConferencia: string, idPlantilla: string, nombre: string) => Promise<ResultadoMemoria>
+  generar: (
+    idConferencia: string,
+    idPlantilla: string,
+    nombre: string,
+    huecos?: readonly HuecoParaRedactar[],
+  ) => Promise<ResultadoMemoria>
   alGenerar: (memoria: Memoria) => void
 }
 
@@ -133,7 +140,17 @@ export function PanelDeGenerarMemoria({
     evento.preventDefault()
 
     setGenerando(true)
-    const resultado = await generar(idConferencia, idPlantilla, nombre)
+    /*
+      Los huecos salen de la plantilla elegida, con la instrucción que se le
+      escribió al configurarla: es lo que el modelo tiene que redactar.
+    */
+    const plantilla = plantillas.find((candidata) => candidata.id === idPlantilla)
+    const resultado = await generar(
+      idConferencia,
+      idPlantilla,
+      nombre,
+      plantilla === undefined ? [] : huecosDePlantilla(plantilla),
+    )
     setGenerando(false)
 
     if (!resultado.ok) {

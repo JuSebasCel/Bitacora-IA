@@ -28,6 +28,8 @@ export async function generarMemoria(
   fichas: readonly Ficha[],
   temas: readonly Tema[],
   bytesDelDocx: ArrayBuffer | null,
+  /* Lo que la IA escribió al generarla. Ausente en memorias anteriores a la redacción con IA. */
+  secciones?: Readonly<Record<string, string | null>>,
 ): Promise<ResultadoDeMemoria> {
   const datosReales = mapearConferenciaACampos(conferencia, fichas, temas)
 
@@ -43,7 +45,7 @@ export async function generarMemoria(
       throw new Error('Falta el archivo original de la plantilla importada')
     }
 
-    const blob = await generarVistaPrevia(bytesDelDocx, plantilla.marcadores, datosReales)
+    const blob = await generarVistaPrevia(bytesDelDocx, plantilla.marcadores, datosReales, secciones)
     return { origen: 'docx', blob }
   }
 

@@ -39,6 +39,7 @@ export function crearMemoria(
   idPlantilla: string,
   nombre: string,
   idDueno: string,
+  secciones?: Readonly<Record<string, string | null>>,
 ): ResultadoMemoria {
   if (idConferencia.trim().length === 0) {
     return { ok: false, codigo: 'MEM_CONFERENCIA_REQUERIDA' }
@@ -67,6 +68,7 @@ export function crearMemoria(
       idDueno,
       nombre: nombreLimpio,
       generadaEl: new Date().toISOString(),
+      ...(secciones === undefined ? {} : { secciones }),
     },
   }
 }

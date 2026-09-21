@@ -184,3 +184,16 @@ export function validarImagen(archivo: File): { ok: true } | { ok: false; codigo
 
   return { ok: true }
 }
+
+/*
+  `[[Resumen de la tesis]]` → `Resumen de la tesis`: el nombre de un hueco tal
+  como lo escribió quien diseñó la plantilla, sin los corchetes.
+
+  Vive aquí y no en una pantalla porque lo usan dos sitios que no se conocen:
+  la configuración de la plantilla, para enseñarlo, y la redacción de la
+  memoria, que se lo manda al modelo como pista de qué va en el hueco cuando
+  no hay instrucción.
+*/
+export function nombreDeMarcador(textoOriginal: string): string {
+  return textoOriginal.replace(/^\[\[/, '').replace(/\]\]$/, '').trim()
+}

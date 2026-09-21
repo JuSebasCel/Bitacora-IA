@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { hayBackend } from '@/shared/api/backend'
 import type { CodigoError } from '@/shared/errors'
 import type { Memoria } from './data'
 import { crearMemoria as crearMemoriaPura } from './memorias'
 import type { ResultadoMemoria } from './memorias'
 import { crearMemoria, eliminarMemoria, listarMemorias } from './repositorio'
+import { redactarSecciones } from './redaccion'
+import type { HuecoParaRedactar, SeccionesRedactadas } from './redaccion'
 
 /*
   Estado de las memorias del grupo contra Supabase (B6). Mismo reparto que
@@ -28,7 +31,12 @@ export type ValorDeMemorias = {
   readonly cargando: boolean
   /** Fallo al leer el listado. El fallo al generar viaja en el resultado de `generar`. */
   readonly codigoDeError: CodigoError | null
-  readonly generar: (idConferencia: string, idPlantilla: string, nombre: string) => Promise<ResultadoMemoria>
+  readonly generar: (
+    idConferencia: string,
+    idPlantilla: string,
+    nombre: string,
+    huecos?: readonly HuecoParaRedactar[],
+  ) => Promise<ResultadoMemoria>
   readonly eliminar: (id: string) => Promise<void>
 }
 
@@ -69,8 +77,44 @@ export function useMemorias(idUsuario: string): ValorDeMemorias {
   }, [idUsuario])
 
   const generar = useCallback(
-    async (idConferencia: string, idPlantilla: string, nombre: string): Promise<ResultadoMemoria> => {
-      const resultado = crearMemoriaPura(idConferencia, idPlantilla, nombre, idUsuario)
+    async (
+      idConferencia: string,
+      idPlantilla: string,
+      nombre: string,
+      huecos: readonly HuecoParaRedactar[] = [],
+    ): Promise<ResultadoMemoria> => {
+      /*
+        Se valida ANTES de redactar: un nombre vacío o una conferencia sin
+        elegir se sabe sin llamar a nadie, y descubrirlo después de pagar la
+        llamada al modelo sería cobrar por un error que se veía en el
+        formulario.
+      */
+      const validada = crearMemoriaPura(idConferencia, idPlantilla, nombre, idUsuario)
+
+      if (!validada.ok) {
+        return validada
+      }
+
+      /*
+        Sin backend (desarrollo sin `VITE_API_URL`) o sin huecos no hay nada
+        que redactar, y la memoria sale como antes: con los datos que se
+        podían copiar de la conferencia. Con backend, un fallo al redactar
+        —sin API key, sin saldo— detiene la generación: guardar una memoria
+        sin su contenido y enterarse al abrirla sería peor que no guardarla.
+      */
+      let secciones: SeccionesRedactadas | undefined
+
+      if (huecos.length > 0 && hayBackend()) {
+        const redactadas = await redactarSecciones(idConferencia, huecos)
+
+        if (!redactadas.ok) {
+          return { ok: false, codigo: redactadas.codigo }
+        }
+
+        secciones = redactadas.datos
+      }
+
+      const resultado = crearMemoriaPura(idConferencia, idPlantilla, nombre, idUsuario, secciones)
 
       if (!resultado.ok) {
         return resultado

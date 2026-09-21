@@ -68,6 +68,18 @@ export type CodigoError =
   | 'MEM_NOMBRE_MUY_LARGO'
   | 'MEM_NO_ENCONTRADA'
   | 'MEM_FALLO_GENERACION'
+  /* Redacción con IA y conversión a PDF: los escribe el backend con el mismo texto. */
+  | 'MEM_SIN_HUECOS'
+  | 'MEM_DOCX_VACIO'
+  | 'MEM_DOCX_DEMASIADO_GRANDE'
+  | 'MEM_PDF_SIN_CONVERSOR'
+  | 'MEM_PDF_FALLO'
+  /* Fallos de OpenAI que llegan desde el backend. Sin ellos, quedarse sin saldo se leía como un error genérico. */
+  | 'IA_API_KEY_RECHAZADA'
+  | 'IA_LIMITE_DE_USO'
+  | 'IA_SIN_RESPUESTA'
+  | 'IA_RESPUESTA_ILEGIBLE'
+  | 'IA_FALLO_INESPERADO'
 
   /* Taxonomía de temas (F9). */
   | 'TAX_TEMA_NOMBRE_REQUERIDO'
@@ -207,6 +219,26 @@ const MENSAJES: Record<CodigoError, string> = {
   MEM_NO_ENCONTRADA: 'No encontramos esa memoria. Puede que ya se haya eliminado.',
   MEM_FALLO_GENERACION:
     'No pudimos generar la memoria. Puede que la conferencia o la plantilla de origen ya no estén disponibles.',
+  IA_API_KEY_RECHAZADA:
+    'OpenAI rechazó tu API key. Revísala en Configuración y vuelve a guardarla.',
+  IA_LIMITE_DE_USO:
+    'Tu cuenta de OpenAI alcanzó su límite de uso. Revísalo y vuelve a intentarlo más tarde.',
+  IA_SIN_RESPUESTA:
+    'No pudimos comunicarnos con OpenAI. Vuelve a intentarlo en unos momentos.',
+  IA_RESPUESTA_ILEGIBLE:
+    'El análisis devolvió un resultado que no pudimos interpretar. Vuelve a intentarlo.',
+  IA_FALLO_INESPERADO:
+    'No pudimos completar el análisis. Vuelve a intentarlo en unos momentos.',
+  MEM_SIN_HUECOS:
+    'Esta plantilla no tiene ningún marcador que rellenar. Márcalos en Word con [[Nombre]] y vuelve a subirla.',
+  MEM_DOCX_VACIO:
+    'No llegó ningún documento que convertir. Vuelve a generar la memoria.',
+  MEM_DOCX_DEMASIADO_GRANDE:
+    'El documento es demasiado grande para convertirlo a PDF. Reduce el tamaño de las imágenes de la plantilla en Word y vuelve a subirla.',
+  MEM_PDF_SIN_CONVERSOR:
+    'El servidor no tiene LibreOffice instalado, así que no puede crear el PDF. La memoria en Word sí se puede descargar.',
+  MEM_PDF_FALLO:
+    'No pudimos convertir la memoria a PDF. La versión en Word sí se puede descargar.',
 
   TAX_TEMA_NOMBRE_REQUERIDO: 'Escribe un nombre para el tema.',
   TAX_TEMA_NOMBRE_MUY_LARGO: `El nombre de un tema admite hasta ${LARGO_MAXIMO_DE_TEMA} caracteres. Acórtalo para guardarlo.`,

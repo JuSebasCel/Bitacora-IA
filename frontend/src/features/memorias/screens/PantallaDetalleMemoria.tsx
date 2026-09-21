@@ -13,6 +13,7 @@ import { Esqueleto, PanelDeError } from '@/shared/ui'
 import { VistaPreviaDeMemoria } from '../components'
 import type { ResultadoDeMemoria } from '../generarMemoria'
 import { generarMemoria } from '../generarMemoria'
+import { huecosPorRevisar } from '../redaccion'
 import { useMemorias } from '../useMemorias'
 
 /*
@@ -31,8 +32,16 @@ import { useMemorias } from '../useMemorias'
 
 function EnlaceDeRegreso(): ReactElement {
   return (
-    <Link to="/memorias" className="inline-flex w-fit items-center text-sm text-texto-tenue hover:text-acento">
-      Volver a memorias
+    <Link
+      to="/memorias"
+      /* Visible dice "Memorias", como una miga; para un lector de pantalla, junto al "Memorias" del dock, hace falta decir que regresa. */
+      aria-label="Volver a memorias"
+      className="flex w-fit items-center gap-1 rounded-full py-1 pr-2 text-sm text-texto-tenue transition-colors hover:text-texto"
+    >
+      <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+        arrow_back
+      </span>
+      Memorias
     </Link>
   )
 }
@@ -97,7 +106,14 @@ export function PantallaDetalleMemoria(): ReactElement {
     const bytes = archivo === null ? Promise.resolve(null) : archivo.arrayBuffer()
 
     bytes
-      .then((datos) => generarMemoria(plantilla, conferenciaVisible.conferencia, fichas, temas, datos))
+      /*
+        Con las secciones que la IA escribió al generarla: abrir una memoria
+        no vuelve a llamar al modelo. Sin ellas (memorias anteriores a la
+        redacción con IA), sale como antes.
+      */
+      .then((datos) =>
+        generarMemoria(plantilla, conferenciaVisible.conferencia, fichas, temas, datos, memoria.secciones),
+      )
       .then((valor) => {
         if (!cancelado) {
           setResultado(valor)
@@ -131,10 +147,33 @@ export function PantallaDetalleMemoria(): ReactElement {
     )
   }
 
+  /*
+    Los huecos que se quedaron sin material y cuya plantilla pidió avisar. Es
+    lo único que hay que mirar antes de mandar la memoria: el resto está
+    escrito, estos no, y quien diseñó la plantilla quería enterarse.
+  */
+  const porRevisar =
+    plantilla === undefined || memoria.secciones === undefined ? [] : huecosPorRevisar(plantilla, memoria.secciones)
+
   return (
-    <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
-      <h1 className="text-lg font-semibold tracking-tight text-texto">{memoria.nombre}</h1>
-      <EnlaceDeRegreso />
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <EnlaceDeRegreso />
+        <h1 className="font-titulo text-[32px] leading-tight font-semibold text-texto">{memoria.nombre}</h1>
+      </div>
+
+      {porRevisar.length === 0 ? null : (
+        <div role="status" className="flex items-start gap-3 rounded-[20px] bg-acento-tenue px-5 py-4">
+          <span aria-hidden="true" className="material-symbols-rounded icono-contorno mt-0.5 text-xl text-texto-tenue">
+            info
+          </span>
+          <p className="text-sm leading-relaxed text-texto">
+            La charla no dio material para{' '}
+            <span className="font-medium">{porRevisar.join(', ')}</span>. Esos huecos quedaron en blanco:
+            revísalos antes de enviar la memoria.
+          </p>
+        </div>
+      )}
 
       {error !== null ? (
         <PanelDeError mensaje={mensajeDeError(error)} />

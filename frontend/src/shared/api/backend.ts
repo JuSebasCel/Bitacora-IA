@@ -75,6 +75,51 @@ export async function pedirAlBackend<T>(
 }
 
 /*
+  Como `pedirAlBackend`, pero con un archivo de ida y otro de vuelta.
+
+  Existe para convertir una memoria a PDF: se manda el `.docx` tal cual, como
+  cuerpo crudo, y vuelve el PDF. No se envuelve en JSON ni en base64 —un
+  documento con imágenes pesa megas, y codificarlo lo engordaría un tercio
+  para nada—, pero los fallos siguen llegando como `{ codigo, mensaje }` y se
+  traducen igual que en la otra.
+*/
+export async function pedirArchivoAlBackend(
+  ruta: string,
+  archivo: Blob,
+): Promise<ResultadoDeConsulta<Blob>> {
+  if (!hayBackend()) {
+    return { ok: false, codigo: 'DATOS_FALLO_INESPERADO' }
+  }
+
+  const token = await tokenDeSesion()
+
+  if (token === null) {
+    return { ok: false, codigo: 'AUTH_FALLO_INESPERADO' }
+  }
+
+  let respuesta: Response
+
+  try {
+    respuesta = await fetch(`${URL_BASE}${ruta}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': archivo.type || 'application/octet-stream',
+        Authorization: `Bearer ${token}`,
+      },
+      body: archivo,
+    })
+  } catch {
+    return { ok: false, codigo: 'DATOS_SIN_CONEXION' }
+  }
+
+  if (!respuesta.ok) {
+    return { ok: false, codigo: await codigoDeRespuestaFallida(respuesta) }
+  }
+
+  return { ok: true, datos: await respuesta.blob() }
+}
+
+/*
   El backend responde `{ codigo, mensaje }` en cada fallo nombrado (ver
   `bitacora/api/aplicacion.py`). Se respeta ese código si es uno que el
   frontend conoce; si no, se traduce el estado HTTP a algo accionable. Un 401

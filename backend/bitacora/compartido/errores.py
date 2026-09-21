@@ -43,6 +43,12 @@ CodigoError = Literal[
     "PROC_TRANSCRIPCION_SIN_COORDENADAS",
     "PROC_SIN_TEMAS_DISPONIBLES",
     "PROC_SIN_FICHAS",
+    # Memorias: redactar los huecos de una plantilla y convertirla a PDF.
+    "MEM_SIN_HUECOS",
+    "MEM_DOCX_VACIO",
+    "MEM_DOCX_DEMASIADO_GRANDE",
+    "MEM_PDF_SIN_CONVERSOR",
+    "MEM_PDF_FALLO",
     # Agente conversacional sobre el catálogo.
     "CHAT_MENSAJE_VACIO",
     "CHAT_CONVERSACION_NO_ENCONTRADA",
@@ -54,6 +60,24 @@ CodigoError = Literal[
 ]
 
 _MENSAJES: Final[dict[str, str]] = {
+    "MEM_SIN_HUECOS": (
+        "Esta plantilla no tiene ningún marcador que rellenar. Márcalos en Word con "
+        "[[Nombre]] y vuelve a subirla."
+    ),
+    "MEM_DOCX_VACIO": "No llegó ningún documento que convertir. Vuelve a generar la memoria.",
+    "MEM_DOCX_DEMASIADO_GRANDE": (
+        "El documento es demasiado grande para convertirlo a PDF. Reduce el tamaño de las "
+        "imágenes de la plantilla en Word y vuelve a subirla."
+    ),
+    # El único caso en el que el problema es del servidor y no se arregla
+    # reintentando: dice qué falta para que quien lo despliega lo encuentre.
+    "MEM_PDF_SIN_CONVERSOR": (
+        "El servidor no tiene LibreOffice instalado, así que no puede crear el PDF. "
+        "La memoria en Word sí se puede descargar."
+    ),
+    "MEM_PDF_FALLO": (
+        "No pudimos convertir la memoria a PDF. La versión en Word sí se puede descargar."
+    ),
     "AUTH_TOKEN_AUSENTE": (
         "Tu sesión no viajó con la petición. Vuelve a iniciar sesión e inténtalo de nuevo."
     ),
@@ -153,6 +177,10 @@ _ESTADOS_HTTP: Final[dict[str, int]] = {
     "CONF_NO_ENCONTRADA": 404,
     "CHAT_CONVERSACION_NO_ENCONTRADA": 404,
     "CHAT_MENSAJE_VACIO": 422,
+    "MEM_SIN_HUECOS": 422,
+    "MEM_DOCX_VACIO": 422,
+    "MEM_DOCX_DEMASIADO_GRANDE": 413,
+    "MEM_PDF_SIN_CONVERSOR": 503,
     "PROC_ESTADO_NO_PROCESABLE": 409,
     "PROC_AUDIO_NO_ENCONTRADO": 404,
     "PROC_TRANSCRIPCION_SIN_COORDENADAS": 422,
