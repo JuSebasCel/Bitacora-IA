@@ -46,6 +46,19 @@ export type PropsModal = {
   ancho?: 'angosto' | 'normal'
   /** Región dentro de la cual debe quedar la ventana anclada, para no montarse sobre la navegación. */
   limites?: RefObject<HTMLElement | null>
+  /**
+   * Si pulsar el velo cierra el modal. Por defecto sí.
+   *
+   * Se apaga en los que llevan un formulario a medio escribir: ahí el clic
+   * fuera no es "ya terminé", es un resbalón que tira un título, un ponente y
+   * una fecha sin preguntar. Un panel de selección se puede descartar de un
+   * clic porque no hay nada que perder; un formulario no.
+   *
+   * Escape se queda en los dos casos: es una tecla que se pulsa a propósito,
+   * no algo que pase por accidente, y quitarla dejaría el modal sin salida de
+   * teclado.
+   */
+  cerrarAlPulsarElVelo?: boolean
 }
 
 const ANCHO: Record<'angosto' | 'normal', string> = {
@@ -65,6 +78,7 @@ export function Modal({
   anclaEn,
   ancho = 'normal',
   limites,
+  cerrarAlPulsarElVelo = true,
 }: PropsModal): ReactElement | null {
   const ventanaRef = useRef<HTMLDivElement>(null)
   const veloRef = useRef<HTMLDivElement>(null)
@@ -231,7 +245,7 @@ export function Modal({
     <div
       ref={veloRef}
       onClick={(evento) => {
-        if (evento.target === evento.currentTarget) alCerrar()
+        if (cerrarAlPulsarElVelo && evento.target === evento.currentTarget) alCerrar()
       }}
       className={`velo-de-modal fixed inset-0 z-50 p-4 ${cerrando ? '' : 'velo-entra'} ${
         anclaje === 'centro' ? 'flex items-center justify-center' : ''

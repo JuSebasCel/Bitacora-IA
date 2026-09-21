@@ -65,14 +65,6 @@ export function SelectorDeFecha({
       etiquetaAccesible={`${etiquetaAccesible}: ${valor === null ? vacio : fechaLegible(valor)}`}
       claseDelBoton="cursor-pointer"
       claseDelPanel="w-[336px] p-3"
-      /*
-        Elegir un dia no cierra el calendario, y eso es deliberado: cerrarlo
-        al primer clic obligaba a reabrirlo para corregir un mes equivocado o
-        un dia de al lado. Se queda puesto y se va solo cuando el cursor lleva
-        fuera un rato, o al pulsar en otro campo, que es cuando de verdad se
-        termino con la fecha.
-      */
-      cerrarAlSalir={700}
       boton={
         <span
           className={`flex h-11 items-center gap-2 rounded-full px-4 text-base transition-colors ${

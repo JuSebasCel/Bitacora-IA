@@ -50,21 +50,34 @@
     como un color.
   */
 
-  /* Superficies — beige cálido, no blanco */
-  --bitacora-fondo: oklch(0.974 0.007 85);
-  --bitacora-panel: oklch(0.948 0.009 85);
-  --bitacora-filete: oklch(0.9 0.011 85);
-  --bitacora-filete-fuerte: oklch(0.79 0.013 85);
+  /*
+    Superficies — beige cálido, no blanco.
 
-  /* Texto */
-  --bitacora-texto: oklch(0.21 0.005 85);
-  --bitacora-texto-tenue: oklch(0.43 0.008 85);
+    Segunda pasada: la primera acertó el matiz pero dejó los escalones
+    demasiado juntos. Entre fondo y panel había 2,6 puntos de luminancia y las
+    columnas seguían sin despegarse; ahora son 4,4, y el filete sube para que
+    el borde se vea sin tener que buscarlo. El fondo además baja un punto:
+    a pantalla completa, cuanto más cerca del blanco, más deslumbra.
+  */
+  --bitacora-fondo: oklch(0.966 0.008 85);
+  --bitacora-panel: oklch(0.922 0.012 85);
+  --bitacora-filete: oklch(0.86 0.015 85);
+  --bitacora-filete-fuerte: oklch(0.7 0.018 85);
+
+  /*
+    Texto. El secundario sube de contraste: a 0,43 sobre el fondo se quedaba
+    justo en el límite de AA para texto pequeño, y este es el tono en el que
+    están los renglones que más se leen —el ponente, el minuto, los rótulos—.
+  */
+  --bitacora-texto: oklch(0.18 0.006 85);
+  --bitacora-texto-tenue: oklch(0.38 0.01 85);
 
   /* Acento: contraste, no color */
   --bitacora-acento: #000000;
   --bitacora-acento-fuerte: #000000;
-  --bitacora-acento-tenue: oklch(0.928 0.01 85);
-  --bitacora-acento-contraste: oklch(0.99 0.004 85);
+  /* Las pastillas y los campos: se tienen que ver sobre el panel, no solo sobre el fondo. */
+  --bitacora-acento-tenue: oklch(0.885 0.014 85);
+  --bitacora-acento-contraste: oklch(0.985 0.005 85);
 
   /*
     Navegación. El inactivo del dock deja de ser un gris neutro y pasa al
@@ -73,7 +86,7 @@
     de vivir solo en un rincón. Sigue siendo más tenue que el texto
     secundario; lo que cambia es el matiz, no la jerarquía.
   */
-  --bitacora-nav-tenue: oklch(0.66 0.032 262);
+  --bitacora-nav-tenue: oklch(0.56 0.045 262);
   --bitacora-nav-activo: #000000;
 
   /*

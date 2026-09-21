@@ -49,20 +49,6 @@ export type PropsPopover = {
   claseDelBoton?: string
   /** Sustituye el tamaño del panel; el fondo, el radio y la elevación se conservan. */
   claseDelPanel?: string
-  /**
-   * Milisegundos que el cursor puede estar fuera antes de que el panel se
-   * cierre solo. Sin esto, el panel solo se cierra por clic fuera o Escape.
-   *
-   * Existe para los paneles donde elegir algo NO termina la tarea —el
-   * calendario es el caso: se elige un día y puede que uno se haya
-   * equivocado de mes—. Ahí cerrar al primer clic obliga a reabrir para
-   * corregir, así que el panel se queda y es el cursor yéndose lo que dice
-   * que ya está.
-   *
-   * Solo lo dispara el ratón: con teclado no hay "estar fuera", y ahí
-   * siguen mandando Escape y el clic fuera.
-   */
-  cerrarAlSalir?: number
 }
 
 export function Popover({
@@ -75,7 +61,6 @@ export function Popover({
   className,
   claseDelBoton,
   claseDelPanel,
-  cerrarAlSalir,
 }: PropsPopover): ReactElement {
   const [abierto, setAbierto] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
@@ -85,42 +70,6 @@ export function Popover({
   const [posicion, setPosicion] = useState({ top: -9999, left: -9999, maxHeight: 0 })
   const reducirMovimiento = useReducedMotion()
   const idPanel = useId()
-
-  const temporizadorDeSalida = useRef<number | null>(null)
-
-  const cancelarCierre = useCallback((): void => {
-    if (temporizadorDeSalida.current !== null) {
-      clearTimeout(temporizadorDeSalida.current)
-      temporizadorDeSalida.current = null
-    }
-  }, [])
-
-  /*
-    El disparador y el panel estan separados por 8px de aire, asi que ir de
-    uno al otro dispara una salida. Por eso es un temporizador y no un cierre
-    inmediato: el reingreso lo cancela antes de que llegue a cumplirse.
-  */
-  const programarCierre = useCallback((): void => {
-    if (cerrarAlSalir === undefined) {
-      return
-    }
-
-    cancelarCierre()
-    temporizadorDeSalida.current = window.setTimeout(() => {
-      temporizadorDeSalida.current = null
-      setAbierto(false)
-      alCerrar?.()
-    }, cerrarAlSalir)
-  }, [cerrarAlSalir, cancelarCierre, alCerrar])
-
-  /* Un temporizador en vuelo cuando el panel ya se fue cerraria algo que no existe. */
-  useEffect(() => cancelarCierre, [cancelarCierre])
-
-  useEffect(() => {
-    if (!abierto) {
-      cancelarCierre()
-    }
-  }, [abierto, cancelarCierre])
 
   function abrir(): void {
     setAbierto(true)
@@ -224,12 +173,7 @@ export function Popover({
   }, [abierto, alCerrar, cerrarYEnfocar])
 
   return (
-    <div
-      className={unirClases('relative', className)}
-      ref={contenedorRef}
-      onPointerEnter={cancelarCierre}
-      onPointerLeave={programarCierre}
-    >
+    <div className={unirClases('relative', className)} ref={contenedorRef}>
       <button
         ref={disparadorRef}
         type="button"
@@ -257,8 +201,6 @@ export function Popover({
               exit={reducirMovimiento ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
               transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
               style={posicion}
-              onPointerEnter={cancelarCierre}
-              onPointerLeave={programarCierre}
               className={unirClases(
                 'elevacion sin-barra-de-scroll fixed z-[60] overflow-y-auto rounded-[24px] bg-panel p-2',
                 claseDelPanel ?? 'min-w-64 max-w-[min(20rem,90vw)]',

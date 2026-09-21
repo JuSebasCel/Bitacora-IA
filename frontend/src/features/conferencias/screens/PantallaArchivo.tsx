@@ -176,21 +176,32 @@ function CitaEnContexto({ contexto, fragmento }: { contexto: string; fragmento: 
 }
 
 /*
-  Como se dice en la fila cuantas fichas se pidieron.
+  Cómo se dice en la fila cuántas fichas se pidieron.
 
-  Con la densidad reconstruida se dice la palabra que se eligio ("pocas"), que
-  es lo que la persona recuerda haber pulsado. Cuando no se puede reconstruir
-  se dice el numero, que nunca miente — pasa con las transcripciones, donde al
-  cargarlas no habia duracion con la que calcular el techo.
+  Empieza por el verbo —"Pediste pocas"— y no por el sustantivo. La fila ya
+  dice "26 fichas · Julián Mora" un renglón más arriba, así que una pastilla
+  que dijera "Fichas · pocas" al lado pondría dos cantidades distintas de lo
+  mismo sin explicar que una es lo que hay y la otra lo que se pidió. El verbo
+  en segunda persona lo resuelve solo: lo pedido tiene un autor, el recuento
+  no.
+
+  Con la densidad reconstruida se dice la palabra que se eligió, que es lo que
+  uno recuerda haber pulsado. Cuando no se puede reconstruir se dice el
+  número, que nunca miente — pasa con las transcripciones, donde al cargarlas
+  no había duración con la que calcular el techo.
+
+  Descartada la idea de los puntitos (●○○○): codifican cuánto, pero no de qué,
+  así que seguirían necesitando el rótulo que venían a ahorrar; y no saben
+  representar los dos casos de borde, "sin tope" y "hasta 26".
 */
 function etiquetaDeCuota(maximoDeFichas: number | null, duracionEnSegundos: number): string {
   const densidad = densidadDe(maximoDeFichas, duracionEnSegundos)
 
   if (densidad === 'libre' || maximoDeFichas === null) {
-    return 'sin tope'
+    return 'Pediste sin tope'
   }
 
-  return densidad === null ? `hasta ${maximoDeFichas}` : densidad
+  return densidad === null ? `Pediste hasta ${maximoDeFichas}` : `Pediste ${densidad}`
 }
 
 /** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
@@ -422,16 +433,19 @@ function Fila({
         {cuota === undefined && (etiquetas === undefined || etiquetas.length === 0) ? null : (
           <span className="mt-1 flex flex-wrap items-center gap-1">
             {cuota === undefined ? null : (
+              /*
+                Sin icono. Llevaba el de ajustes y no venía a cuento: esto no
+                es una preferencia que se pueda tocar desde aquí, es cuántas
+                fichas se pidieron al cargarla. El rótulo "Fichas" hace ese
+                trabajo mejor que cualquier símbolo.
+              */
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
                   activa
                     ? 'bg-ilustracion-texto/15'
                     : 'text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete-fuerte)]'
                 }`}
               >
-                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-sm">
-                  tune
-                </span>
                 {cuota}
               </span>
             )}
@@ -1109,32 +1123,50 @@ export function PantallaArchivo({
               </p>
             </blockquote>
 
-            <div className="flex flex-wrap gap-2">
+            {/*
+              Las pastillas dicen de qué son.
+
+              Antes eran dos palabras sueltas —"Estrategia", "Biotecnología"—
+              y no había forma de saber que una era el tipo de unidad y la
+              otra el tema: se leían como dos etiquetas cualesquiera del mismo
+              rango. El rótulo va dentro de la misma pastilla y en tono tenue,
+              para que se siga leyendo primero el valor.
+            */}
+            <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
+                <span className="text-texto-tenue">Tipo · </span>
                 {TIPO_EN_SINGULAR[activa.ficha.tipoDeUnidad]}
               </span>
               <span className="rounded-full bg-acento-tenue px-3 py-1.5 text-sm text-texto">
+                <span className="text-texto-tenue">Tema · </span>
                 {nombreDeTema(temas, activa.ficha.idTema)}
               </span>
 
               {/*
-                Solo aparece cuando hay dos versiones que comparar. En una
-                ficha que ya se entendia leida, el analisis no la reescribio y
-                el boton abriria un modal con el mismo texto dos veces.
+                Siempre, en toda ficha.
+
+                Antes salía solo si el análisis había reescrito la frase, y eso
+                dejaba fichas —las analizadas antes de que la condensación
+                existiera, y las que ya se entendían leídas— sin manera de ver
+                en qué contexto se dijo la cita. Poder volver a lo que se dijo
+                no es una consecuencia de que hubiera algo que condensar: es la
+                promesa del producto, y tiene que estar en todas.
+
+                Y se ve pulsable: relleno de acento en vez del gris de las
+                otras dos. Al lado de dos pastillas que solo informan, una que
+                además abre algo tiene que decirlo por su forma.
               */}
-              {fueCondensada(activa.ficha) ? (
-                <button
-                  ref={botonDeLiteral}
-                  type="button"
-                  onClick={() => setLiteralAbierta(true)}
-                  className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-acento-tenue px-3 text-sm text-texto-tenue transition-colors hover:text-texto"
-                >
-                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
-                    format_quote
-                  </span>
-                  Cómo se dijo
-                </button>
-              ) : null}
+              <button
+                ref={botonDeLiteral}
+                type="button"
+                onClick={() => setLiteralAbierta(true)}
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-acento px-3 text-sm font-medium text-acento-contraste transition-opacity hover:opacity-85"
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+                  format_quote
+                </span>
+                Cómo se dijo
+              </button>
             </div>
 
           </article>
@@ -1468,6 +1500,8 @@ export function PantallaArchivo({
         ancho="angosto"
         anclaEn={botonDeDetalle}
         limites={marco}
+        /* Lleva título, ponente, fecha y descripción escritos: un clic fuera no los tira. */
+        cerrarAlPulsarElVelo={false}
       >
         {conferenciaEnDetalle === undefined ? null : (
           <>
@@ -1615,6 +1649,15 @@ export function PantallaArchivo({
         alCerrar={() => setIdParaEtiquetar(null)}
         titulo="Etiquetas"
         anclaje="disparador"
+        /*
+          Se ancla al «···» de la fila y no al botón de dentro del detalle.
+
+          Ese botón se desmonta al cerrarse el detalle, y anclarse a un nodo
+          suelto da una caja de ceros: el panel aparecía pegado a la esquina de
+          arriba en vez de crecer desde algún sitio. El «···» sigue en su fila,
+          que es además de donde se viene.
+        */
+        anclaEn={botonDeDetalle}
         ancho="angosto"
         limites={marco}
       >
@@ -1662,17 +1705,25 @@ export function PantallaArchivo({
               </div>
             </section>
 
-            <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium text-texto-tenue">Cómo se lee aquí</h3>
-              <div className="rounded-[20px] bg-acento-tenue p-4">
-                <p className="text-[19px] leading-relaxed text-texto">{activa.ficha.condensado}</p>
-              </div>
-            </section>
+            {/*
+              La segunda mitad solo existe si de verdad hay dos versiones.
+              Cuando la frase ya se entendía leída, el análisis la devolvió
+              igual, y enseñar el mismo texto dos veces no compara nada: lo que
+              se viene a ver entonces es el contexto de arriba.
+            */}
+            {fueCondensada(activa.ficha) ? (
+              <section className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium text-texto-tenue">Cómo se lee aquí</h3>
+                <div className="rounded-[20px] bg-acento-tenue p-4">
+                  <p className="text-[19px] leading-relaxed text-texto">{activa.ficha.condensado}</p>
+                </div>
+              </section>
+            ) : null}
 
             <p className="text-sm leading-relaxed text-texto-tenue">
-              La versión de arriba es la que se cita: el análisis tiene prohibido
-              tocarla. La de abajo es la misma idea sin las repeticiones del
-              habla, y es la que se enseña por defecto.
+              {fueCondensada(activa.ficha)
+                ? 'La versión de arriba es la que se cita: el análisis tiene prohibido tocarla. La de abajo es la misma idea sin las repeticiones del habla, y es la que se enseña por defecto.'
+                : 'Esta ficha se lee igual que se dijo: el análisis no necesitó reescribirla. En negrita, lo citado; alrededor, lo que se dijo antes y después.'}
             </p>
           </div>
         )}

@@ -336,6 +336,13 @@ export function ModalDeCarga({
           sola lectura vertical y el desplazamiento cae donde se espera.
         */
         ancho="angosto"
+        /*
+          Aquí dentro hay un archivo elegido, un título escrito, un evento, un
+          ponente y una fecha. Un clic fuera se lleva las cinco cosas, y el
+          velo ocupa toda la pantalla: es el sitio más fácil del mundo donde
+          resbalar. Se sale con la X o con Escape.
+        */
+        cerrarAlPulsarElVelo={false}
         {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
         {...(limites === undefined ? {} : { limites })}
       >
@@ -467,6 +474,18 @@ export function ModalDeCarga({
                 alCambiar={(valor) => actualizar({ idPonente: valor })}
               />
 
+            </div>
+
+            {/*
+              La fecha va en su propia fila y no con las otras dos.
+
+              Compartiendo fila las tres eran hermanas de un `flex-wrap`, y al
+              elegir un día la pastilla pasaba de "Fecha del evento" a "14 may
+              2026" —más corta— y de pronto cabía arriba: el campo saltaba de
+              línea justo al usarlo. Un control no puede moverse de sitio como
+              respuesta a que lo uses.
+            */}
+            <div>
               <SelectorDeFecha
                 etiquetaAccesible="Fecha del evento"
                 vacio="Fecha del evento"
