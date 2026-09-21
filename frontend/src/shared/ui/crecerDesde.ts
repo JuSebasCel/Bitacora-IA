@@ -32,13 +32,22 @@ import type { RefObject } from 'react'
   - cerrar: la pantalla anota su caja al desmontarse, con la clave de lo que
     mostraba, y la tarjeta con esa clave aterriza desde ahí hasta su sitio
     (`useAterrizarDesdeCierre`). Se anima la tarjeta y no la pantalla porque
-    la pantalla ya no existe cuando la galería vuelve, y porque así el resto
-    de la galería se ve alrededor mientras la tarjeta se encoge, igual que el
-    fondo sigue a la vista cuando un modal se cierra.
+    la pantalla ya no existe cuando la galería vuelve.
+
+  Al aterrizar, lo que rodea a la tarjeta se esconde y aparece cuando ella
+  ya está casi en su sitio. La tarjeta arranca del tamaño de la pantalla
+  entera, y si la galería estaba a la vista, pasaba por encima de las otras
+  tarjetas y del título mientras se encogía: se leía como una plantilla que
+  se comía a otra. Es el patrón de "transformación de contenedor" de
+  Material: lo que se transforma nunca comparte pantalla con lo que taparía.
 */
 
 const DURACION_DE_APERTURA = 380
 const DURACION_DE_CIERRE = 340
+
+/* Cuándo empieza a aparecer lo que rodea a la tarjeta que aterriza, y cuánto tarda. */
+const ESPERA_DEL_ENTORNO = 200
+const DURACION_DEL_ENTORNO = 220
 
 /* `--ease-entrada`: la Web Animations API no resuelve variables CSS en `easing`. */
 const CURVA = 'cubic-bezier(0.37, 0.35, 0, 1)'
@@ -80,6 +89,30 @@ function sinMovimiento(elemento: HTMLElement): boolean {
     typeof elemento.animate !== 'function' ||
     (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   )
+}
+
+/*
+  Todo lo que rodea a `elemento` dentro de `escena`: los hermanos de cada
+  eslabón entre los dos. Esconder la escena entera escondería también la
+  tarjeta, que es su descendiente; así queda fuera solo su camino.
+*/
+function entornoDe(elemento: HTMLElement, escena: HTMLElement): HTMLElement[] {
+  const entorno: HTMLElement[] = []
+
+  for (let eslabon: HTMLElement | null = elemento; eslabon !== null && eslabon !== escena; eslabon = eslabon.parentElement) {
+    const padre: HTMLElement | null = eslabon.parentElement
+    if (padre === null) {
+      break
+    }
+
+    for (const hermano of padre.children) {
+      if (hermano !== eslabon && hermano instanceof HTMLElement) {
+        entorno.push(hermano)
+      }
+    }
+  }
+
+  return entorno
 }
 
 /* La transformación que calza `caja` exactamente encima de `sobre`, como el FLIP del modal. */
@@ -154,7 +187,6 @@ export function useAterrizarDesdeCierre(ref: RefObject<HTMLElement | null>, clav
       return
     }
 
-    /* Por delante de sus vecinas mientras dura: se encoge sobre la galería, no por detrás de ella. */
     const animacion = tarjeta.animate(
       [
         { transform: calzar(hasta, desde), opacity: 0, zIndex: 10 },
@@ -164,6 +196,24 @@ export function useAterrizarDesdeCierre(ref: RefObject<HTMLElement | null>, clav
       { duration: DURACION_DE_CIERRE, easing: CURVA },
     )
 
-    return () => animacion.cancel()
+    /*
+      `fill: backwards` las mantiene escondidas durante la espera: sin él
+      estarían a la vista hasta que arranca su fundido, que es justo el
+      momento en que la tarjeta grande les pasa por encima.
+    */
+    const escena = tarjeta.closest<HTMLElement>('[data-escena-de-aterrizaje]')
+    const entorno = (escena === null ? [] : entornoDe(tarjeta, escena)).map((vecino) =>
+      vecino.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: DURACION_DEL_ENTORNO,
+        delay: ESPERA_DEL_ENTORNO,
+        easing: 'ease-out',
+        fill: 'backwards',
+      }),
+    )
+
+    return () => {
+      animacion.cancel()
+      entorno.forEach((fundido) => fundido.cancel())
+    }
   }, [ref, clave])
 }

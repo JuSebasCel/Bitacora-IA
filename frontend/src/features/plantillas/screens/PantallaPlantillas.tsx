@@ -183,7 +183,7 @@ export function PantallaPlantillas(): ReactElement {
     )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
+    <div data-escena-de-aterrizaje className="flex min-h-0 flex-1 flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         {/*
           Una línea que diga para qué es la sección, siempre. Con la galería
