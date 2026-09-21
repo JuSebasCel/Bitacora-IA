@@ -90,36 +90,39 @@
   --bitacora-acento-contraste: oklch(0.985 0.005 85);
 
   /*
-    Navegación. El inactivo del dock deja de ser un gris neutro y pasa al
-    azul del sistema —el mismo matiz 262 que ya usaban las ilustraciones y
-    el panel de marca—, que es lo que se pidió: que ese azul se note en vez
-    de vivir solo en un rincón. Sigue siendo más tenue que el texto
-    secundario; lo que cambia es el matiz, no la jerarquía.
+    Navegación. En claro, el inactivo del dock es un gris cálido, del mismo
+    matiz que las superficies.
+
+    Pasó por azul —el 262 que el tema oscuro sí conserva— y en claro no
+    funcionaba: sobre beige, un texto azulado en cada ítem del menú era una
+    nota fría repetida seis veces en la columna que más se ve. El azul se
+    queda en el tema oscuro, donde se pidió y donde casa con el fondo.
   */
-  --bitacora-nav-tenue: oklch(0.56 0.045 262);
+  --bitacora-nav-tenue: oklch(0.55 0.012 70);
   --bitacora-nav-activo: #000000;
 
   /*
     Par para ilustraciones y selección: el disco del estado vacío y la fila
     elegida en las columnas.
 
-    Era el `secondary-container` de Material, #e0e6f8, un lavanda pensado para
-    el fondo frío original. Sobre el beige quedaba como un parche ajeno. Se
-    probaron dos salidas en pantalla, sobre la fila activa y el disco:
+    Historia corta, porque cada paso descartó algo con motivo:
 
-    - Arena, del mismo matiz que las superficies: cohesiva, pero la fila
-      elegida casi desaparecía. Al compartir matiz con el panel solo la
-      separaba un escalón de luminancia, y una selección que no se ve no está
-      haciendo su trabajo.
-    - Azul empolvado: croma bajo y matiz 250, a la misma luminancia que el
-      panel. Se distingue por el matiz, no por el brillo, así que se ve sin
-      gritar — y sigue el azul del dock en vez de inventar un tercer color.
+    - Lavanda (#e0e6f8), el `secondary-container` de Material: pensado para el
+      fondo frío original; sobre beige, un parche ajeno.
+    - Arena clara (L 0.87): cohesiva, pero la fila elegida casi desaparecía —
+      mismo matiz que el panel y solo un escalón de brillo por encima.
+    - Azul empolvado: se veía, pero en claro el usuario no quiere azul.
+    - Arcilla y salvia, probadas en pantalla: las dos se distinguían bien, pero
+      la arcilla tira a salmón y se confunde con el rojo de error y borrado,
+      y el verde en esta app significa "validado".
 
-    Se quedó el azul. Frío sobre cálido, los dos con poco croma, es una pareja
-    que descansa la vista en lugar de competir.
+    Se quedó esta arena más honda: L 0.845 con algo más de croma. Es la
+    corrección de lo que falló en la primera arena — ahora hay suficiente
+    distancia con el panel (0,922) para que la selección se lea, sin salir de
+    la familia cálida ni cargar un significado que no le toca.
   */
-  --bitacora-ilustracion: oklch(0.895 0.02 250);
-  --bitacora-ilustracion-texto: oklch(0.36 0.035 258);
+  --bitacora-ilustracion: oklch(0.845 0.035 70);
+  --bitacora-ilustracion-texto: oklch(0.3 0.03 60);
 
   /*
     Velo de los modales. Aquí nos apartamos de la referencia a propósito:

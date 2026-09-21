@@ -74,10 +74,21 @@ export function BarraLateral({
 
         `overflow-hidden` mientras se cierra para que el contenido se recorte
         en vez de re-partirse línea a línea durante la transición.
+
+        Abierto, `overflow-x-hidden` va explícito y no es redundante. Con solo
+        `overflow-y-auto`, el navegador pone también el eje X en `auto` —un eje
+        no puede quedar `visible` si el otro no lo es—. Y los ítems crecen a
+        `scale(1.2)` al pasar el cursor, con origen a la izquierda: su caja es
+        de ancho completo (247px desde x=16), así que al 120% acababa en x≈312
+        con el dock terminando en 280, y aparecía una barra de desplazamiento
+        abajo cada vez que se tocaba el menú. Medido: lo que desborda es la
+        caja, no las letras — el texto agrandado más largo, "Cargar
+        conferencia", llega justo a 280. Recortar el eje X no esconde nada que
+        se lea.
       */
       style={{ width: plegada ? 0 : undefined }}
       className={`${visibilidad} dock-entra fixed inset-y-0 left-0 z-30 w-70 shrink-0 flex-col border-r border-filete bg-fondo transition-[width] duration-500 ease-(--ease-entrada) focus:outline-none md:sticky md:z-auto md:h-dvh ${
-        plegada ? 'overflow-hidden border-transparent p-0' : 'overflow-y-auto p-4'
+        plegada ? 'overflow-hidden border-transparent p-0' : 'overflow-x-hidden overflow-y-auto p-4'
       }`}
     >
       {/*
