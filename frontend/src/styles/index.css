@@ -100,12 +100,26 @@
   --bitacora-nav-activo: #000000;
 
   /*
-    Par para ilustraciones (el disco del estado vacío y su icono). Es el
-    `secondary-container` de Material: funciona en los dos temas sin tocarlo,
-    y es el único sitio donde el sistema se permite un tinte.
+    Par para ilustraciones y selección: el disco del estado vacío y la fila
+    elegida en las columnas.
+
+    Era el `secondary-container` de Material, #e0e6f8, un lavanda pensado para
+    el fondo frío original. Sobre el beige quedaba como un parche ajeno. Se
+    probaron dos salidas en pantalla, sobre la fila activa y el disco:
+
+    - Arena, del mismo matiz que las superficies: cohesiva, pero la fila
+      elegida casi desaparecía. Al compartir matiz con el panel solo la
+      separaba un escalón de luminancia, y una selección que no se ve no está
+      haciendo su trabajo.
+    - Azul empolvado: croma bajo y matiz 250, a la misma luminancia que el
+      panel. Se distingue por el matiz, no por el brillo, así que se ve sin
+      gritar — y sigue el azul del dock en vez de inventar un tercer color.
+
+    Se quedó el azul. Frío sobre cálido, los dos con poco croma, es una pareja
+    que descansa la vista en lugar de competir.
   */
-  --bitacora-ilustracion: #e0e6f8;
-  --bitacora-ilustracion-texto: #444a58;
+  --bitacora-ilustracion: oklch(0.895 0.02 250);
+  --bitacora-ilustracion-texto: oklch(0.36 0.035 258);
 
   /*
     Velo de los modales. Aquí nos apartamos de la referencia a propósito:

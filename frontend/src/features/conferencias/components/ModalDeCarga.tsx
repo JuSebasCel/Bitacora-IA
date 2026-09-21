@@ -148,6 +148,8 @@ export function ModalDeCarga({
     una variable de estado le llegaria con el valor que tenia al empezar.
   */
   const cancelada = useRef(false)
+  const formulario = useRef<HTMLFormElement>(null)
+  const finDelFormulario = useRef<HTMLSpanElement>(null)
 
   /* Cada apertura empieza en blanco: es una conferencia nueva, no la anterior a medias. */
   useEffect(() => {
@@ -165,6 +167,72 @@ export function ModalDeCarga({
   }, [abierto])
 
   const fuente = archivo === null ? null : fuenteDeArchivo(archivo)
+
+  /*
+    A medida que se rellena, el modal baja solo: al completar un campo se hace
+    visible el que viene debajo, y tras la fecha, el botón de cargar.
+
+    El formulario es más alto que la pantalla, y el botón quedaba bajo el
+    borde: se llegaba al final de los campos sin ver dónde se terminaba.
+
+    Es "el de debajo" y no "el primero que falte", a propósito. La primera
+    versión buscaba el primer campo vacío, y medido en pantalla eso fallaba
+    justo en el caso que importa: con el archivo sin elegir —que está arriba
+    del todo— cualquier campo que se completara apuntaba hacia arriba, la
+    vista no se movía y el botón seguía perdido. Rellenar va hacia abajo, y el
+    desplazamiento tiene que ir con ella.
+
+    - Solo cuenta lo que se elige de un toque (archivo, evento, ponente,
+      fecha). El título se escribe, y mover la vista con la primera letra
+      sería desplazar el campo bajo los dedos de quien teclea.
+    - `block: 'nearest'`: si lo de debajo ya se ve, no se mueve nada. Baja lo
+      justo y nunca sube.
+    - Solo al completar. Vaciar un campo no arrastra la vista.
+  */
+  const hechos = {
+    archivo: archivo !== null,
+    evento: campos.idEvento !== '',
+    ponente: campos.idPonente !== '',
+    fecha: campos.fechaDelEvento !== '',
+  }
+  const hechosAntes = useRef(hechos)
+
+  useEffect(() => {
+    const antes = hechosAntes.current
+    hechosAntes.current = hechos
+
+    /* Qué se ve a continuación de cada uno. `null` es el final: el botón. */
+    const siguienteDe = { archivo: 'titulo', evento: 'ponente', ponente: 'fecha', fecha: null } as const
+
+    const recienCompletado = (Object.keys(siguienteDe) as (keyof typeof siguienteDe)[]).find(
+      (campo) => hechos[campo] && !antes[campo],
+    )
+
+    if (recienCompletado === undefined) {
+      return
+    }
+
+    const siguiente = siguienteDe[recienCompletado]
+    const destino =
+      siguiente === null
+        ? finDelFormulario.current
+        : formulario.current?.querySelector<HTMLElement>(`[data-campo="${siguiente}"]`)
+
+    const sinMovimiento =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    /*
+      Un cuadro de espera: el campo recién elegido puede cambiar de alto (el
+      archivo pasa de la zona de soltar a su nombre), y medir antes de que el
+      DOM se asiente calcularía contra una altura que ya no es.
+    */
+    const cuadro = requestAnimationFrame(() => {
+      destino?.scrollIntoView({ block: 'nearest', behavior: sinMovimiento ? 'auto' : 'smooth' })
+    })
+
+    return () => cancelAnimationFrame(cuadro)
+  }, [hechos.archivo, hechos.evento, hechos.ponente, hechos.fecha])
 
   function actualizar(cambio: Partial<Campos>): void {
     setCampos((anteriores) => ({ ...anteriores, ...cambio }))
@@ -347,6 +415,7 @@ export function ModalDeCarga({
         {...(limites === undefined ? {} : { limites })}
       >
         <form
+          ref={formulario}
           noValidate
           onSubmit={(evento) => {
             void alEnviar(evento)
@@ -357,7 +426,7 @@ export function ModalDeCarga({
             El archivo primero: en cuanto está, la fuente y la duración quedan
             resueltas y el título llega sugerido.
           */}
-          <div className="flex flex-col gap-1.5">
+          <div data-campo="archivo" className="flex flex-col gap-1.5">
             <p className="px-1 text-sm font-medium text-texto-tenue">Audio o transcripción</p>
 
             <input
@@ -424,7 +493,7 @@ export function ModalDeCarga({
             posición ya dice qué va ahí, y un rótulo sería decir lo mismo dos
             veces en un formulario que cabe de un vistazo.
           */}
-          <div className="flex flex-col gap-1.5">
+          <div data-campo="titulo" className="flex flex-col gap-1.5">
             <input
               id="carga-titulo"
               value={campos.titulo}
@@ -446,8 +515,20 @@ export function ModalDeCarga({
             se llama. El icono es el que dice de qué va, y cuando están vacías
             piden lo que les falta ("Elige un evento").
           */}
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
+          {/*
+            Una debajo de otra, siempre, y no en un `flex-wrap`.
+
+            Con el reparto automático la posición de cada pastilla dependía de
+            cuánto texto llevaba puesto. Vacías, "Elige un evento" y "Elige
+            primero el evento" no cabían juntas y quedaban apiladas; en cuanto
+            se elegía un evento y un ponente de nombre corto, sí cabían, y el
+            ponente saltaba a la fila de arriba justo al usarlo. La fecha tenía
+            el mismo problema y por eso ya iba aparte. Ahora las tres son una
+            columna y nada se mueve por rellenarlo. `items-start` para que cada
+            pastilla siga midiendo lo que su valor, sin estirarse a lo ancho.
+          */}
+          <div className="flex flex-col items-start gap-2">
+            <div data-campo="evento">
               <SelectorDeOpciones
                 etiquetaAccesible="Evento"
                 icono="folder"
@@ -461,7 +542,9 @@ export function ModalDeCarga({
                   actualizar({ idEvento: valor, idPonente: '' })
                 }}
               />
+            </div>
 
+            <div data-campo="ponente">
               <SelectorDeOpciones
                 etiquetaAccesible="Ponente"
                 icono="mic"
@@ -473,19 +556,9 @@ export function ModalDeCarga({
                 alCrear={alCrearPonente}
                 alCambiar={(valor) => actualizar({ idPonente: valor })}
               />
-
             </div>
 
-            {/*
-              La fecha va en su propia fila y no con las otras dos.
-
-              Compartiendo fila las tres eran hermanas de un `flex-wrap`, y al
-              elegir un día la pastilla pasaba de "Fecha del evento" a "14 may
-              2026" —más corta— y de pronto cabía arriba: el campo saltaba de
-              línea justo al usarlo. Un control no puede moverse de sitio como
-              respuesta a que lo uses.
-            */}
-            <div>
+            <div data-campo="fecha">
               <SelectorDeFecha
                 etiquetaAccesible="Fecha del evento"
                 vacio="Fecha del evento"
@@ -635,6 +708,8 @@ export function ModalDeCarga({
               Cargar conferencia
             </button>
           )}
+
+          <span ref={finDelFormulario} aria-hidden="true" />
         </form>
       </Modal>
 
