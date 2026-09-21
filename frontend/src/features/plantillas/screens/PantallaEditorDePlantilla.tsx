@@ -167,6 +167,7 @@ function EditorDePlantillaInterno({ plantilla, mutadores }: PropsEditorInterno):
 export function PantallaEditorDePlantilla(): ReactElement {
   const { idPlantilla = '' } = useParams()
   const mutadores = usePlantillas()
+  const navegar = useNavigate()
   const plantilla = mutadores.plantillas.find((candidata) => candidata.id === idPlantilla)
 
   /*
@@ -202,15 +203,22 @@ export function PantallaEditorDePlantilla(): ReactElement {
   }
 
   if (plantilla.origen === 'docx') {
+    /*
+      La pantalla de la plantilla trae su propia cabecera —regreso, nombre
+      editable, descargar, borrar—, así que aquí ya no se envuelve con el
+      filete y el enlace de antes: habrían quedado dos regresos, uno encima
+      del otro.
+    */
     return (
-      <div className="flex flex-col gap-6 border-t border-filete-fuerte pt-6">
-        <h1 className="sr-only">Plantilla: {plantilla.nombre}</h1>
-        <EnlaceDeRegreso />
-        <ConfirmacionDePlantillaDocx
-          plantilla={plantilla}
-          alRenombrar={(nombre) => mutadores.renombrarPlantilla(plantilla.id, nombre)}
-        />
-      </div>
+      <ConfirmacionDePlantillaDocx
+        plantilla={plantilla}
+        alRenombrar={(nombre) => mutadores.renombrarPlantilla(plantilla.id, nombre)}
+        alCambiarMarcadores={(marcadores) => mutadores.actualizarMarcadoresDeDocx(plantilla.id, marcadores)}
+        alEliminar={async () => {
+          await mutadores.eliminar(plantilla.id)
+          void navegar('/plantillas')
+        }}
+      />
     )
   }
 

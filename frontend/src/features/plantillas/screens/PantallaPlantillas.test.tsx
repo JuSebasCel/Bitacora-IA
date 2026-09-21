@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -115,27 +115,26 @@ describe('PantallaPlantillas', () => {
     expect(screen.queryByText('Todavía no hay plantillas')).not.toBeInTheDocument()
   })
 
-  it('crear plantilla la persiste sin pedir nombre y navega directo a su editor', async () => {
-    const usuario = userEvent.setup()
+  /*
+    La plantilla en blanco salió del camino: el diseño se hace en Word. La
+    pantalla solo ofrece subir un .docx, y no debe quedar ningún atajo para
+    crear la otra.
+  */
+  it('solo ofrece subir una plantilla de Word, no crear una en blanco', async () => {
     montar()
     await screen.findByText('Memoria estándar')
 
-    await usuario.click(screen.getByRole('button', { name: 'Crear plantilla' }))
-
-    expect(await screen.findByText(/^Editor de /)).toBeInTheDocument()
-    expect(repositorio.crearPlantilla).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Subir plantilla' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /crear plantilla/i })).not.toBeInTheDocument()
   })
 
-  it('si crear falla, se queda en el listado y explica por qué', async () => {
-    repositorio.crearPlantilla.mockResolvedValue({ ok: false, codigo: 'DATOS_SIN_PERMISO' })
+  it('cada plantilla abre su configuración', async () => {
     const usuario = userEvent.setup()
     montar()
-    await screen.findByText('Memoria estándar')
 
-    await usuario.click(screen.getByRole('button', { name: 'Crear plantilla' }))
+    await usuario.click(await screen.findByRole('link', { name: /Cita simple/ }))
 
-    expect(await screen.findByText(/no tienes permiso/i)).toBeInTheDocument()
-    expect(screen.queryByText(/^Editor de /)).not.toBeInTheDocument()
+    expect(await screen.findByText(`Editor de ${CITA_SIMPLE.id}`)).toBeInTheDocument()
   })
 
   it('importar un .docx no admitido muestra un error y no sube nada', async () => {
@@ -173,16 +172,16 @@ describe('PantallaPlantillas', () => {
     expect(repositorio.crearPlantilla).not.toHaveBeenCalled()
   })
 
-  it('elimina una plantilla existente de la lista y de la base', async () => {
-    const usuario = userEvent.setup()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  /*
+    Borrar se mudó a la pantalla de la plantilla, detrás de una confirmación
+    que dice qué se pierde: desde la galería, un clic de más se llevaba el
+    archivo y todas sus memorias sin preguntar.
+  */
+  it('la galería no borra: borrar vive dentro de la plantilla', async () => {
     montar()
     await screen.findByText('Cita simple')
 
-    await usuario.click(screen.getByRole('button', { name: 'Eliminar «Cita simple»' }))
-
-    await waitFor(() => expect(screen.queryByText('Cita simple')).not.toBeInTheDocument())
-    expect(repositorio.eliminarPlantilla).toHaveBeenCalledWith(CITA_SIMPLE.id)
+    expect(screen.queryByRole('button', { name: /eliminar|borrar/i })).not.toBeInTheDocument()
   })
 
   /*
@@ -190,12 +189,14 @@ describe('PantallaPlantillas', () => {
     un caso imposible: sin este vacío la pantalla quedaba en blanco, sin decir
     qué pasó ni por dónde salir.
   */
-  it('sin ninguna plantilla, explica el vacío en vez de dejar la lista en blanco', async () => {
+  it('sin ninguna plantilla, explica cómo se hace una en vez de dejar la lista en blanco', async () => {
     repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [] })
 
     montar()
 
-    expect(await screen.findByText('Todavía no hay plantillas')).toBeInTheDocument()
+    expect(await screen.findByText('Tu primera plantilla empieza en Word')).toBeInTheDocument()
+    /* La convención de los corchetes es lo único que no se adivina: tiene que estar escrita. */
+    expect(screen.getByText('[[Resumen de la tesis]]')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Plantillas' })).not.toBeInTheDocument()
   })
 

@@ -73,7 +73,27 @@ export type MarcadorSimpleDeDocx = {
   readonly contexto: string
   readonly origenDeDato: OrigenDeMarcador
   readonly formato: FormatoDeMarcador
+  /**
+   * Qué tiene que escribir la IA en este hueco, en palabras de quien diseñó la
+   * plantilla: "resume en dos párrafos la tesis principal del ponente".
+   *
+   * Se escribe una vez al configurar la plantilla y vale para todas las
+   * memorias que salgan de ella. Opcional porque las plantillas subidas antes
+   * de que existiera no la tienen, y `marcadores` es un `jsonb`: añadir el
+   * campo no pidió migración, pero tampoco lo rellenó en las filas viejas.
+   */
+  readonly instruccion?: string
+  /** Qué hacer cuando la IA no encuentra nada para este hueco. Sin valor, `dejar-vacio`. */
+  readonly siVacio?: ComportamientoSiVacio
 }
+
+/**
+ * Lo que pasa con un hueco para el que la conferencia no dio material — una
+ * charla sin tesis clara, un marcador de "datos de impacto" sin datos. Lo
+ * elige quien diseña la plantilla, no la IA: inventar texto para rellenar es
+ * justo lo que una memoria no puede hacer.
+ */
+export type ComportamientoSiVacio = 'dejar-vacio' | 'quitar' | 'avisar'
 
 /**
  * Envuelve un tramo del documento escrito en Word entre `[[SI: descripción]]`

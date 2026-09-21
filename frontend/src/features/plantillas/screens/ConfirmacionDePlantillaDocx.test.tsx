@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearPlantillaDesdeDocx } from '../plantillas'
-import type { MarcadorDeDocx } from '../data'
+import type { MarcadorDeDocx, PlantillaDesdeDocx } from '../data'
 import { ConfirmacionDePlantillaDocx } from './ConfirmacionDePlantillaDocx'
 
 const renderAsyncMock = vi.hoisted(() => vi.fn())
@@ -52,80 +53,106 @@ const MARCADOR_CONDICIONAL: MarcadorDeDocx = {
   origenDeDato: { tipo: 'personalizado', etiqueta: 'Cita opcional' },
 }
 
+/* La pantalla enlaza de vuelta a /plantillas, así que necesita un router alrededor. */
+function montar(plantilla: PlantillaDesdeDocx, props: { alRenombrar?: () => void; alCambiarMarcadores?: () => void } = {}) {
+  return render(
+    <MemoryRouter>
+      <ConfirmacionDePlantillaDocx
+        plantilla={plantilla}
+        alRenombrar={props.alRenombrar ?? vi.fn()}
+        alCambiarMarcadores={props.alCambiarMarcadores ?? vi.fn()}
+        alEliminar={vi.fn()}
+      />
+    </MemoryRouter>,
+  )
+}
+
 describe('ConfirmacionDePlantillaDocx', () => {
-  it('sin marcadores detectados, avisa que no se encontró ninguna marca', () => {
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
+  /*
+    Sin marcadores, lo probable es que no se escribieran, no que la app no los
+    viera: se explica cómo se escribe uno en vez de solo constatar la ausencia.
+  */
+  it('sin marcadores, explica cómo se escribe uno', () => {
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', []))
 
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
-
-    expect(screen.getByText(/no encontramos ninguna marca/i)).toBeInTheDocument()
+    expect(screen.getByText(/no encontramos ningún marcador/i)).toBeInTheDocument()
+    expect(screen.getByText('[[Resumen de la tesis]]')).toBeInTheDocument()
   })
 
-  it('muestra el contexto de un marcador simple con el marcador resaltado, sin corchetes', () => {
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE])
+  it('abre el primer hueco sin instrucción, con su marcador resaltado dentro del párrafo', () => {
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE]))
 
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
-
-    expect(screen.getByText('Grupo de investigación:', { exact: false })).toBeInTheDocument()
-    expect(screen.getByText('Nombre grupo')).toBeInTheDocument()
-    expect(screen.queryByText('[[Nombre grupo]]')).not.toBeInTheDocument()
+    const resaltado = screen.getByText('[[Nombre grupo]]')
+    expect(resaltado.tagName).toBe('MARK')
+    expect(screen.getByText(/grupo de investigación:/i)).toBeInTheDocument()
   })
 
-  it('muestra la insignia correcta para una sección condicional', () => {
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_CONDICIONAL])
-
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
+  it('lista las secciones de Word sin pedirles instrucción', () => {
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_CONDICIONAL]))
 
     expect(screen.getByText('Cita opcional')).toBeInTheDocument()
-    expect(screen.getByText('Condicional')).toBeInTheDocument()
+    expect(screen.getByText(/aparece solo si hay datos/i)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /qué debe escribir/i })).not.toBeInTheDocument()
   })
 
-  it('escribir en el campo Nombre llama a alRenombrar con el valor tecleado', async () => {
-    const usuario = userEvent.setup()
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
+  it('escribir el nombre llama a alRenombrar con lo tecleado', async () => {
     const alRenombrar = vi.fn()
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', []), { alRenombrar })
 
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={alRenombrar} />)
-    await usuario.type(screen.getByLabelText('Nombre'), 'X')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nombre de la plantilla' }), 'X')
 
-    expect(alRenombrar).toHaveBeenCalledWith('PruebaX')
+    expect(alRenombrar).toHaveBeenLastCalledWith('PruebaX')
   })
 
-  it('no hay ningún control para mapear campo u origen — solo lectura', () => {
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE, MARCADOR_CONDICIONAL])
+  /*
+    Es lo que esta pantalla existe para hacer: antes era de solo lectura y un
+    marcador personalizado salía con texto de ejemplo. La instrucción tiene
+    que llegar al marcador que se está editando, y a ningún otro.
+  */
+  it('la instrucción que se escribe se guarda en su marcador', async () => {
+    const alCambiarMarcadores = vi.fn()
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE, MARCADOR_CONDICIONAL]), {
+      alCambiarMarcadores,
+    })
 
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
+    await userEvent.type(screen.getByRole('textbox', { name: /qué debe escribir la ia/i }), 'R')
 
-    expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-    expect(screen.queryByRole('button', { name: /generar vista previa/i })).not.toBeInTheDocument()
+    const marcadores = alCambiarMarcadores.mock.lastCall?.[0] as MarcadorDeDocx[]
+    expect(marcadores.find((m) => m.id === 'mar-1')).toMatchObject({ instruccion: 'R' })
+    expect(marcadores.find((m) => m.id === 'sec-1')).toEqual(MARCADOR_CONDICIONAL)
+  })
+
+  it('qué hacer si la conferencia no da material se guarda en el marcador', async () => {
+    const alCambiarMarcadores = vi.fn()
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE]), { alCambiarMarcadores })
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Quitar el renglón' }))
+
+    expect(alCambiarMarcadores).toHaveBeenLastCalledWith([expect.objectContaining({ id: 'mar-1', siVacio: 'quitar' })])
   })
 
   it('una vez que el archivo original baja del bucket, aparece el enlace de descarga', async () => {
-    const blob = new Blob(['contenido'])
-    descargarMock.mockResolvedValue({ ok: true, datos: blob })
+    descargarMock.mockResolvedValue({ ok: true, datos: new Blob(['contenido']) })
     renderAsyncMock.mockResolvedValue(undefined)
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [])
 
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', []))
 
-    await waitFor(() => expect(screen.getByText('Descargar plantilla')).toBeInTheDocument())
-    const enlace = screen.getByText('Descargar plantilla').closest('a')
+    const enlace = (await screen.findByText('Descargar el .docx')).closest('a')
     expect(enlace).toHaveAttribute('download', 'Prueba.docx')
   })
 
   /*
     Que el archivo no baje no invalida la plantilla: sus marcadores viven en la
-    fila y se siguen viendo. Lo que no puede pasar es quedarse callado, con la
-    vista previa vacía insinuando que el documento se perdió.
+    fila y se siguen pudiendo configurar. Lo que no puede pasar es quedarse
+    callado, con la vista previa vacía insinuando que el documento se perdió.
   */
   it('si el archivo original no se puede descargar, lo dice con nombre propio y conserva los marcadores', async () => {
     descargarMock.mockResolvedValue({ ok: false, codigo: 'PLANT_DOCX_FALLO_DESCARGA' })
-    const plantilla = crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE])
 
-    render(<ConfirmacionDePlantillaDocx plantilla={plantilla} alRenombrar={vi.fn()} />)
+    montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', [MARCADOR_SIMPLE]))
 
     expect(await screen.findByText(/no pudimos recuperar el archivo original/i)).toBeInTheDocument()
     expect(screen.getByText('Nombre grupo')).toBeInTheDocument()
-    expect(screen.queryByText('Descargar plantilla')).not.toBeInTheDocument()
+    expect(screen.queryByText('Descargar el .docx')).not.toBeInTheDocument()
   })
 })

@@ -1,188 +1,423 @@
-import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
-import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple'
-import { GitBranchIcon } from '@phosphor-icons/react/dist/csr/GitBranch'
-import { RepeatIcon } from '@phosphor-icons/react/dist/csr/Repeat'
-import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
-import type { ChangeEvent, ReactElement } from 'react'
-import { useEffect, useState } from 'react'
+import type { ReactElement } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
-import { Field, Input, Insignia, PanelDeError } from '@/shared/ui'
-import type { MarcadorDeDocx, PlantillaDesdeDocx } from '../data'
+import { ModalDeConfirmacion, PanelDeError } from '@/shared/ui'
 import { VistaPreviaDeDocx } from '../components'
+import type {
+  ComportamientoSiVacio,
+  FormatoDeMarcador,
+  MarcadorDeDocx,
+  MarcadorSimpleDeDocx,
+  PlantillaDesdeDocx,
+} from '../data'
 import { useDocxDePlantilla } from '../useDocxDePlantilla'
+
+/*
+  Configurar una plantilla: la hoja a la izquierda, sus huecos a la derecha.
+
+  Es la pantalla donde se hace el único trabajo que la app pide sobre una
+  plantilla — decir qué debe escribir la IA en cada `[[marcador]]`. El diseño
+  no se toca aquí: se hizo en Word y el archivo se conserva intacto. Por eso la
+  hoja es de solo lectura y la columna de la derecha es la que se edita.
+
+  Se llamaba "confirmación" porque antes solo enseñaba los marcadores que se
+  habían reconocido, sin nada que rellenar: a qué se ligaba cada uno se dejaba
+  a una IA que nunca llegó a existir, y un marcador personalizado acababa
+  saliendo con texto de ejemplo. Ahora cada hueco lleva su instrucción.
+
+  Todo se guarda solo, sobre la marcha (`usePlantillas` agrupa los cambios con
+  un temporizador): no hay botón de guardar porque no hay nada que se pueda
+  perder por no pulsarlo.
+*/
 
 export type PropsConfirmacionDePlantillaDocx = {
   plantilla: PlantillaDesdeDocx
   alRenombrar: (nombre: string) => void
+  alCambiarMarcadores: (marcadores: readonly MarcadorDeDocx[]) => void
+  alEliminar: () => void | Promise<void>
 }
 
+const CAMPO =
+  'w-full rounded-2xl bg-acento-tenue px-4 text-base text-texto placeholder:text-texto-tenue focus:outline-2 focus:outline-offset-2 focus:outline-acento'
+
+const FORMATOS: readonly { valor: FormatoDeMarcador; etiqueta: string }[] = [
+  { valor: 'parrafo', etiqueta: 'Párrafo' },
+  { valor: 'lista_vinetas', etiqueta: 'Viñetas' },
+  { valor: 'lista_numerada', etiqueta: 'Numerada' },
+]
+
+/*
+  Qué pasa si la conferencia no da material para este hueco.
+
+  "Quitar el renglón" y no "quitar la sección": un marcador simple ocupa un
+  párrafo, y eso es lo que se va — para quitar un tramo más largo está el
+  marcador `[[SI: …]]` de Word, que envuelve lo que haga falta.
+*/
+const SI_VACIO: readonly { valor: ComportamientoSiVacio; etiqueta: string }[] = [
+  { valor: 'dejar-vacio', etiqueta: 'Dejarlo en blanco' },
+  { valor: 'quitar', etiqueta: 'Quitar el renglón' },
+  { valor: 'avisar', etiqueta: 'Avisarme' },
+]
+
+/** `[[Resumen de la tesis]]` → `Resumen de la tesis`. */
 function etiquetaLegible(textoOriginal: string): string {
   return textoOriginal.replace(/^\[\[/, '').replace(/\]\]$/, '').trim()
 }
 
-/*
-  Muestra el párrafo completo que rodea al marcador (ej. "Grupo de
-  investigación: [[Nombre grupo]]"), con el propio marcador resaltado como
-  chip y sin corchetes — contexto que la app ya tiene gratis del documento,
-  en vez de pedir una descripción manual. Si por algún motivo el texto
-  exacto no aparece dentro del contexto, se cae a mostrarlo completo tal
-  cual, sin romper.
-*/
-function ContextoDeMarcador({
-  contexto,
-  textoOriginal,
-}: {
-  contexto: string
-  textoOriginal: string
-}): ReactElement {
-  const indice = contexto.indexOf(textoOriginal)
-
-  if (indice === -1) {
-    return <span className="min-w-0 shrink text-sm leading-snug break-words text-texto line-clamp-3">{contexto}</span>
-  }
-
-  const antes = contexto.slice(0, indice)
-  const despues = contexto.slice(indice + textoOriginal.length)
-
-  return (
-    <span className="min-w-0 shrink text-sm leading-snug break-words text-texto line-clamp-3">
-      {antes}
-      <span className="rounded bg-acento-tenue px-1.5 py-0.5 font-medium text-acento">
-        {etiquetaLegible(textoOriginal)}
-      </span>
-      {despues}
-    </span>
-  )
+function tieneInstruccion(marcador: MarcadorDeDocx): boolean {
+  return marcador.tipo === 'simple' && (marcador.instruccion ?? '').trim() !== ''
 }
 
-function FilaDeMarcador({ marcador }: { marcador: MarcadorDeDocx }): ReactElement {
-  if (marcador.tipo === 'simple') {
-    return (
-      <li className="flex items-start gap-2 rounded-md bg-fondo px-3 py-2">
-        <TagIcon size={14} weight="bold" className="mt-1 shrink-0 text-texto-tenue" aria-hidden="true" />
-        <ContextoDeMarcador contexto={marcador.contexto} textoOriginal={marcador.textoOriginal} />
-      </li>
+export function ConfirmacionDePlantillaDocx({
+  plantilla,
+  alRenombrar,
+  alCambiarMarcadores,
+  alEliminar,
+}: PropsConfirmacionDePlantillaDocx): ReactElement {
+  const { archivo, codigoDeError } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
+  const [nombre, setNombre] = useState(plantilla.nombre)
+  const [urlDeDescarga, setUrlDeDescarga] = useState<string | null>(null)
+  const [borradoAbierto, setBorradoAbierto] = useState(false)
+  const botonDeBorrado = useRef<HTMLButtonElement>(null)
+
+  const huecos = plantilla.marcadores.filter((marcador): marcador is MarcadorSimpleDeDocx => marcador.tipo === 'simple')
+  const listos = huecos.filter(tieneInstruccion).length
+
+  /*
+    Se abre el primero que falte, no el primero de la lista: al entrar, lo que
+    hay que hacer es lo que está sin hacer. Con todo listo, ninguno abierto.
+  */
+  const [abierto, setAbierto] = useState<string | null>(
+    () => huecos.find((marcador) => !tieneInstruccion(marcador))?.id ?? null,
+  )
+
+  useEffect(() => {
+    if (archivo === null) {
+      setUrlDeDescarga(null)
+      return
+    }
+
+    const url = URL.createObjectURL(archivo)
+    setUrlDeDescarga(url)
+
+    return () => URL.revokeObjectURL(url)
+  }, [archivo])
+
+  function cambiarMarcador(id: string, cambio: Partial<MarcadorSimpleDeDocx>): void {
+    alCambiarMarcadores(
+      plantilla.marcadores.map((marcador) =>
+        marcador.id === id && marcador.tipo === 'simple' ? { ...marcador, ...cambio } : marcador,
+      ),
     )
   }
 
-  const esCondicional = marcador.tipo === 'condicional'
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
+      <h1 className="sr-only">Plantilla: {plantilla.nombre}</h1>
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <Link
+            to="/plantillas"
+            className="flex w-fit items-center gap-1 rounded-full py-1 pr-2 text-sm text-texto-tenue transition-colors hover:text-texto"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+              arrow_back
+            </span>
+            Plantillas
+          </Link>
+
+          {/*
+            El nombre es el título y se edita en el sitio. Un campo con rótulo
+            aparte convertiría la cabecera en un formulario; así se lee como lo
+            que es, y se corrige tocándolo.
+          */}
+          <input
+            value={nombre}
+            onChange={(evento) => {
+              setNombre(evento.target.value)
+              alRenombrar(evento.target.value)
+            }}
+            aria-label="Nombre de la plantilla"
+            className="-mx-2 min-w-0 rounded-xl bg-transparent px-2 font-titulo text-[32px] leading-tight font-semibold text-texto transition-colors hover:bg-acento-tenue focus:bg-acento-tenue focus:outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 pt-7">
+          {urlDeDescarga === null ? null : (
+            <a
+              href={urlDeDescarga}
+              download={`${nombre.trim().length > 0 ? nombre.trim() : 'plantilla'}.docx`}
+              className="flex h-10 items-center gap-2 rounded-full bg-acento-tenue px-4 text-sm text-texto-tenue transition-colors hover:text-texto"
+            >
+              <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                download
+              </span>
+              Descargar el .docx
+            </a>
+          )}
+
+          <button
+            ref={botonDeBorrado}
+            type="button"
+            onClick={() => setBorradoAbierto(true)}
+            aria-label="Borrar la plantilla"
+            className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-acento-tenue text-texto-tenue transition-colors hover:text-error"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+              delete
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/*
+        Descargar el archivo puede fallar sin que la plantilla esté mal: los
+        marcadores viven en la fila y se siguen pudiendo configurar. Se dice,
+        en vez de dejar la hoja vacía insinuando que el documento se perdió.
+      */}
+      {codigoDeError === null ? null : <PanelDeError mensaje={mensajeDeError(codigoDeError)} />}
+
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <section aria-label="Vista previa" className="flex min-h-[28rem] min-w-0 flex-1 flex-col gap-3 rounded-[24px] bg-panel p-4">
+          <p className="flex items-center gap-1.5 px-2 text-sm text-texto-tenue">
+            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+              visibility
+            </span>
+            Vista previa · solo lectura
+          </p>
+
+          <div className="sin-barra-de-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl">
+            <VistaPreviaDeDocx blob={archivo} />
+          </div>
+        </section>
+
+        <section aria-label="Marcadores" className="flex min-h-0 flex-col gap-3 rounded-[24px] bg-panel p-4 lg:w-[27rem]">
+          <div className="flex items-baseline justify-between gap-3 px-2">
+            <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Qué va en cada hueco</h2>
+            {huecos.length === 0 ? null : (
+              <span className="shrink-0 text-sm text-texto-tenue">
+                {listos} de {huecos.length}
+              </span>
+            )}
+          </div>
+
+          {plantilla.marcadores.length === 0 ? (
+            /*
+              Sin marcadores no hay nada que configurar, y el motivo más
+              probable es que no se escribieron, no que la app no los viera.
+              Se explica cómo se escriben en vez de solo constatar la ausencia.
+            */
+            <div className="flex flex-col gap-3 rounded-[20px] bg-fondo p-5">
+              <p className="text-base text-texto">No encontramos ningún marcador en este archivo.</p>
+              <p className="text-sm leading-relaxed text-texto-tenue">
+                Ábrelo en Word y escribe, donde va cada contenido, su nombre entre dobles corchetes:
+              </p>
+              <code className="w-fit rounded-lg bg-acento-tenue px-2 py-1 font-mono text-sm text-texto">
+                [[Resumen de la tesis]]
+              </code>
+              <p className="text-sm leading-relaxed text-texto-tenue">Luego vuelve a subirlo.</p>
+            </div>
+          ) : (
+            <ul className="sin-barra-de-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+              {plantilla.marcadores.map((marcador) =>
+                marcador.tipo === 'simple' ? (
+                  <HuecoConfigurable
+                    key={marcador.id}
+                    marcador={marcador}
+                    abierto={abierto === marcador.id}
+                    alAlternar={() => setAbierto((actual) => (actual === marcador.id ? null : marcador.id))}
+                    alCambiar={(cambio) => cambiarMarcador(marcador.id, cambio)}
+                  />
+                ) : (
+                  <SeccionDeWord key={marcador.id} marcador={marcador} />
+                ),
+              )}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <ModalDeConfirmacion
+        abierto={borradoAbierto}
+        alCerrar={() => setBorradoAbierto(false)}
+        titulo="Borrar la plantilla"
+        accion="Borrar"
+        anclaEn={botonDeBorrado}
+        consecuencias={[
+          'Se borra el archivo de Word que subiste y las instrucciones de cada hueco.',
+          /* `memorias.id_plantilla` es `on delete cascade`: no quedan huérfanas, desaparecen. */
+          'Se borran también todas las memorias que se generaron con ella.',
+        ]}
+        alConfirmar={async () => {
+          setBorradoAbierto(false)
+          await alEliminar()
+        }}
+      >
+        <p className="text-base text-texto">«{plantilla.nombre}»</p>
+      </ModalDeConfirmacion>
+    </div>
+  )
+}
+
+/*
+  Un hueco de la plantilla, plegado o abierto.
+
+  Plegado dice lo justo para saber si ya está: su nombre y si tiene
+  instrucción. Abierto enseña dónde cae en el documento —el párrafo que lo
+  rodea, con el marcador resaltado— porque "Resumen" solo no dice si es el de
+  la portada o el de la tercera página, y la instrucción depende de eso.
+*/
+function HuecoConfigurable({
+  marcador,
+  abierto,
+  alAlternar,
+  alCambiar,
+}: {
+  marcador: MarcadorSimpleDeDocx
+  abierto: boolean
+  alAlternar: () => void
+  alCambiar: (cambio: Partial<MarcadorSimpleDeDocx>) => void
+}): ReactElement {
+  const listo = tieneInstruccion(marcador)
+  const indice = marcador.contexto.indexOf(marcador.textoOriginal)
 
   return (
-    <li className="flex flex-col gap-1.5 rounded-md bg-fondo px-3 py-2">
-      <div className="flex items-center gap-1.5">
-        {esCondicional ? (
-          <GitBranchIcon size={14} weight="bold" className="shrink-0 text-texto-tenue" aria-hidden="true" />
-        ) : (
-          <RepeatIcon size={14} weight="bold" className="shrink-0 text-texto-tenue" aria-hidden="true" />
-        )}
-        <Insignia tono="automatico">{esCondicional ? 'Condicional' : 'Repetible'}</Insignia>
-      </div>
-      <span className="min-w-0 shrink text-sm leading-snug break-words text-texto line-clamp-2">
-        {marcador.descripcion}
-      </span>
+    <li className={`flex flex-col rounded-[20px] transition-colors ${abierto ? 'bg-fondo' : ''}`}>
+      <button
+        type="button"
+        onClick={alAlternar}
+        aria-expanded={abierto}
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-colors ${
+          abierto ? '' : 'hover:bg-acento-tenue'
+        }`}
+      >
+        <span className="min-w-0 flex-1 truncate text-base text-texto">{etiquetaLegible(marcador.textoOriginal)}</span>
+
+        <span
+          className={`flex shrink-0 items-center gap-1 text-sm ${listo ? 'text-texto' : 'text-texto-tenue'}`}
+        >
+          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
+            {listo ? 'check_circle' : 'radio_button_unchecked'}
+          </span>
+          {listo ? 'Listo' : 'Falta'}
+        </span>
+
+        <span
+          aria-hidden="true"
+          className={`material-symbols-rounded icono-contorno text-lg text-texto-tenue transition-transform ${abierto ? 'rotate-180' : ''}`}
+        >
+          expand_more
+        </span>
+      </button>
+
+      {abierto ? (
+        <div className="flex flex-col gap-4 px-4 pb-4">
+          <p className="text-sm leading-relaxed text-texto-tenue">
+            {indice === -1 ? (
+              marcador.contexto
+            ) : (
+              <>
+                {marcador.contexto.slice(0, indice)}
+                <mark className="rounded bg-acento-tenue px-1 font-mono text-texto">{marcador.textoOriginal}</mark>
+                {marcador.contexto.slice(indice + marcador.textoOriginal.length)}
+              </>
+            )}
+          </p>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-texto-tenue">Qué debe escribir la IA aquí</span>
+            <textarea
+              value={marcador.instruccion ?? ''}
+              onChange={(evento) => alCambiar({ instruccion: evento.target.value })}
+              rows={3}
+              placeholder="Ej. Resume en dos párrafos la tesis principal del ponente, en tono formal."
+              className={`${CAMPO} resize-none py-3 leading-relaxed`}
+            />
+          </label>
+
+          <GrupoDePastillas
+            titulo="Cómo se escribe"
+            opciones={FORMATOS}
+            valor={marcador.formato}
+            alCambiar={(formato) => alCambiar({ formato })}
+          />
+
+          <GrupoDePastillas
+            titulo="Si la conferencia no da para esto"
+            opciones={SI_VACIO}
+            valor={marcador.siVacio ?? 'dejar-vacio'}
+            alCambiar={(siVacio) => alCambiar({ siVacio })}
+          />
+        </div>
+      ) : null}
     </li>
   )
 }
 
 /*
-  Pantalla de confirmación para una plantilla `origen: 'docx'` — no de
-  mapeo. El archivo subido nunca se toca ni se completa desde aquí: a qué
-  dato de una conferencia se liga cada marca lo decide la IA al generar una
-  memoria (fuera de alcance todavía), no la persona que sube la plantilla.
-  Lo único que esta pantalla hace es dejar ver, de solo lectura, que el
-  documento subido es el correcto y que sus marcas se reconocieron, y
-  ofrecer descargar ese mismo archivo original sin modificar.
-
-  Desde B6 ese archivo ya no viaja dentro de la plantilla: se descarga del
-  bucket `plantillas-docx` por su ruta (`useDocxDePlantilla`), y hasta que
-  llega no hay enlace de descarga que ofrecer.
+  Un tramo condicional o repetible, escrito en Word con `[[SI: …]]` o
+  `[[REPETIR: …]]`. No lleva instrucción: su contenido ya lo escribió quien
+  diseñó la plantilla, y lo único que decide la app es si aparece o cuántas
+  veces. Se lista para que se sepa que se reconoció.
 */
-export function ConfirmacionDePlantillaDocx({
-  plantilla,
-  alRenombrar,
-}: PropsConfirmacionDePlantillaDocx): ReactElement {
-  const [nombreLocal, setNombreLocal] = useState(plantilla.nombre)
-  const { archivo: blob, codigoDeError } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
-  const [urlDeDescarga, setUrlDeDescarga] = useState<string | null>(null)
+function SeccionDeWord({ marcador }: { marcador: Exclude<MarcadorDeDocx, MarcadorSimpleDeDocx> }): ReactElement {
+  return (
+    <li className="flex items-center gap-3 rounded-[20px] px-4 py-3">
+      <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg text-texto-tenue">
+        {marcador.tipo === 'condicional' ? 'rule' : 'repeat'}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-base text-texto">{marcador.descripcion}</span>
+        <span className="block text-sm text-texto-tenue">
+          {marcador.tipo === 'condicional' ? 'Tramo que aparece solo si hay datos' : 'Tramo que se repite'}
+        </span>
+      </span>
+    </li>
+  )
+}
 
-  useEffect(() => {
-    if (blob === null) {
-      setUrlDeDescarga(null)
-      return
-    }
-
-    const url = URL.createObjectURL(blob)
-    setUrlDeDescarga(url)
-
-    return () => URL.revokeObjectURL(url)
-  }, [blob])
-
-  function alCambiarNombre(evento: ChangeEvent<HTMLInputElement>): void {
-    setNombreLocal(evento.target.value)
-    alRenombrar(evento.target.value)
-  }
+function GrupoDePastillas<T extends string>({
+  titulo,
+  opciones,
+  valor,
+  alCambiar,
+}: {
+  titulo: string
+  opciones: readonly { valor: T; etiqueta: string }[]
+  valor: T
+  alCambiar: (valor: T) => void
+}): ReactElement {
+  /* Un nombre por grupo: sin él, las flechas del teclado no saltan entre las opciones de un mismo grupo. */
+  const nombre = useId()
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="max-w-md min-w-48 flex-1">
-          <Field id="plantilla-nombre" etiqueta="Nombre">
-            <Input value={nombreLocal} onChange={alCambiarNombre} />
-          </Field>
-        </div>
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-medium text-texto-tenue">{titulo}</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {opciones.map((opcion) => {
+          const activa = opcion.valor === valor
 
-        {urlDeDescarga !== null ? (
-          <a
-            href={urlDeDescarga}
-            download={`${nombreLocal.trim().length > 0 ? nombreLocal : 'plantilla'}.docx`}
-            className="inline-flex items-center gap-1.5 text-sm text-acento hover:underline"
-          >
-            <DownloadSimpleIcon size={14} weight="bold" aria-hidden="true" />
-            Descargar plantilla
-          </a>
-        ) : null}
+          return (
+            <label
+              key={opcion.valor}
+              className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acento ${
+                activa ? 'bg-acento text-acento-contraste' : 'bg-acento-tenue text-texto-tenue hover:text-texto'
+              }`}
+            >
+              <input
+                type="radio"
+                name={nombre}
+                checked={activa}
+                onChange={() => alCambiar(opcion.valor)}
+                className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+              />
+              {opcion.etiqueta}
+            </label>
+          )
+        })}
       </div>
-
-      {/*
-        La descarga del archivo puede fallar sin que la plantilla esté mal: los
-        marcadores detectados viven en la fila y se siguen viendo. Se avisa
-        aquí, con nombre propio, en vez de dejar la vista previa vacía
-        insinuando que el documento se perdió.
-      */}
-      {codigoDeError === null ? null : <PanelDeError mensaje={mensajeDeError(codigoDeError)} />}
-
-      <section className="flex flex-col gap-4 rounded-md bg-panel p-6 shadow-sm">
-        <div className="flex items-start gap-2 text-sm text-texto-tenue">
-          <CheckCircleIcon
-            size={18}
-            weight="fill"
-            className="mt-0.5 shrink-0 text-validado"
-            aria-hidden="true"
-          />
-          <p>
-            Este documento se conserva exactamente como lo subiste — el diseño se edita en Word, no aquí. El
-            contenido de cada marca lo completa la IA al generar una memoria, no se configura desde esta pantalla.
-          </p>
-        </div>
-
-        {plantilla.marcadores.length === 0 ? (
-          <p className="text-sm text-texto-tenue">No encontramos ninguna marca «[[...]]» en este archivo.</p>
-        ) : (
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold tracking-tight text-texto">
-              Marcadores detectados ({plantilla.marcadores.length})
-            </h2>
-
-            <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {plantilla.marcadores.map((marcador) => (
-                <FilaDeMarcador key={marcador.id} marcador={marcador} />
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-
-      <VistaPreviaDeDocx blob={blob} />
-    </div>
+    </fieldset>
   )
 }

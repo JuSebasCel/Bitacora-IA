@@ -9,6 +9,7 @@ export type {
   JSONContent,
   MarcadorDeDocx,
   MarcadorDeSeccionDeDocx,
+  ComportamientoSiVacio,
   MarcadorSimpleDeDocx,
   ModoDeSeccion,
   OrigenDeMarcador,

@@ -90,7 +90,7 @@ describe('PantallaEditorDePlantilla — origen docx', () => {
 
     montar(id)
 
-    expect(await screen.findByText(/no encontramos ninguna marca/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no encontramos ningún marcador/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Negrita' })).not.toBeInTheDocument()
   })
 })
