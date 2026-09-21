@@ -3,9 +3,19 @@
   <!--
     Marca del producto: el dial de una caja fuerte recortado en un cuadrado
     redondeado. Es la misma figura que `MarcaDeMenti` en
-    `src/shared/ui/Logo.tsx`; aquí el negro va fijo porque la pestaña del
-    navegador no sabe del tema de la app.
+    `src/shared/ui/Logo.tsx`.
+
+    El color sigue al tema del navegador, no al de la app (la pestaña no
+    sabe de él): blanco sobre una barra de pestañas oscura, como se ve en la
+    pantalla de acceso con el tema oscuro, y negro sobre una clara. Fijo en
+    negro, en un navegador oscuro el logo desaparecía.
   -->
+  <style>
+    .marca { fill: #111111; }
+    @media (prefers-color-scheme: dark) {
+      .marca { fill: #ffffff; }
+    }
+  </style>
   <defs>
     <mask id="dial">
       <rect width="32" height="32" rx="9" fill="white" />
@@ -14,5 +24,5 @@
       <path d="M16 16 L20.6 11.4" stroke="black" stroke-width="2.75" stroke-linecap="round" />
     </mask>
   </defs>
-  <rect width="32" height="32" rx="9" fill="#111111" mask="url(#dial)" />
+  <rect class="marca" width="32" height="32" rx="9" mask="url(#dial)" />
 </svg>

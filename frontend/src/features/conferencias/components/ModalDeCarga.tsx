@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useApiKey } from '@/features/configuracion/useApiKey'
 import { mensajeDeError } from '@/shared/errors'
-import { Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
+import { hoyEnIso, Modal, SelectorDeFecha, SelectorDeOpciones } from '@/shared/ui'
 import type { OpcionDeSelector } from '@/shared/ui'
 import {
   EXTENSIONES_POR_FUENTE,
@@ -563,6 +563,13 @@ export function ModalDeCarga({
                 etiquetaAccesible="Fecha del evento"
                 vacio="Fecha del evento"
                 valor={campos.fechaDelEvento === '' ? null : campos.fechaDelEvento}
+                /*
+                  Hasta hoy: una conferencia se carga cuando ya ocurrió —hay
+                  su audio o su transcripción—, así que una fecha futura es
+                  casi siempre un error al tocar, y la dejaría mal ordenada
+                  entre las recientes.
+                */
+                maximo={hoyEnIso()}
                 alElegir={(iso) => actualizar({ fechaDelEvento: iso })}
               />
             </div>

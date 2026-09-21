@@ -4,6 +4,7 @@ import type { CodigoError } from '@/shared/errors'
 import type { Memoria } from './data'
 import { crearMemoria as crearMemoriaPura } from './memorias'
 import type { ResultadoMemoria } from './memorias'
+import { memoriasRecordadas, recordarMemorias } from './memoriasRecordadas'
 import { crearMemoria, eliminarMemoria, listarMemorias } from './repositorio'
 import { redactarSecciones } from './redaccion'
 import type { HuecoParaRedactar, SeccionesRedactadas } from './redaccion'
@@ -41,8 +42,9 @@ export type ValorDeMemorias = {
 }
 
 export function useMemorias(idUsuario: string): ValorDeMemorias {
-  const [memorias, setMemorias] = useState<readonly Memoria[]>([])
-  const [cargando, setCargando] = useState(true)
+  /* Con algo recordado no hay nada que esperar: se enseña y se relee detrás (ver `memoriasRecordadas.ts`). */
+  const [memorias, setMemorias] = useState<readonly Memoria[]>(() => memoriasRecordadas(idUsuario) ?? [])
+  const [cargando, setCargando] = useState(() => memoriasRecordadas(idUsuario) === null)
   const [codigoDeError, setCodigoDeError] = useState<CodigoError | null>(null)
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export function useMemorias(idUsuario: string): ValorDeMemorias {
       return
     }
 
-    setCargando(true)
+    setCargando(memoriasRecordadas(idUsuario) === null)
 
     listarMemorias().then((resultado) => {
       if (cancelado) {
@@ -75,6 +77,13 @@ export function useMemorias(idUsuario: string): ValorDeMemorias {
       cancelado = true
     }
   }, [idUsuario])
+
+  /* Lo que se ve es lo que se recuerda, también tras generar o borrar una. */
+  useEffect(() => {
+    if (!cargando && idUsuario !== '') {
+      recordarMemorias(idUsuario, memorias)
+    }
+  }, [memorias, cargando, idUsuario])
 
   const generar = useCallback(
     async (

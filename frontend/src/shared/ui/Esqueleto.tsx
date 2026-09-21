@@ -24,7 +24,9 @@ export type PropsEsqueleto = {
   filas?: number
   etiqueta?: string
   /** La forma de lo que va a llegar. */
-  variante?: 'lista' | 'columnas' | 'galeria'
+  variante?: 'lista' | 'columnas' | 'galeria' | 'tarjetas'
+  /** Solo para `tarjetas`: la grilla de tres o una fila por tarjeta, como la vista elegida. */
+  enGrilla?: boolean
 }
 
 const BARRIDO = 'barrido-de-carga relative overflow-hidden'
@@ -45,8 +47,53 @@ function Fila(): ReactElement {
   )
 }
 
-export function Esqueleto({ filas = 3, etiqueta = 'Cargando', variante = 'lista' }: PropsEsqueleto): ReactElement {
+export function Esqueleto({
+  filas = 3,
+  etiqueta = 'Cargando',
+  variante = 'lista',
+  enGrilla = true,
+}: PropsEsqueleto): ReactElement {
   const elementos = Array.from({ length: filas }, (_, indice) => indice)
+
+  /*
+    Las tarjetas de las memorias: claras sobre el panel, con el disco y el
+    título, en la misma grilla o en las mismas filas que la vista elegida.
+    La variante `lista` pintaba filas grises sobre un panel gris, que es
+    otra pantalla distinta de la que llega.
+  */
+  if (variante === 'tarjetas') {
+    return (
+      <div
+        role="status"
+        aria-label={etiqueta}
+        className={enGrilla ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'flex flex-col gap-2'}
+      >
+        {elementos.map((indice) =>
+          enGrilla ? (
+            <div key={indice} className={`${BARRIDO} flex flex-col gap-3 rounded-[24px] bg-fondo p-6`}>
+              <div className="flex items-center gap-3">
+                <div className="size-10 shrink-0 rounded-full bg-acento-tenue" />
+                <Barra ancho="w-3/5" />
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                <Barra ancho="w-4/5" />
+                <Barra ancho="w-1/2" />
+                <Barra ancho="w-1/4" />
+              </div>
+            </div>
+          ) : (
+            <div key={indice} className={`${BARRIDO} flex items-center gap-3 rounded-[24px] bg-fondo py-3 pr-14 pl-4`}>
+              <div className="size-10 shrink-0 rounded-full bg-acento-tenue" />
+              <Barra ancho="w-1/3" />
+              <div className="ml-auto flex w-1/3 gap-3">
+                <Barra ancho="w-full" />
+              </div>
+            </div>
+          ),
+        )}
+      </div>
+    )
+  }
 
   if (variante === 'galeria') {
     return (

@@ -8,6 +8,7 @@ import {
   Popover,
   EstadoVacioIlustrado,
   Esqueleto,
+  hoyEnIso,
   Modal,
   ModalDeConfirmacion,
   SelectorDeFecha,
@@ -1670,6 +1671,8 @@ export function PantallaArchivo({
                 etiquetaAccesible="Fecha del evento"
                 vacio="Fecha del evento"
                 valor={edicion.fechaDelEvento === '' ? null : edicion.fechaDelEvento}
+                /* Hasta hoy, igual que al cargarla: ver `ModalDeCarga`. */
+                maximo={hoyEnIso()}
                 alElegir={(iso) => setEdicion((a) => ({ ...a, fechaDelEvento: iso }))}
               />
 

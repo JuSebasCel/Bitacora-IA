@@ -8,6 +8,7 @@ import { usePlantillas } from '@/features/plantillas/usePlantillas'
 import { mensajeDeError } from '@/shared/errors'
 import { BotonPildora, EstadoVacioIlustrado, Esqueleto, PanelDeError, SelectorDeVista } from '@/shared/ui'
 import type { OpcionDeVista } from '@/shared/ui'
+import { cuantasMemoriasHabia } from '../memoriasRecordadas'
 import { BarraDeBusquedaDeMemorias, PanelDeGenerarMemoria, TarjetaDeMemoria } from '../components'
 import { CRITERIOS_POR_DEFECTO, listarMemorias } from '../filtros'
 import type { EntradaDeMemoria } from '../filtros'
@@ -172,7 +173,13 @@ export function PantallaMemorias(): ReactElement {
           sobre memorias que están perfectamente bien.
         */}
         {cargandoMemorias || carga === 'cargando' ? (
-          <Esqueleto filas={3} etiqueta="Cargando las memorias" />
+          /* Tantas como había la última vez y con la forma de la vista elegida: el esqueleto es lo que va a llegar. */
+          <Esqueleto
+            filas={Math.max(1, cuantasMemoriasHabia() ?? 1)}
+            etiqueta="Cargando las memorias"
+            variante="tarjetas"
+            enGrilla={vista === 'grilla'}
+          />
         ) : codigoDeError !== null ? (
           <PanelDeError mensaje={mensajeDeError(codigoDeError)} />
         ) : listadas.length > 0 ? (

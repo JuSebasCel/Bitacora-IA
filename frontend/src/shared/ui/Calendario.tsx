@@ -48,7 +48,8 @@ function aIso(anio: number, mes: number, dia: number): string {
   return `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
 }
 
-function hoyEnIso(): string {
+/** Hoy, como texto ISO en la zona horaria de quien mira. */
+export function hoyEnIso(): string {
   const ahora = new Date()
   return aIso(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
 }
