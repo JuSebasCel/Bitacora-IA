@@ -4,6 +4,69 @@ import { useEffect, useRef, useState } from 'react'
 
 export type PropsVistaPreviaDeDocx = {
   blob: Blob | null
+  /** Resaltar los `[[marcadores]]` dentro de la hoja. Para configurar una plantilla, no para ver una memoria. */
+  resaltarMarcadores?: boolean
+}
+
+const NOMBRE_DEL_RESALTE = 'marcadores-de-plantilla'
+
+/*
+  Resalta cada `[[marcador]]` de la hoja ya pintada, sin tocarla.
+
+  No se envuelve el texto en un `<mark>`: `docx-preview` pinta cada tramo de
+  formato de Word como un `<span>` aparte, y un marcador que Word partió en
+  tres —pasa, al corregir una letra— vive en tres nodos distintos que ningún
+  elemento puede envolver sin romper los de alrededor. La API de resaltado del
+  navegador trabaja sobre rangos, que sí pueden cruzar nodos: se busca en el
+  texto de todos seguidos y se traduce cada coincidencia a su rango.
+
+  Donde no existe la API (navegadores viejos) simplemente no se resalta: la
+  hoja se sigue viendo igual y los marcadores siguen en la columna de al lado.
+*/
+function resaltarMarcadoresEn(contenedor: HTMLElement): void {
+  if (typeof CSS === 'undefined' || !('highlights' in CSS) || typeof Highlight === 'undefined') {
+    return
+  }
+
+  const nodos: Text[] = []
+  const inicios: number[] = []
+  let texto = ''
+
+  const recorrido = document.createTreeWalker(contenedor, NodeFilter.SHOW_TEXT)
+  while (recorrido.nextNode()) {
+    const nodo = recorrido.currentNode as Text
+    inicios.push(texto.length)
+    nodos.push(nodo)
+    texto += nodo.data
+  }
+
+  /* El nodo donde cae una posición del texto corrido, y su desplazamiento dentro de él. */
+  function ubicar(posicion: number, esFinal: boolean): [Text, number] | null {
+    for (let indice = nodos.length - 1; indice >= 0; indice -= 1) {
+      const inicio = inicios[indice] ?? 0
+      if (esFinal ? inicio < posicion : inicio <= posicion) {
+        const nodo = nodos[indice]
+        return nodo === undefined ? null : [nodo, posicion - inicio]
+      }
+    }
+    return null
+  }
+
+  const rangos: Range[] = []
+
+  for (const coincidencia of texto.matchAll(/\[\[[^[\]]+\]\]/g)) {
+    const inicio = ubicar(coincidencia.index, false)
+    const fin = ubicar(coincidencia.index + coincidencia[0].length, true)
+
+    if (inicio !== null && fin !== null) {
+      const rango = new Range()
+      rango.setStart(inicio[0], inicio[1])
+      rango.setEnd(fin[0], fin[1])
+      rangos.push(rango)
+    }
+  }
+
+  CSS.highlights.set(NOMBRE_DEL_RESALTE, new Highlight(...rangos))
 }
 
 /*
@@ -13,7 +76,7 @@ export type PropsVistaPreviaDeDocx = {
   aviso: la descarga del archivo generado sigue disponible en la pantalla
   que monta este componente, así que nunca es la única salida.
 */
-export function VistaPreviaDeDocx({ blob }: PropsVistaPreviaDeDocx): ReactElement | null {
+export function VistaPreviaDeDocx({ blob, resaltarMarcadores = false }: PropsVistaPreviaDeDocx): ReactElement | null {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const [fallo, setFallo] = useState(false)
 
@@ -36,10 +99,22 @@ export function VistaPreviaDeDocx({ blob }: PropsVistaPreviaDeDocx): ReactElemen
       queda transparente y pegada al borde izquierdo — la causa real del
       "no se ve centrada, fondo negro" que reportó el usuario.
     */
-    renderAsync(blob, contenedor, undefined, { inWrapper: true }).catch(() => {
-      setFallo(true)
-    })
-  }, [blob])
+    renderAsync(blob, contenedor, undefined, { inWrapper: true })
+      .then(() => {
+        if (resaltarMarcadores) {
+          resaltarMarcadoresEn(contenedor)
+        }
+      })
+      .catch(() => {
+        setFallo(true)
+      })
+
+    return () => {
+      if (resaltarMarcadores && typeof CSS !== 'undefined' && 'highlights' in CSS) {
+        CSS.highlights.delete(NOMBRE_DEL_RESALTE)
+      }
+    }
+  }, [blob, resaltarMarcadores])
 
   if (blob === null) {
     return null

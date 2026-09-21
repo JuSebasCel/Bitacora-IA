@@ -453,6 +453,17 @@
     en línea en las propiedades que anima, así que si se queda puesta, la
     salida —que se hace con estilos en línea— no tiene ningún efecto.
   */
+  /*
+    Los `[[marcadores]]` dentro de la hoja de una plantilla (ver
+    `VistaPreviaDeDocx`). Mismo fondo que tienen al lado, en la columna de
+    configuración, para que se lea que son la misma cosa. Va fijo y no con los
+    tokens del tema porque la hoja es siempre papel claro.
+  */
+  ::highlight(marcadores-de-plantilla) {
+    background-color: oklch(0.88 0.06 85);
+    color: oklch(0.2 0.02 60);
+  }
+
   .velo-de-modal {
     background-color: var(--bitacora-velo);
     backdrop-filter: blur(var(--bitacora-velo-desenfoque));

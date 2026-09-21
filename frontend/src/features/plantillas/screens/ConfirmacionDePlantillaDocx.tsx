@@ -185,7 +185,7 @@ export function ConfirmacionDePlantillaDocx({
           </p>
 
           <div className="sin-barra-de-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl">
-            <VistaPreviaDeDocx blob={archivo} />
+            <VistaPreviaDeDocx blob={archivo} resaltarMarcadores />
           </div>
         </section>
 
