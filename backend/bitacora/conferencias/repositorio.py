@@ -16,13 +16,22 @@ una forma de averiguar qué subió otra persona.
 
 from __future__ import annotations
 
+import json
+
 from typing import Any, Protocol, Sequence
 
 from bitacora.compartido.datos import ClienteSupabase, traducir_fallo_de_datos
 from bitacora.compartido.errores import ErrorDeBitacora
-from bitacora.conferencias.tipos import Conferencia, Ficha, PropuestaDeTema, Tema, fila_de_ficha
+from bitacora.conferencias.tipos import Conferencia, Ficha, PropuestaDeTema, Segmento, Tema, fila_de_ficha
 
 BUCKET_DE_AUDIO = "audio-conferencias"
+
+"""
+La transcripción de un audio, guardada junto a él para no volver a pagarla en
+los reintentos (ver `pipeline.procesar_conferencia`). Queda fuera de la lista
+de fuentes: no es el audio.
+"""
+NOMBRE_DE_LA_TRANSCRIPCION_GUARDADA = "transcripcion-guardada.json"
 
 
 class RepositorioDeConferencias(Protocol):
@@ -47,6 +56,10 @@ class RepositorioDeConferencias(Protocol):
     def crear_temas(self, nombres: Sequence[str]) -> tuple[Tema, ...]: ...
 
     def descargar_fuente(self, conferencia: Conferencia) -> tuple[str, bytes]: ...
+
+    def leer_transcripcion_guardada(self, conferencia: Conferencia) -> tuple[Segmento, ...] | None: ...
+
+    def guardar_transcripcion(self, conferencia: Conferencia, segmentos: Sequence[Segmento]) -> None: ...
 
 
 def _fila_a_conferencia(fila: dict[str, Any]) -> Conferencia:
@@ -273,7 +286,9 @@ class RepositorioSupabase:
         nombres = [
             str(objeto.get("name"))
             for objeto in objetos
-            if isinstance(objeto, dict) and objeto.get("name")
+            if isinstance(objeto, dict)
+            and objeto.get("name")
+            and objeto.get("name") != NOMBRE_DE_LA_TRANSCRIPCION_GUARDADA
         ]
 
         if not nombres:
@@ -290,3 +305,55 @@ class RepositorioSupabase:
             raise ErrorDeBitacora("PROC_ARCHIVO_ILEGIBLE", "archivo vacío")
 
         return nombre, bytes(contenido)
+
+    def leer_transcripcion_guardada(self, conferencia: Conferencia) -> tuple[Segmento, ...] | None:
+        """
+        La transcripción de un análisis anterior de esta misma conferencia, si
+        la hay. Cualquier problema al leerla cuenta como que no la hay: se
+        vuelve a transcribir, que es lo que se hacía siempre.
+        """
+        ruta = f"{conferencia.id_dueno}/{conferencia.id}/{NOMBRE_DE_LA_TRANSCRIPCION_GUARDADA}"
+
+        try:
+            contenido = self._cliente.storage.from_(BUCKET_DE_AUDIO).download(ruta)
+            crudos = json.loads(bytes(contenido).decode("utf-8"))
+            return tuple(
+                Segmento(
+                    inicio=int(crudo["inicio"]),
+                    fin=int(crudo["fin"]),
+                    texto=str(crudo["texto"]),
+                    hablante=crudo.get("hablante"),
+                    estimado=bool(crudo.get("estimado", False)),
+                )
+                for crudo in crudos
+            ) or None
+        except Exception:  # noqa: BLE001
+            return None
+
+    def guardar_transcripcion(self, conferencia: Conferencia, segmentos: Sequence[Segmento]) -> None:
+        """
+        Se guarda junto al audio, en la carpeta del dueño. Si no se puede, no
+        pasa nada: el análisis sigue, y el próximo reintento transcribirá otra
+        vez, como antes.
+        """
+        ruta = f"{conferencia.id_dueno}/{conferencia.id}/{NOMBRE_DE_LA_TRANSCRIPCION_GUARDADA}"
+        cuerpo = json.dumps(
+            [
+                {
+                    "inicio": segmento.inicio,
+                    "fin": segmento.fin,
+                    "texto": segmento.texto,
+                    "hablante": segmento.hablante,
+                    "estimado": segmento.estimado,
+                }
+                for segmento in segmentos
+            ],
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        try:
+            self._cliente.storage.from_(BUCKET_DE_AUDIO).upload(
+                ruta, cuerpo, {"content-type": "application/json", "upsert": "true"}
+            )
+        except Exception:  # noqa: BLE001
+            return

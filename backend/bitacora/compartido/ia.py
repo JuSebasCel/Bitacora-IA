@@ -83,22 +83,55 @@ _FALLOS_QUE_PASAN_AL_RESPALDO = frozenset(
 
 
 def _pasa_al_respaldo(fallo: BaseException) -> bool:
+    """
+    También el 413 de Groq: una petición que sola supera el límite de tokens
+    por minuto del modelo. Esperar no la arregla —el límite es por minuto y
+    ella entera ya no cabe—, pero otro modelo de la cadena puede tener un
+    límite más holgado.
+    """
+    if getattr(fallo, "status_code", None) == 413:
+        return True
     return any(clase.__name__ in _FALLOS_QUE_PASAN_AL_RESPALDO for clase in type(fallo).__mro__)
+
+
+"""
+Lo que se le pide a cada llamada de texto en Groq, si quien llama no lo fija.
+
+Medido en la primera corrida real: una ventana de clasificación pedía unos
+8.500 tokens (6.000 de entrada y 2.300 de salida) contra un límite de 8.000
+por minuto del plan gratuito, y Groq la rechazaba entera. gpt-oss es un
+modelo que razona antes de responder, y ese razonamiento cuenta como
+salida: con esfuerzo bajo la salida baja mucho sin tocar el JSON que se
+pide. `reasoning_effort` solo se manda a los gpt-oss: llama lo rechaza.
+El tope de salida acota lo que Groq reserva para la respuesta, que también
+cuenta contra el límite por minuto.
+"""
+TOPE_DE_SALIDA_EN_GROQ = 3000
+
+
+def _ajustes_para_groq(modelo: str, argumentos: dict[str, Any]) -> dict[str, Any]:
+    ajustados = dict(argumentos)
+    ajustados.setdefault("max_completion_tokens", TOPE_DE_SALIDA_EN_GROQ)
+    if "gpt-oss" in modelo:
+        ajustados.setdefault("reasoning_effort", "low")
+    return ajustados
 
 
 class _CrearConRespaldo:
     """Un `create` del SDK que prueba cada modelo de la cadena, en orden, hasta que uno responda."""
 
-    def __init__(self, crear: Callable[..., Any], cadena: tuple[str, ...]) -> None:
+    def __init__(self, crear: Callable[..., Any], cadena: tuple[str, ...], es_de_texto: bool = False) -> None:
         self._crear = crear
         self._cadena = cadena
+        self._es_de_texto = es_de_texto
 
     def create(self, **argumentos: Any) -> Any:
         ultimo: BaseException | None = None
 
         for modelo in self._cadena:
+            pedidos = _ajustes_para_groq(modelo, argumentos) if self._es_de_texto else argumentos
             try:
-                return self._crear(**{**argumentos, "model": modelo})
+                return self._crear(**{**pedidos, "model": modelo})
             except Exception as fallo:  # noqa: BLE001
                 if not _pasa_al_respaldo(fallo):
                     raise
@@ -119,7 +152,9 @@ class ClienteConRespaldo:
 
     def __init__(self, cliente: Any, cadena: tuple[str, ...]) -> None:
         self.audio = SimpleNamespace(transcriptions=_CrearConRespaldo(cliente.audio.transcriptions.create, cadena))
-        self.chat = SimpleNamespace(completions=_CrearConRespaldo(cliente.chat.completions.create, cadena))
+        self.chat = SimpleNamespace(
+            completions=_CrearConRespaldo(cliente.chat.completions.create, cadena, es_de_texto=True)
+        )
 
 
 def crear_cliente(clave: ClaveDeOpenAI, cadena: tuple[str, ...] = ()) -> ClienteDeOpenAI:
@@ -131,7 +166,17 @@ def crear_cliente(clave: ClaveDeOpenAI, cadena: tuple[str, ...] = ()) -> Cliente
     """
     from openai import OpenAI
 
-    cliente = OpenAI(api_key=clave.valor, base_url=URL_DE_GROQ if es_de_groq(clave) else None)
+    """
+    Con Groq, más reintentos: el SDK ya espera lo que el proveedor pide en
+    `retry-after` ante un 429, y con 8.000 tokens por minuto un análisis
+    largo va a tener que esperar su turno varias veces. Esperar es mejor que
+    fallar o saltar al respaldo al primer aviso.
+    """
+    cliente = (
+        OpenAI(api_key=clave.valor, base_url=URL_DE_GROQ, max_retries=6)
+        if es_de_groq(clave)
+        else OpenAI(api_key=clave.valor)
+    )
     return ClienteConRespaldo(cliente, cadena) if cadena else cliente
 
 
@@ -172,15 +217,38 @@ def codigo_de_error_de_openai(excepcion: BaseException) -> str:
     return "IA_FALLO_INESPERADO"
 
 
-def traducir_fallo(excepcion: BaseException) -> ErrorDeBitacora:
+def detalle_seguro(excepcion: BaseException) -> str:
     """
-    El detalle guarda el TIPO de la excepción, nunca su mensaje.
+    Lo que sirve para depurar un fallo del proveedor, sin nada sensible.
 
-    El mensaje de un `AuthenticationError` de OpenAI cita la clave enviada; el
-    nombre de la clase dice todo lo que sirve para depurar y no arrastra nada
-    sensible al log del servidor.
+    El tipo de la excepción, el código HTTP y el código de error que manda el
+    proveedor (`rate_limit_exceeded`, `request_too_large`,
+    `json_validate_failed`…): palabras fijas de un catálogo, nunca el
+    mensaje, que en un `AuthenticationError` cita la clave enviada. Sin el
+    código del proveedor, un 413 por petición demasiado grande y un 400 por
+    JSON inválido llegaban al log como el mismo `IA_FALLO_INESPERADO`, y no
+    había forma de saber cuál de los dos era.
     """
-    return ErrorDeBitacora(codigo_de_error_de_openai(excepcion), type(excepcion).__name__)
+    partes = [type(excepcion).__name__]
+
+    estado = getattr(excepcion, "status_code", None)
+    if isinstance(estado, int):
+        partes.append(str(estado))
+
+    cuerpo = getattr(excepcion, "body", None)
+    error = cuerpo.get("error", cuerpo) if isinstance(cuerpo, dict) else None
+    if isinstance(error, dict):
+        for campo in ("code", "type"):
+            valor = error.get(campo)
+            if isinstance(valor, str) and valor.replace("_", "").isalnum() and len(valor) <= 60:
+                partes.append(valor)
+
+    return ":".join(partes)
+
+
+def traducir_fallo(excepcion: BaseException) -> ErrorDeBitacora:
+    """El detalle nunca lleva el mensaje del proveedor: ver `detalle_seguro`."""
+    return ErrorDeBitacora(codigo_de_error_de_openai(excepcion), detalle_seguro(excepcion))
 
 
 """

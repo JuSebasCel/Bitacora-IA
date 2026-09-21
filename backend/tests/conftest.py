@@ -26,7 +26,7 @@ from bitacora.agente.recuperacion import (  # noqa: E402
     PasoDeRazonamiento,
 )
 from bitacora.compartido.errores import ErrorDeBitacora  # noqa: E402
-from bitacora.conferencias.tipos import Conferencia, Ficha, PropuestaDeTema, Tema  # noqa: E402
+from bitacora.conferencias.tipos import Conferencia, Ficha, PropuestaDeTema, Segmento, Tema  # noqa: E402
 
 
 @pytest.fixture
@@ -148,6 +148,12 @@ class RepositorioFalso:
         self._quizas_fallar("registrar_temas_propuestos")
         self.evento_de_las_propuestas = id_evento
         self.propuestas_registradas = tuple(propuestas)
+
+    def leer_transcripcion_guardada(self, conferencia: Conferencia) -> tuple[Segmento, ...] | None:
+        return None
+
+    def guardar_transcripcion(self, conferencia: Conferencia, segmentos: Sequence[Segmento]) -> None:
+        return None
 
     def descargar_fuente(self, conferencia: Conferencia) -> tuple[str, bytes]:
         self._quizas_fallar("descargar_fuente")

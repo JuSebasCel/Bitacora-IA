@@ -168,7 +168,10 @@ export async function urlDelAudio(idDueno: string, idConferencia: string): Promi
   const carpeta = `${idDueno}/${idConferencia}`
   const almacen = supabase.storage.from(BUCKET_DE_AUDIO)
   const { data: objetos } = await almacen.list(carpeta)
-  const archivo = objetos?.find((objeto) => objeto.name !== '.emptyFolderPlaceholder')
+  /* La transcripción que guarda el backend vive en la misma carpeta: no es el audio. */
+  const archivo = objetos?.find(
+    (objeto) => objeto.name !== '.emptyFolderPlaceholder' && objeto.name !== 'transcripcion-guardada.json',
+  )
 
   if (archivo === undefined) {
     return null

@@ -26,8 +26,18 @@ from bitacora.api.dependencias import (
     repositorio_de_conferencias,
     transcriptor_de,
 )
+from bitacora.analisis.chunking import CARACTERES_POR_VENTANA
 from bitacora.compartido.datos import reservar_cupo_de_audio
+from bitacora.compartido.ia import es_de_groq
 from bitacora.compartido.errores import ErrorDeBitacora
+
+"""
+Ventana de la transcripción por llamada al modelo cuando se analiza con Groq:
+unos 1.500 tokens, que con las instrucciones y la respuesta dejan cada
+petición cómodamente por debajo de 8.000 tokens por minuto.
+"""
+CARACTERES_POR_VENTANA_EN_GROQ = 5000
+
 
 router = APIRouter(prefix="/conferencias", tags=["conferencias"])
 
@@ -98,7 +108,15 @@ def procesar(
             raise ErrorDeBitacora("IA_CUPO_DIARIO_AGOTADO")
 
     cliente_de_voz = cliente_para(usuario, clave_de_voz, "transcripcion")
-    cliente_de_texto = cliente_de_openai(usuario, "fichas")
+    clave_de_texto = usuario.clave_de_openai("fichas")
+    cliente_de_texto = cliente_para(usuario, clave_de_texto, "fichas")
+
+    """
+    Con Groq, ventanas más cortas: el plan gratuito deja 8.000 tokens por
+    minuto por modelo, y una ventana de 12.000 caracteres con sus
+    instrucciones y su respuesta ya pedía unos 8.500 sola.
+    """
+    caracteres_por_ventana = CARACTERES_POR_VENTANA_EN_GROQ if es_de_groq(clave_de_texto) else CARACTERES_POR_VENTANA
 
     tareas.add_task(
         procesar_sin_propagar,
@@ -108,6 +126,7 @@ def procesar(
         analizador_para(usuario, cliente_de_texto),
         registrar_fallo,
         condensador_para(usuario, cliente_de_texto),
+        caracteres_por_ventana,
     )
 
     return RespuestaDeProcesamiento(

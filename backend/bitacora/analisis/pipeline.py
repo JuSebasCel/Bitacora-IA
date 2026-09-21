@@ -18,7 +18,12 @@ import logging
 from dataclasses import dataclass, replace
 from typing import Callable, Protocol, Sequence
 
-from bitacora.analisis.chunking import Ventana, agrupar_en_ventanas, renderizar_ventana
+from bitacora.analisis.chunking import (
+    CARACTERES_POR_VENTANA,
+    Ventana,
+    agrupar_en_ventanas,
+    renderizar_ventana,
+)
 from bitacora.analisis.clasificacion import (
     ContextoDeClasificacion,
     deduplicar,
@@ -208,6 +213,7 @@ def procesar_conferencia(
     transcribir: Transcriptor,
     analizar: AnalizadorDeDiscurso,
     condensar: Condensador | None = None,
+    caracteres_por_ventana: int = CARACTERES_POR_VENTANA,
 ) -> ResultadoDelProcesamiento:
     """
     Marca `fallida` ante cualquier fallo posterior a `procesando`, y solo ahí.
@@ -236,10 +242,24 @@ def procesar_conferencia(
     repositorio.marcar_estado(id_conferencia, "procesando")
 
     try:
-        nombre, contenido = repositorio.descargar_fuente(conferencia)
-        segmentos = _segmentos_de_la_fuente(conferencia, nombre, contenido, transcribir)
+        """
+        La transcripción de un audio se guarda la primera vez y se reusa en
+        los reintentos. Transcribir es lo más caro de todo y lo único que no
+        cambia de un intento a otro: con Groq gratuito, dos intentos seguidos
+        de una charla de 90 minutos agotaban el cupo de audio de la hora (7.200
+        segundos por modelo) antes de llegar a analizar nada.
+        """
+        guardada = repositorio.leer_transcripcion_guardada(conferencia) if conferencia.fuente == "audio" else None
 
-        ventanas = agrupar_en_ventanas(segmentos)
+        if guardada is not None:
+            segmentos = guardada
+        else:
+            nombre, contenido = repositorio.descargar_fuente(conferencia)
+            segmentos = _segmentos_de_la_fuente(conferencia, nombre, contenido, transcribir)
+            if conferencia.fuente == "audio":
+                repositorio.guardar_transcripcion(conferencia, segmentos)
+
+        ventanas = agrupar_en_ventanas(segmentos, caracteres_por_ventana=caracteres_por_ventana)
         fichas, propuestas = _analizar_ventanas(conferencia, ventanas, temas, analizar)
 
         if not fichas:
@@ -334,6 +354,7 @@ def procesar_sin_propagar(
     analizar: AnalizadorDeDiscurso,
     registrar: Callable[[str, str], None],
     condensar: Condensador | None = None,
+    caracteres_por_ventana: int = CARACTERES_POR_VENTANA,
 ) -> None:
     """
     Envoltorio para correr en segundo plano, donde no hay a quién propagarle.
@@ -344,8 +365,8 @@ def procesar_sin_propagar(
     interfaz ya sabe traducir a `CONF_PROCESAMIENTO_FALLIDO`.
     """
     try:
-        procesar_conferencia(id_conferencia, repositorio, transcribir, analizar, condensar)
+        procesar_conferencia(id_conferencia, repositorio, transcribir, analizar, condensar, caracteres_por_ventana)
     except ErrorDeBitacora as error:
-        registrar(id_conferencia, error.codigo)
+        registrar(id_conferencia, f"{error.codigo} ({error.detalle})" if error.detalle else error.codigo)
     except Exception as fallo:  # noqa: BLE001
         registrar(id_conferencia, f"INESPERADO:{type(fallo).__name__}")
