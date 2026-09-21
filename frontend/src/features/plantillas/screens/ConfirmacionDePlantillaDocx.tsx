@@ -118,7 +118,7 @@ export function ConfirmacionDePlantillaDocx({
   const [borradoAbierto, setBorradoAbierto] = useState(false)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
   const pantalla = useRef<HTMLDivElement>(null)
-  useCrecerDesdeOrigen(pantalla)
+  useCrecerDesdeOrigen(pantalla, plantilla.id)
 
   const campos = plantilla.marcadores.filter((marcador): marcador is MarcadorSimpleDeDocx => marcador.tipo === 'simple')
   const listos = campos.filter(tieneInstruccion).length

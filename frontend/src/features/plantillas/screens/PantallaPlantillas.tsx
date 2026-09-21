@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
 import { mensajeDeError } from '@/shared/errors'
-import { BotonPildora, Esqueleto, Modal, PanelDeError, recordarOrigenDeApertura } from '@/shared/ui'
+import { BotonPildora, Esqueleto, Modal, PanelDeError, recordarOrigenDeApertura, useAterrizarDesdeCierre } from '@/shared/ui'
 import { MiniaturaDeDocx } from '../components'
 import type { Plantilla } from '../data'
 import { importarDocx } from '../editor/importarDocx'
@@ -293,9 +293,12 @@ export function PantallaPlantillas(): ReactElement {
   Decirlo en la tarjeta evita tener que entrar a cada una para averiguarlo.
 
   Al pulsarla anota su caja: la pantalla de la plantilla crece desde aquí,
-  igual que un modal crece desde su botón (`shared/ui/crecerDesde.ts`).
+  igual que un modal crece desde su botón, y al volver se encoge de nuevo en
+  ella (`shared/ui/crecerDesde.ts`).
 */
 function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement {
+  const tarjeta = useRef<HTMLAnchorElement>(null)
+  useAterrizarDesdeCierre(tarjeta, plantilla.id)
   const { archivo } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
 
   const campos = plantilla.marcadores.filter((marcador) => marcador.tipo === 'simple')
@@ -311,6 +314,7 @@ function HojaDePlantilla({ plantilla }: { plantilla: Plantilla }): ReactElement 
 
   return (
     <Link
+      ref={tarjeta}
       to={`/plantillas/${plantilla.id}`}
       onClick={(evento) => recordarOrigenDeApertura(evento.currentTarget)}
       className="group flex flex-col gap-3 rounded-[24px] bg-panel p-3 transition-colors hover:bg-acento-tenue"
