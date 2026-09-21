@@ -33,6 +33,8 @@ class HuecoPedido(BaseModel):
     nombre: str
     instruccion: str = ""
     formato: Literal["parrafo", "lista_vinetas", "lista_numerada"] = "parrafo"
+    modo: Literal["redactar", "cita"] = "redactar"
+    extension: Literal["breve", "media", "extensa"] = "media"
 
 
 class PedidoDeRedaccion(BaseModel):
@@ -69,6 +71,8 @@ def redactar(cuerpo: PedidoDeRedaccion, usuario: Usuario) -> RespuestaDeRedaccio
                 nombre=hueco.nombre.strip(),
                 instruccion=hueco.instruccion.strip(),
                 formato=hueco.formato,
+                modo=hueco.modo,
+                extension=hueco.extension,
             )
             for hueco in cuerpo.huecos
         ],

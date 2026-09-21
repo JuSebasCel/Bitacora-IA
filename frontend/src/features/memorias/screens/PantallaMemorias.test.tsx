@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
+import { crearPlantillaDesdeDocx } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import type { Memoria } from '../data'
@@ -37,7 +37,8 @@ const repositorioDePlantillas = vi.hoisted(() => ({
 vi.mock('../repositorio', () => repositorioDeMemorias)
 vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
 
-const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
+const ID_DE_PLANTILLA = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const PLANTILLA = crearPlantillaDesdeDocx(ID_DE_PLANTILLA, `${ID_DE_PLANTILLA}/original.docx`, 'Memoria estándar', [])
 
 /* Dueña de `cnf-alc-01`/`cnf-alc-03` en el fixture: Valentina Alcántara Rueda. */
 const ID_ALCANTARA = '1ba5af9a-f6a2-4504-ab60-1f018c21290a'

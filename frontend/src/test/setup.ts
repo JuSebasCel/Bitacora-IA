@@ -1,3 +1,4 @@
+import { olvidarPlantillasPorPruebas } from '@/features/plantillas/listaRecordada'
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
@@ -37,4 +38,5 @@ afterEach(() => {
     componentes ya desmontados se hayan dado de baja primero.
   */
   reiniciarCachePorPruebas()
+  olvidarPlantillasPorPruebas()
 })

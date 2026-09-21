@@ -70,9 +70,11 @@ export const SECCIONES_DE_NAVEGACION: readonly SeccionDeNavegacion[] = [
   leer ese parámetro. Abrir un panel no crea nada hasta que se envía, así que
   recargar la URL es inofensivo.
 
-  Crear plantilla no está aquí a propósito: en su pantalla no abre un panel,
-  crea la plantilla en el acto y navega a su editor. Dispararlo desde una URL
-  haría que recargar creara otra plantilla cada vez.
+  Cargar plantilla entró cuando dejó de crear algo en el acto. Antes,
+  "crear plantilla" fabricaba una en blanco y navegaba a su editor, y
+  dispararlo desde una URL habría creado otra en cada recarga. Ahora abre la
+  explicación del método con su botón de subir, y no se crea nada hasta
+  elegir el archivo.
 */
 export type AccionDeNavegacion = {
   readonly etiqueta: string
@@ -81,6 +83,7 @@ export type AccionDeNavegacion = {
 
 export const ACCIONES_DE_NAVEGACION: readonly AccionDeNavegacion[] = [
   { etiqueta: 'Cargar conferencia', ruta: '/conferencias?nuevo=1' },
+  { etiqueta: 'Cargar plantilla', ruta: '/plantillas?nuevo=1' },
   { etiqueta: 'Generar memoria', ruta: '/memorias?nuevo=1' },
 ]
 

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { crearPlantillaEnBlanco } from '../plantillas'
+import { crearPlantillaDesdeDocx } from '../plantillas'
 import { PantallaEditorDePlantilla } from './PantallaEditorDePlantilla'
 import { PantallaPlantillas } from './PantallaPlantillas'
 
@@ -18,8 +18,8 @@ const repositorio = vi.hoisted(() => ({
 
 vi.mock('../repositorio', () => repositorio)
 
-/* Con nombre propio: una plantilla en blanco sin tocar la podaría el propio listado al cargar. */
-const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
+const ID = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const PLANTILLA = crearPlantillaDesdeDocx(ID, `${ID}/original.docx`, 'Memoria estándar', [])
 
 /*
   Reglas de redacción de las pantallas de F4. Mismo criterio que
@@ -37,6 +37,7 @@ beforeEach(() => {
   repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [PLANTILLA] })
   repositorio.actualizarPlantilla.mockResolvedValue({ ok: true, datos: PLANTILLA })
   repositorio.eliminarPlantilla.mockResolvedValue({ ok: true, datos: null })
+  repositorio.descargarDocxDePlantilla.mockImplementation(() => new Promise(() => {}))
 })
 
 afterEach(() => {
@@ -106,14 +107,14 @@ describe('Redacción de la pantalla de plantillas', () => {
 describe('Redacción de la pantalla del editor de plantillas', () => {
   it('no usa lenguaje de obra en curso', async () => {
     montarEditor()
-    await screen.findByLabelText('Nombre')
+    await screen.findByLabelText('Nombre de la plantilla')
 
     expect(document.body.textContent ?? '').not.toMatch(LENGUAJE_DE_OBRA_EN_CURSO)
   })
 
   it('no usa el guion largo en ningún texto visible', async () => {
     montarEditor()
-    await screen.findByLabelText('Nombre')
+    await screen.findByLabelText('Nombre de la plantilla')
 
     expect(document.body.textContent ?? '').not.toContain(GUION_LARGO)
   })

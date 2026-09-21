@@ -75,7 +75,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
   it('sin marcadores, explica cómo se escribe uno', () => {
     montar(crearPlantillaDesdeDocx(ID_DE_PRUEBA, RUTA_DE_PRUEBA, 'Prueba', []))
 
-    expect(screen.getByText(/no encontramos ningún marcador/i)).toBeInTheDocument()
+    expect(screen.getByText(/no encontramos ningún campo/i)).toBeInTheDocument()
     expect(screen.getByText('[[Resumen de la tesis]]')).toBeInTheDocument()
   })
 
@@ -92,7 +92,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
 
     expect(screen.getByText('Cita opcional')).toBeInTheDocument()
     expect(screen.getByText(/aparece solo si hay datos/i)).toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: /qué debe escribir/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /qué debe ir aquí/i })).not.toBeInTheDocument()
   })
 
   it('escribir el nombre llama a alRenombrar con lo tecleado', async () => {
@@ -115,7 +115,7 @@ describe('ConfirmacionDePlantillaDocx', () => {
       alCambiarMarcadores,
     })
 
-    await userEvent.type(screen.getByRole('textbox', { name: /qué debe escribir la ia/i }), 'R')
+    await userEvent.type(screen.getByRole('textbox', { name: /qué debe ir aquí/i }), 'R')
 
     const marcadores = alCambiarMarcadores.mock.lastCall?.[0] as MarcadorDeDocx[]
     expect(marcadores.find((m) => m.id === 'mar-1')).toMatchObject({ instruccion: 'R' })

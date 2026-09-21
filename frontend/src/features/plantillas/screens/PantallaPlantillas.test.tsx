@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Plantilla } from '../data'
-import { crearPlantillaEnBlanco } from '../plantillas'
+import { crearPlantillaDesdeDocx, idNuevo } from '../plantillas'
 import { PantallaPlantillas } from './PantallaPlantillas'
 
 const renderAsyncMock = vi.hoisted(() => vi.fn())
@@ -41,7 +41,8 @@ function archivoDocxReal(): File {
 }
 
 function plantillaLlamada(nombre: string): Plantilla {
-  return { ...crearPlantillaEnBlanco(), nombre }
+  const id = idNuevo()
+  return crearPlantillaDesdeDocx(id, `${id}/original.docx`, nombre, [])
 }
 
 const ESTANDAR = plantillaLlamada('Memoria estándar')
@@ -198,16 +199,5 @@ describe('PantallaPlantillas', () => {
     /* La convención de los corchetes es lo único que no se adivina: tiene que estar escrita. */
     expect(screen.getByText('[[Resumen de la tesis]]')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Plantillas' })).not.toBeInTheDocument()
-  })
-
-  it('al montar, poda cualquier plantilla en blanco abandonada que haya quedado guardada', async () => {
-    const abandonada = crearPlantillaEnBlanco()
-    repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [abandonada, ESTANDAR] })
-
-    montar()
-
-    expect(await screen.findByText('Memoria estándar')).toBeInTheDocument()
-    expect(screen.queryByText('Plantilla sin nombre')).not.toBeInTheDocument()
-    expect(repositorio.eliminarPlantilla).toHaveBeenCalledWith(abandonada.id)
   })
 })

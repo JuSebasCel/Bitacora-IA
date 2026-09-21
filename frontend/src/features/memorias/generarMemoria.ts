@@ -1,7 +1,6 @@
 import type { Conferencia, Ficha } from '@/features/conferencias/data'
 import { generarVistaPrevia } from '@/features/plantillas/editor/generarVistaPrevia'
-import { sustituirContenidoDePlantilla } from '@/features/plantillas/editor/sustituirContenidoDePlantilla'
-import type { JSONContent, Plantilla } from '@/features/plantillas/data'
+import type { Plantilla } from '@/features/plantillas/data'
 import type { Tema } from '@/features/taxonomia'
 import { mapearConferenciaACampos } from './mapeo'
 
@@ -18,9 +17,7 @@ import { mapearConferenciaACampos } from './mapeo'
   que es la única que puede decidir qué mostrar mientras llegan y qué decir si
   no llegan. Esta función sigue sin saber que existe Supabase.
 */
-export type ResultadoDeMemoria =
-  | { readonly origen: 'docx'; readonly blob: Blob }
-  | { readonly origen: 'blanco'; readonly contenido: JSONContent }
+export type ResultadoDeMemoria = { readonly origen: 'docx'; readonly blob: Blob }
 
 export async function generarMemoria(
   plantilla: Plantilla,
@@ -33,21 +30,17 @@ export async function generarMemoria(
 ): Promise<ResultadoDeMemoria> {
   const datosReales = mapearConferenciaACampos(conferencia, fichas, temas)
 
-  if (plantilla.origen === 'docx') {
-    /*
-      Llegar aquí sin bytes es un error de programación de quien llama (pidió
-      generar sobre una plantilla importada sin haber descargado su archivo),
-      no un desenlace que la persona pueda arreglar. Se rechaza igual que un
-      `.docx` corrupto: la pantalla ya traduce cualquier rechazo de esta
-      promesa a `MEM_FALLO_GENERACION`.
-    */
-    if (bytesDelDocx === null) {
-      throw new Error('Falta el archivo original de la plantilla importada')
-    }
-
-    const blob = await generarVistaPrevia(bytesDelDocx, plantilla.marcadores, datosReales, secciones)
-    return { origen: 'docx', blob }
+  /*
+    Llegar aquí sin bytes es un error de programación de quien llama (pidió
+    generar sobre una plantilla importada sin haber descargado su archivo),
+    no un desenlace que la persona pueda arreglar. Se rechaza igual que un
+    `.docx` corrupto: la pantalla ya traduce cualquier rechazo de esta
+    promesa a `MEM_FALLO_GENERACION`.
+  */
+  if (bytesDelDocx === null) {
+    throw new Error('Falta el archivo original de la plantilla importada')
   }
 
-  return { origen: 'blanco', contenido: sustituirContenidoDePlantilla(plantilla.contenido, datosReales) }
+  const blob = await generarVistaPrevia(bytesDelDocx, plantilla.marcadores, datosReales, secciones)
+  return { origen: 'docx', blob }
 }

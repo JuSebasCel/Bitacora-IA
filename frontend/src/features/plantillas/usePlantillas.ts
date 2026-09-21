@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CodigoError } from '@/shared/errors'
-import type { JSONContent, MarcadorDeDocx, Plantilla } from './data'
+import type { MarcadorDeDocx, Plantilla } from './data'
 import {
-  actualizarContenido as actualizarContenidoPuro,
   actualizarMarcadoresDeDocx as actualizarMarcadoresDeDocxPuro,
-  cambiarColores as cambiarColoresPuro,
   crearPlantillaDesdeDocx,
-  crearPlantillaEnBlanco,
-  esPlantillaEnBlancoAbandonada,
   idNuevo,
   renombrarPlantilla as renombrarPlantillaPura,
 } from './plantillas'
@@ -20,6 +16,7 @@ import {
   listarPlantillas,
   subirDocxDePlantilla,
 } from './repositorio'
+import { listaRecordada, recordarLista } from './listaRecordada'
 
 /*
   Estado de las plantillas del grupo contra Supabase (B6). Sigue apoyándose en
@@ -35,16 +32,17 @@ import {
   no tener ninguna.
 
   Las escrituras son optimistas: el estado en memoria se actualiza primero y la
-  llamada al repositorio va detrás. El editor autoguarda en cada pulsación, así
-  que esperar la respuesta antes de pintar convertiría escribir un nombre en
-  una sucesión de saltos de un texto que se adelanta y se atrasa.
+  llamada al repositorio va detrás. La configuración de una plantilla guarda en
+  cada tecla, así que esperar la respuesta antes de pintar convertiría escribir
+  una instrucción en una sucesión de saltos de un texto que se adelanta y se
+  atrasa.
 */
 
 /**
  * Cuánto se espera, sin más cambios, antes de mandar una edición a Supabase.
  *
- * El editor persiste en cada `onUpdate` de TipTap y en cada tecla del campo de
- * nombre. Contra `sessionStorage` eso era gratis; contra la red serían decenas
+ * La configuración persiste en cada tecla: del nombre y de la instrucción de
+ * cada campo. Contra `sessionStorage` eso era gratis; contra la red serían decenas
  * de `UPDATE` por párrafo escrito. Se acumulan los cambios y se manda el
  * último estado de cada plantilla tocada. Medio segundo es lo bastante corto
  * para que un cierre de pestaña normal (que además dispara el guardado
@@ -58,38 +56,20 @@ export type ValorDePlantillas = {
   readonly cargando: boolean
   /** Fallo al leer el listado. Los fallos de escritura viajan en el resultado de cada mutador. */
   readonly codigoDeError: CodigoError | null
-  readonly crear: () => Promise<ResultadoPlantilla>
   readonly crearDesdeDocx: (
     archivo: File,
     nombre: string,
     marcadores: readonly MarcadorDeDocx[],
   ) => Promise<ResultadoPlantilla>
   readonly renombrarPlantilla: (id: string, nombre: string) => ResultadoPlantilla
-  readonly cambiarColores: (id: string, colorPrincipal: string, colorSecundario: string) => void
-  readonly actualizarContenido: (id: string, contenido: JSONContent) => void
   readonly actualizarMarcadoresDeDocx: (id: string, marcadores: readonly MarcadorDeDocx[]) => void
   readonly eliminar: (id: string) => Promise<void>
 }
 
-export type OpcionesDePlantillas = {
-  /**
-   * Borra, tras cargar, las plantillas en blanco que quedaron abandonadas sin
-   * nombre ni contenido.
-   *
-   * Solo el listado lo pide. Hacerlo en todo montaje borraría la plantilla que
-   * el editor acaba de crear, porque nace exactamente con esa forma: el
-   * criterio de "abandonada" no distingue una recién creada de una olvidada,
-   * y quien sí puede distinguirlas es la pantalla donde la persona ya no está
-   * editando ninguna.
-   */
-  readonly podarAbandonadas?: boolean
-}
-
-export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlantillas {
-  const { podarAbandonadas = false } = opciones
-
-  const [plantillas, setPlantillas] = useState<readonly Plantilla[]>([])
-  const [cargando, setCargando] = useState(true)
+export function usePlantillas(): ValorDePlantillas {
+  const [plantillas, setPlantillas] = useState<readonly Plantilla[]>(() => listaRecordada() ?? [])
+  /* Con algo recordado no hay nada que esperar: se enseña y se relee detrás. */
+  const [cargando, setCargando] = useState(listaRecordada() === null)
   const [codigoDeError, setCodigoDeError] = useState<CodigoError | null>(null)
 
   /*
@@ -111,7 +91,6 @@ export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlant
 
   useEffect(() => {
     let cancelado = false
-    setCargando(true)
 
     listarPlantillas().then((resultado) => {
       if (cancelado) {
@@ -124,25 +103,22 @@ export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlant
         return
       }
 
-      const abandonadas = podarAbandonadas ? resultado.datos.filter(esPlantillaEnBlancoAbandonada) : []
-
-      for (const plantilla of abandonadas) {
-        void eliminarPlantilla(plantilla.id)
-      }
-
       setCodigoDeError(null)
-      setPlantillas(
-        abandonadas.length === 0
-          ? resultado.datos
-          : resultado.datos.filter((candidata) => !esPlantillaEnBlancoAbandonada(candidata)),
-      )
+      setPlantillas(resultado.datos)
       setCargando(false)
     })
 
     return () => {
       cancelado = true
     }
-  }, [podarAbandonadas])
+  }, [])
+
+  /* Lo que se ve es lo que se recuerda, también tras cada escritura optimista. */
+  useEffect(() => {
+    if (!cargando) {
+      recordarLista(plantillas)
+    }
+  }, [plantillas, cargando])
 
   /*
     Al desmontar se manda de inmediato lo que quedara pendiente, sin esperar al
@@ -196,18 +172,6 @@ export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlant
     },
     [plantillas, programarGuardado],
   )
-
-  const crear = useCallback(async (): Promise<ResultadoPlantilla> => {
-    const nueva = crearPlantillaEnBlanco()
-    const resultado = await crearPlantilla(nueva)
-
-    if (!resultado.ok) {
-      return resultado
-    }
-
-    reemplazarEnEstado(nueva)
-    return { ok: true, plantilla: nueva }
-  }, [reemplazarEnEstado])
 
   /*
     Crear una plantilla importada son dos escrituras en almacenamientos
@@ -268,20 +232,6 @@ export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlant
     [plantillas, programarGuardado],
   )
 
-  const cambiarColores = useCallback(
-    (id: string, colorPrincipal: string, colorSecundario: string): void => {
-      conPlantilla(id, (plantilla) => cambiarColoresPuro(plantilla, colorPrincipal, colorSecundario))
-    },
-    [conPlantilla],
-  )
-
-  const actualizarContenido = useCallback(
-    (id: string, contenido: JSONContent): void => {
-      conPlantilla(id, (plantilla) => actualizarContenidoPuro(plantilla, contenido))
-    },
-    [conPlantilla],
-  )
-
   const actualizarMarcadoresDeDocx = useCallback(
     (id: string, marcadores: readonly MarcadorDeDocx[]): void => {
       conPlantilla(id, (plantilla) => actualizarMarcadoresDeDocxPuro(plantilla, marcadores))
@@ -305,7 +255,7 @@ export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlant
 
       const resultado = await eliminarPlantilla(id)
 
-      if (resultado.ok && plantilla?.origen === 'docx') {
+      if (resultado.ok && plantilla !== undefined) {
         void eliminarDocxDePlantilla(plantilla.rutaArchivoOriginal)
       }
     },
@@ -316,11 +266,8 @@ export function usePlantillas(opciones: OpcionesDePlantillas = {}): ValorDePlant
     plantillas,
     cargando,
     codigoDeError,
-    crear,
     crearDesdeDocx,
     renombrarPlantilla,
-    cambiarColores,
-    actualizarContenido,
     actualizarMarcadoresDeDocx,
     eliminar,
   }

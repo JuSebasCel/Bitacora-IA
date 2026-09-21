@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
+import { crearPlantillaDesdeDocx } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import { sembrarConferencias } from '@/test/conferenciasDePrueba'
 import type { Memoria } from '../data'
@@ -30,29 +30,8 @@ const repositorioDePlantillas = vi.hoisted(() => ({
 vi.mock('../repositorio', () => repositorioDeMemorias)
 vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
 
-/*
-  Plantilla en blanco con un marcador de campo fijo: al abrir la memoria se
-  vuelve a generar sobre la conferencia real, así que el documento tiene que
-  terminar mostrando el dato de esa conferencia y no el de ejemplo.
-*/
-const PLANTILLA = {
-  ...crearPlantillaEnBlanco(),
-  nombre: 'Memoria estándar',
-  contenido: {
-    type: 'doc',
-    content: [
-      {
-        type: 'paragraph',
-        content: [
-          {
-            type: 'marcador',
-            attrs: { origenTipo: 'campo', campo: 'tema_principal', etiquetaPersonalizada: null, formato: 'parrafo' },
-          },
-        ],
-      },
-    ],
-  },
-}
+const ID_DE_PLANTILLA = 'c7d2e4a9-53b1-4f08-9c6e-2a1b8d4f7c33'
+const PLANTILLA = crearPlantillaDesdeDocx(ID_DE_PLANTILLA, `${ID_DE_PLANTILLA}/original.docx`, 'Memoria estándar', [])
 
 const MEMORIA: Memoria = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',
@@ -121,13 +100,12 @@ describe('PantallaDetalleMemoria — id inexistente', () => {
   })
 })
 
-describe('PantallaDetalleMemoria — memoria válida (plantilla en blanco)', () => {
-  it('regenera la vista previa con los datos reales de la conferencia', async () => {
+describe('PantallaDetalleMemoria — memoria válida', () => {
+  it('muestra la memoria y pide el archivo de su plantilla para rehacerla', async () => {
     montar(MEMORIA.id)
 
     expect(await screen.findByText(MEMORIA.nombre)).toBeInTheDocument()
-    /* «Modelos de lenguaje» es el tema real de cnf-alc-01, no un dato de ejemplo de la plantilla. */
-    expect(await screen.findByText('Modelos de lenguaje')).toBeInTheDocument()
+    expect(repositorioDePlantillas.descargarDocxDePlantilla).toHaveBeenCalledWith(PLANTILLA.rutaArchivoOriginal)
   })
 })
 

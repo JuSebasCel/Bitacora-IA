@@ -1,4 +1,4 @@
-import type { FormatoDeMarcador, Plantilla } from '@/features/plantillas/data'
+import type { ExtensionDeCampo, FormatoDeMarcador, ModoDeCampo, Plantilla } from '@/features/plantillas/data'
 import { nombreDeMarcador } from '@/features/plantillas/plantillas'
 import { pedirAlBackend, pedirArchivoAlBackend } from '@/shared/api/backend'
 import type { ResultadoDeConsulta } from '@/shared/supabase/consultas'
@@ -23,6 +23,8 @@ export type HuecoParaRedactar = {
   readonly nombre: string
   readonly instruccion: string
   readonly formato: FormatoDeMarcador
+  readonly modo: ModoDeCampo
+  readonly extension: ExtensionDeCampo
 }
 
 /*
@@ -42,7 +44,10 @@ export function huecosDePlantilla(plantilla: Plantilla): readonly HuecoParaRedac
             id: marcador.id,
             nombre: nombreDeMarcador(marcador.textoOriginal),
             instruccion: marcador.instruccion ?? '',
-            formato: marcador.formato,
+            /* Una cita no se presenta en viñetas: el formato solo manda en lo redactado. */
+            formato: marcador.modo === 'cita' ? 'parrafo' : marcador.formato,
+            modo: marcador.modo ?? 'redactar',
+            extension: marcador.extension ?? 'media',
           },
         ]
       : [],

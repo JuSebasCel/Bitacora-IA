@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Plantilla } from '../data'
-import { crearPlantillaDesdeDocx, crearPlantillaEnBlanco } from '../plantillas'
+import { crearPlantillaDesdeDocx } from '../plantillas'
 import { PantallaEditorDePlantilla } from './PantallaEditorDePlantilla'
 
 const renderAsyncMock = vi.hoisted(() => vi.fn())
@@ -84,55 +84,29 @@ describe('PantallaEditorDePlantilla — id inexistente', () => {
 })
 
 describe('PantallaEditorDePlantilla — origen docx', () => {
-  it('muestra la pantalla de confirmación de solo lectura, sin editor TipTap', async () => {
+  it('muestra la configuración de sus campos', async () => {
     const id = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
     conPlantillas([crearPlantillaDesdeDocx(id, `${id}/original.docx`, 'Importada', [])])
 
     montar(id)
 
-    expect(await screen.findByText(/no encontramos ningún marcador/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Negrita' })).not.toBeInTheDocument()
+    expect(await screen.findByText(/no encontramos ningún campo/i)).toBeInTheDocument()
   })
 })
 
-describe('PantallaEditorDePlantilla — origen blanco', () => {
+describe('PantallaEditorDePlantilla — edición', () => {
   it('renombrar la plantilla persiste el nombre nuevo', async () => {
     const usuario = userEvent.setup()
-    const plantilla = crearPlantillaEnBlanco()
-    conPlantillas([plantilla])
+    const id = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+    conPlantillas([crearPlantillaDesdeDocx(id, `${id}/original.docx`, 'Importada', [])])
 
-    montar(plantilla.id)
-    const campoNombre = await screen.findByLabelText('Nombre')
+    montar(id)
+    const campoNombre = await screen.findByLabelText('Nombre de la plantilla')
     await usuario.clear(campoNombre)
     await usuario.type(campoNombre, 'Memoria de cierre')
 
     await waitFor(() => expect(repositorio.actualizarPlantilla).toHaveBeenCalled())
     const guardadas = repositorio.actualizarPlantilla.mock.calls.map((llamada) => (llamada[0] as Plantilla).nombre)
     expect(guardadas.at(-1)).toBe('Memoria de cierre')
-  })
-
-  it('volver sin tocar nada elimina la plantilla en blanco recién creada', async () => {
-    const usuario = userEvent.setup()
-    const plantilla = crearPlantillaEnBlanco()
-    conPlantillas([plantilla])
-
-    montar(plantilla.id)
-    await usuario.click(await screen.findByRole('button', { name: /volver a plantillas/i }))
-
-    expect(await screen.findByText('Listado')).toBeInTheDocument()
-    expect(repositorio.eliminarPlantilla).toHaveBeenCalledWith(plantilla.id)
-  })
-
-  it('volver tras renombrar conserva la plantilla', async () => {
-    const usuario = userEvent.setup()
-    const plantilla = crearPlantillaEnBlanco()
-    conPlantillas([plantilla])
-
-    montar(plantilla.id)
-    await usuario.type(await screen.findByLabelText('Nombre'), ' agregado')
-    await usuario.click(screen.getByRole('button', { name: /volver a plantillas/i }))
-
-    await waitFor(() => expect(screen.getByText('Listado')).toBeInTheDocument())
-    expect(repositorio.eliminarPlantilla).not.toHaveBeenCalled()
   })
 })

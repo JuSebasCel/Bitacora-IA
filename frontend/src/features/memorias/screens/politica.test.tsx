@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
-import { crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
+import { crearPlantillaDesdeDocx } from '@/features/plantillas/plantillas'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
 import type { Memoria } from '../data'
 import { PantallaDetalleMemoria } from './PantallaDetalleMemoria'
@@ -28,7 +28,8 @@ const repositorioDePlantillas = vi.hoisted(() => ({
 vi.mock('../repositorio', () => repositorioDeMemorias)
 vi.mock('@/features/plantillas/repositorio', () => repositorioDePlantillas)
 
-const PLANTILLA = { ...crearPlantillaEnBlanco(), nombre: 'Memoria estándar' }
+const ID_DE_PLANTILLA = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const PLANTILLA = crearPlantillaDesdeDocx(ID_DE_PLANTILLA, `${ID_DE_PLANTILLA}/original.docx`, 'Memoria estándar', [])
 
 const MEMORIA: Memoria = {
   id: '5f8c1d2e-7a3b-4c9d-8e01-2f3a4b5c6d70',

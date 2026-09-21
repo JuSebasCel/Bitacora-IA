@@ -1,8 +1,7 @@
 import { supabase } from '@/shared/supabase/cliente'
 import { codigoDeErrorDeSupabase, resultadoDeLista } from '@/shared/supabase/consultas'
 import type { ResultadoDeConsulta } from '@/shared/supabase/consultas'
-import type { JSONContent, MarcadorDeDocx, Plantilla } from './data'
-import { COLOR_PRINCIPAL_POR_DEFECTO, COLOR_SECUNDARIO_POR_DEFECTO } from './plantillas'
+import type { MarcadorDeDocx, Plantilla } from './data'
 
 /*
   Único punto del dominio de plantillas que habla con Supabase (B6). Las
@@ -34,79 +33,50 @@ type FilaDePlantilla = {
   readonly id: string
   readonly nombre: string
   readonly origen: string
-  readonly color_principal: string | null
-  readonly color_secundario: string | null
-  readonly contenido: JSONContent | null
   readonly ruta_archivo_original: string | null
   readonly marcadores: readonly MarcadorDeDocx[] | null
   readonly actualizada_el: string
 }
 
 /*
-  El `check` `plantillas_forma_segun_origen` ya garantiza en la base que una
-  fila `blanco` trae `contenido` y una `docx` trae `ruta_archivo_original`.
-  Aun así el mapeo rellena los ausentes en vez de lanzar: una fila escrita por
-  una versión futura de la app, o a mano desde el panel de Supabase, no puede
-  tumbar el listado completo de todo el mundo. El documento vacío y los
-  colores por defecto son exactamente con lo que nace una plantilla nueva.
-*/
-const DOCUMENTO_VACIO: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] }
+  Solo existen plantillas de Word. La plantilla en blanco —el editor dentro de
+  la app— se retiró, pero la base puede conservar filas suyas de cuando
+  existía: se descartan al leer en vez de fingir que son de Word, porque una
+  plantilla sin `.docx` no puede generar ninguna memoria y enseñarla solo
+  prometería algo que falla al usarla. Las columnas que usaba (`contenido`,
+  `color_principal`, `color_secundario`) siguen en la tabla y se escriben en
+  `null`, que es lo que el `check` de la tabla exige a una fila `docx`.
 
-function plantillaDesdeFila(fila: FilaDePlantilla): Plantilla {
-  if (fila.origen === 'docx') {
-    return {
-      id: fila.id,
-      nombre: fila.nombre,
-      origen: 'docx',
-      rutaArchivoOriginal: fila.ruta_archivo_original ?? '',
-      marcadores: fila.marcadores ?? [],
-      actualizadaEl: fila.actualizada_el,
-    }
+  Una ruta ausente se rellena con cadena vacía en vez de lanzar: una fila
+  escrita a mano desde el panel de Supabase no puede tumbar el listado de todo
+  el mundo; al abrirla, la descarga del archivo fallará con su propio aviso.
+*/
+function plantillaDesdeFila(fila: FilaDePlantilla): Plantilla | null {
+  if (fila.origen !== 'docx') {
+    return null
   }
 
   return {
     id: fila.id,
     nombre: fila.nombre,
-    origen: 'blanco',
-    colorPrincipal: fila.color_principal ?? COLOR_PRINCIPAL_POR_DEFECTO,
-    colorSecundario: fila.color_secundario ?? COLOR_SECUNDARIO_POR_DEFECTO,
-    contenido: fila.contenido ?? DOCUMENTO_VACIO,
+    origen: 'docx',
+    rutaArchivoOriginal: fila.ruta_archivo_original ?? '',
+    marcadores: fila.marcadores ?? [],
     actualizadaEl: fila.actualizada_el,
   }
 }
 
-/*
-  Cada rama de la unión escribe solo sus columnas y deja las de la otra en
-  `null` de forma explícita. Omitirlas parecía más limpio, pero en un `update`
-  significa "no la toques": una plantilla que alguna vez fue `blanco` habría
-  conservado su `contenido` viejo y roto el `check` de la tabla.
-*/
 function filaDesdePlantilla(plantilla: Plantilla): Record<string, unknown> {
-  const comunes = {
+  return {
     id: plantilla.id,
     nombre: plantilla.nombre,
     origen: plantilla.origen,
     actualizada_el: plantilla.actualizadaEl,
-  }
-
-  if (plantilla.origen === 'docx') {
-    return {
-      ...comunes,
-      color_principal: null,
-      color_secundario: null,
-      contenido: null,
-      ruta_archivo_original: plantilla.rutaArchivoOriginal,
-      marcadores: plantilla.marcadores,
-    }
-  }
-
-  return {
-    ...comunes,
-    color_principal: plantilla.colorPrincipal,
-    color_secundario: plantilla.colorSecundario,
-    contenido: plantilla.contenido,
-    ruta_archivo_original: null,
-    marcadores: null,
+    color_principal: null,
+    color_secundario: null,
+    contenido: null,
+    ruta_archivo_original: plantilla.rutaArchivoOriginal,
+    marcadores: plantilla.marcadores,
   }
 }
 
@@ -122,7 +92,15 @@ export async function listarPlantillas(): Promise<ResultadoDeConsulta<readonly P
 
   const resultado = resultadoDeLista<FilaDePlantilla>(respuesta)
 
-  return resultado.ok ? { ok: true, datos: resultado.datos.map(plantillaDesdeFila) } : resultado
+  return resultado.ok
+    ? {
+        ok: true,
+        datos: resultado.datos.flatMap((fila) => {
+          const plantilla = plantillaDesdeFila(fila)
+          return plantilla === null ? [] : [plantilla]
+        }),
+      }
+    : resultado
 }
 
 /**

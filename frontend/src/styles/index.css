@@ -455,13 +455,15 @@
   */
   /*
     Los `[[marcadores]]` dentro de la hoja de una plantilla (ver
-    `VistaPreviaDeDocx`). Mismo fondo que tienen al lado, en la columna de
-    configuración, para que se lea que son la misma cosa. Va fijo y no con los
-    tokens del tema porque la hoja es siempre papel claro.
+    `VistaPreviaDeDocx`), con el color de selección del tema: arena en
+    claro, azul en oscuro. Iba en un amarillo fijo porque la hoja es siempre
+    papel claro, pero eso lo dejaba fuera del lenguaje del resto: en oscuro era
+    el único amarillo de la pantalla. Los dos pares del tema se leen bien sobre
+    papel.
   */
   ::highlight(marcadores-de-plantilla) {
-    background-color: oklch(0.88 0.06 85);
-    color: oklch(0.2 0.02 60);
+    background-color: var(--bitacora-ilustracion);
+    color: var(--bitacora-ilustracion-texto);
   }
 
   .velo-de-modal {
@@ -975,5 +977,49 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+/*
+  Transición entre pantallas (View Transitions API), para abrir una plantilla.
+
+  La miniatura de la galería y la hoja grande de su configuración comparten
+  `view-transition-name`, así que el navegador hace crecer una hasta la otra
+  al navegar con `<Link viewTransition>`. Es el mismo gesto que los modales
+  —crecer desde lo que se pulsó— llevado a un cambio de pantalla, con la misma
+  curva y casi la misma duración (un poco más larga: recorre más distancia).
+  El resto de la pantalla cruza con el desenfoque de entrada de la casa.
+*/
+::view-transition-group(*) {
+  animation-duration: 0.42s;
+  animation-timing-function: var(--ease-entrada);
+}
+
+::view-transition-new(root) {
+  animation: vista-entra 0.3s var(--ease-entrada) both;
+}
+
+::view-transition-old(root) {
+  animation: vista-sale 0.2s ease both;
+}
+
+@keyframes vista-entra {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+  }
+}
+
+@keyframes vista-sale {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

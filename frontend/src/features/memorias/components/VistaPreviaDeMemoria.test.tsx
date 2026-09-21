@@ -25,17 +25,3 @@ describe('VistaPreviaDeMemoria — origen docx', () => {
     expect(enlace).toHaveAttribute('download', 'Memoria de prueba.docx')
   })
 })
-
-describe('VistaPreviaDeMemoria — origen blanco', () => {
-  it('muestra el documento sustituido en modo lectura, sin enlace de descarga', async () => {
-    const resultado: ResultadoDeMemoria = {
-      origen: 'blanco',
-      contenido: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Rodrigo Peñaloza' }] }] },
-    }
-
-    render(<VistaPreviaDeMemoria resultado={resultado} nombre="Memoria de prueba" />)
-
-    expect(await screen.findByText('Rodrigo Peñaloza')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
-  })
-})

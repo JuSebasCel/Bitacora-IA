@@ -28,6 +28,8 @@ from bitacora.compartido.ia import (
 )
 
 Formato = Literal["parrafo", "lista_vinetas", "lista_numerada"]
+Modo = Literal["redactar", "cita"]
+Extension = Literal["breve", "media", "extensa"]
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,9 @@ class Hueco:
     """Vacía si quien diseñó la plantilla no escribió ninguna: entonces manda el nombre."""
     instruccion: str
     formato: Formato
+    """`cita`: copiar un fragmento literal, sin tocarlo. `redactar`: escribir con palabras propias."""
+    modo: Modo = "redactar"
+    extension: Extension = "media"
 
 
 @dataclass(frozen=True)
@@ -54,6 +59,12 @@ class FichaParaRedactar:
     tipo: str
     """El condensado si lo hay; si no, la literal. Es lo que se lee, no lo que se cita."""
     texto: str
+    """
+    Lo que se dijo, palabra por palabra. Solo viaja al modelo si algún campo es
+    una cita: son las fichas enteras otra vez, y pagarlas sin necesitarlas
+    sería duplicar el contexto de cada memoria.
+    """
+    literal: str = ""
 
 
 INSTRUCCION = """\
@@ -80,6 +91,13 @@ tesis.
 delante —el documento los pone—.
 5. Escribe en español, en tercera persona y en tono formal. No repitas el \
 nombre del hueco como título: el título ya está en la plantilla.
+6. Respeta la `extension`: `breve` es una o dos frases; `media`, un párrafo; \
+`extensa`, entre dos y cuatro párrafos. El hueco tiene un sitio fijo en la \
+hoja, y pasarse lo desborda.
+7. Si el `modo` es `cita`, NO redactes: copia palabra por palabra el `literal` \
+de la ficha que mejor responda a la instrucción, sin cambiar, añadir ni \
+quitar una sola palabra, y sin comillas. Si ninguna encaja, `null`. En modo \
+`cita` no aplican ni la extensión ni el formato: una cita mide lo que mide.
 
 Devuelves un objeto JSON con una única clave `secciones`, cuyo valor es una \
 lista de objetos `{"id": ..., "texto": ...}` con una entrada por cada hueco \
@@ -110,6 +128,8 @@ def redactor_de(cliente: ClienteDeOpenAI, modelo: str) -> Redactor:
         fichas: Sequence[FichaParaRedactar],
         huecos: Sequence[Hueco],
     ) -> dict[str, str | None]:
+        hay_citas = any(hueco.modo == "cita" for hueco in huecos)
+
         entrada = {
             "charla": {
                 "titulo": charla.titulo,
@@ -118,13 +138,20 @@ def redactor_de(cliente: ClienteDeOpenAI, modelo: str) -> Redactor:
                 "fecha": charla.fecha,
                 "resumen": charla.resumen,
             },
-            "fichas": [{"tipo": ficha.tipo, "texto": ficha.texto} for ficha in fichas],
+            "fichas": [
+                {"tipo": ficha.tipo, "texto": ficha.texto, "literal": ficha.literal}
+                if hay_citas
+                else {"tipo": ficha.tipo, "texto": ficha.texto}
+                for ficha in fichas
+            ],
             "huecos": [
                 {
                     "id": hueco.id,
                     "nombre": hueco.nombre,
                     "instruccion": hueco.instruccion,
                     "formato": hueco.formato,
+                    "modo": hueco.modo,
+                    "extension": hueco.extension,
                 }
                 for hueco in huecos
             ],

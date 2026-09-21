@@ -1,21 +1,11 @@
-import type { JSONContent } from '@tiptap/core'
-
 /*
-  Tipos del dominio de plantillas (F4). Solo declaraciones: la lógica que
-  opera sobre ellos vive en `plantillas.ts`, la lectura/generación de
-  `.docx` en `editor/`, y los datos de ejemplo en
-  `plantillas.fixture.ts`/`campos.ts`.
+  Tipos del dominio de plantillas.
 
-  Segunda revisión de alcance (ver
-  `.agent/plans/f4-editor-de-plantillas-word-plan-design.md` y la sesión que
-  le siguió): una plantilla ya no es un único modelo. Si se construye desde
-  cero, sigue siendo un documento TipTap editable en flujo (`origen:
-  'blanco'`). Si se importa un `.docx` real, ese archivo se conserva
-  **intacto** — la app nunca lo reconstruye ni lo re-renderiza como
-  contenido editable, solo lee sus placeholders y pide a qué dato del
-  repositorio se liga cada uno (`origen: 'docx'`). El pedido explícito del
-  usuario fue que el diseño hecho en Word quede exactamente igual y el LLM
-  solo escriba donde él marcó, desde Word, no desde la página.
+  Una plantilla es un `.docx` diseñado en Word y conservado intacto: la app
+  nunca lo reconstruye ni lo edita, solo lee sus marcadores `[[...]]` y guarda,
+  para cada uno, qué debe escribir la IA ahí. El diseño se hace en Word porque
+  ahí ya se sabe hacer, y un editor dentro de la app —que llegó a existir, la
+  "plantilla en blanco"— habría sido un Word peor.
 */
 
 /** Los cinco campos del repositorio que `PLAN.md` sección 5.6 nombra como ejemplo de placeholder. */
@@ -37,24 +27,6 @@ export type FormatoDeMarcador = 'parrafo' | 'lista_vinetas' | 'lista_numerada'
 export type OrigenDeMarcador =
   | { readonly tipo: 'campo'; readonly campo: CampoDeMarcador }
   | { readonly tipo: 'personalizado'; readonly etiqueta: string }
-
-/** Cómo se comporta una sección envuelta dentro del editor en blanco (nodo `seccionMarcador` de TipTap). */
-export type ModoDeSeccion = 'condicional' | 'repetible'
-
-// ---------------------------------------------------------------------------
-// Plantilla en blanco: documento TipTap editable en flujo (sin cambios).
-// ---------------------------------------------------------------------------
-
-export type PlantillaEnBlanco = {
-  readonly id: string
-  readonly nombre: string
-  readonly origen: 'blanco'
-  /** Hex, editado con `<input type="color">`. */
-  readonly colorPrincipal: string
-  readonly colorSecundario: string
-  readonly contenido: JSONContent
-  readonly actualizadaEl: string
-}
 
 // ---------------------------------------------------------------------------
 // Plantilla importada de .docx: el archivo original nunca se modifica.
@@ -83,9 +55,33 @@ export type MarcadorSimpleDeDocx = {
    * campo no pidió migración, pero tampoco lo rellenó en las filas viejas.
    */
   readonly instruccion?: string
-  /** Qué hacer cuando la IA no encuentra nada para este hueco. Sin valor, `dejar-vacio`. */
+  /** Qué hacer cuando la IA no encuentra nada para este campo. Sin valor, `dejar-vacio`. */
   readonly siVacio?: ComportamientoSiVacio
+  /**
+   * Si la IA redacta o copia. Sin valor, `redactar`.
+   *
+   * Existe porque hay campos que no se pueden parafrasear: una "Cita
+   * destacada" que el modelo reescribe deja de ser una cita, y la memoria
+   * estaría entrecomillando algo que nadie dijo así.
+   */
+  readonly modo?: ModoDeCampo
+  /** Cuánto debe ocupar lo redactado. Sin valor, `media`. No aplica a una cita, que mide lo que mide. */
+  readonly extension?: ExtensionDeCampo
 }
+
+/**
+ * `redactar`: la IA escribe con sus palabras a partir de las fichas.
+ * `cita`: copia palabra por palabra el fragmento de la charla que mejor
+ * responde a la instrucción, sin tocarlo.
+ */
+export type ModoDeCampo = 'redactar' | 'cita'
+
+/**
+ * Cuánto ocupa lo que se escribe. Es lo que más descuadra una plantilla de
+ * Word: un campo pensado para una línea que recibe tres párrafos empuja todo
+ * lo de debajo a la página siguiente.
+ */
+export type ExtensionDeCampo = 'breve' | 'media' | 'extensa'
 
 /**
  * Lo que pasa con un hueco para el que la conferencia no dio material — una
@@ -129,7 +125,7 @@ export type PlantillaDesdeDocx = {
   readonly actualizadaEl: string
 }
 
-export type Plantilla = PlantillaEnBlanco | PlantillaDesdeDocx
+export type Plantilla = PlantillaDesdeDocx
 
 /**
  * Dato real de una conferencia para uno o más de los cinco campos fijos,
@@ -138,4 +134,3 @@ export type Plantilla = PlantillaEnBlanco | PlantillaDesdeDocx
  */
 export type RegistroDeDatosDeCampo = Partial<Record<CampoDeMarcador, { readonly parrafo: string; readonly lista: readonly string[] }>>
 
-export type { JSONContent }

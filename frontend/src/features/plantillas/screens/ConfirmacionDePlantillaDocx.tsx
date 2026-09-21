@@ -6,7 +6,9 @@ import { ModalDeConfirmacion, PanelDeError } from '@/shared/ui'
 import { VistaPreviaDeDocx } from '../components'
 import type {
   ComportamientoSiVacio,
+  ExtensionDeCampo,
   FormatoDeMarcador,
+  ModoDeCampo,
   MarcadorDeDocx,
   MarcadorSimpleDeDocx,
   PlantillaDesdeDocx,
@@ -15,7 +17,7 @@ import { nombreDeMarcador } from '../plantillas'
 import { useDocxDePlantilla } from '../useDocxDePlantilla'
 
 /*
-  Configurar una plantilla: la hoja a la izquierda, sus huecos a la derecha.
+  Configurar una plantilla: la hoja a la izquierda, sus campos a la derecha.
 
   Es la pantalla donde se hace el único trabajo que la app pide sobre una
   plantilla — decir qué debe escribir la IA en cada `[[marcador]]`. El diseño
@@ -25,7 +27,7 @@ import { useDocxDePlantilla } from '../useDocxDePlantilla'
   Se llamaba "confirmación" porque antes solo enseñaba los marcadores que se
   habían reconocido, sin nada que rellenar: a qué se ligaba cada uno se dejaba
   a una IA que nunca llegó a existir, y un marcador personalizado acababa
-  saliendo con texto de ejemplo. Ahora cada hueco lleva su instrucción.
+  saliendo con texto de ejemplo. Ahora cada campo lleva su instrucción.
 
   Todo se guarda solo, sobre la marcha (`usePlantillas` agrupa los cambios con
   un temporizador): no hay botón de guardar porque no hay nada que se pueda
@@ -49,7 +51,40 @@ const FORMATOS: readonly { valor: FormatoDeMarcador; etiqueta: string }[] = [
 ]
 
 /*
-  Qué pasa si la conferencia no da material para este hueco.
+  Las opciones de cada campo, cada una con la línea que dice qué hace.
+
+  Sin esa línea eran botones con una palabra —"Párrafo", "Quitar el
+  renglón"— y quedaba a la intuición de cada uno qué cambiaba al pulsarlos.
+  Una configuración que se hace una vez y vale para todas las memorias es
+  justo la que tiene que entenderse sin probar.
+*/
+const MODOS: readonly { valor: ModoDeCampo; etiqueta: string }[] = [
+  { valor: 'redactar', etiqueta: 'Redactado por la IA' },
+  { valor: 'cita', etiqueta: 'Cita literal' },
+]
+
+const EXTENSIONES: readonly { valor: ExtensionDeCampo; etiqueta: string }[] = [
+  { valor: 'breve', etiqueta: 'Breve' },
+  { valor: 'media', etiqueta: 'Un párrafo' },
+  { valor: 'extensa', etiqueta: 'Extensa' },
+]
+
+/*
+  Puntos de partida para la instrucción, no plantillas cerradas.
+
+  Una caja de texto vacía es donde más se atasca quien configura: no sabe qué
+  nivel de detalle espera la IA. Pulsar una sugerencia la escribe y se sigue
+  editando; con eso se ve también cómo se redacta una buena instrucción.
+*/
+const SUGERENCIAS: readonly { etiqueta: string; texto: string }[] = [
+  { etiqueta: 'La tesis', texto: 'Resume la tesis principal que defendió el ponente y el argumento con que la sostuvo.' },
+  { etiqueta: 'El método', texto: 'Explica el método o el enfoque que presentó, en el orden en que lo contó.' },
+  { etiqueta: 'Las cifras', texto: 'Recoge los datos y cifras concretos que dio, con su contexto.' },
+  { etiqueta: 'Las conclusiones', texto: 'Resume las conclusiones y las recomendaciones con que cerró.' },
+]
+
+/*
+  Qué pasa si la conferencia no da material para este campo.
 
   "Quitar el renglón" y no "quitar la sección": un marcador simple ocupa un
   párrafo, y eso es lo que se va — para quitar un tramo más largo está el
@@ -60,6 +95,12 @@ const SI_VACIO: readonly { valor: ComportamientoSiVacio; etiqueta: string }[] = 
   { valor: 'quitar', etiqueta: 'Quitar el renglón' },
   { valor: 'avisar', etiqueta: 'Avisarme' },
 ]
+
+const AYUDA_DE_SI_VACIO: Record<ComportamientoSiVacio, string> = {
+  'dejar-vacio': 'El campo queda vacío y el resto de la hoja no se mueve.',
+  quitar: 'Se borra el renglón entero, con su rótulo, para que no quede un título sin nada debajo.',
+  avisar: 'Queda vacío y, al abrir la memoria, te avisamos para que lo revises antes de enviarla.',
+}
 
 function tieneInstruccion(marcador: MarcadorDeDocx): boolean {
   return marcador.tipo === 'simple' && (marcador.instruccion ?? '').trim() !== ''
@@ -77,15 +118,15 @@ export function ConfirmacionDePlantillaDocx({
   const [borradoAbierto, setBorradoAbierto] = useState(false)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
 
-  const huecos = plantilla.marcadores.filter((marcador): marcador is MarcadorSimpleDeDocx => marcador.tipo === 'simple')
-  const listos = huecos.filter(tieneInstruccion).length
+  const campos = plantilla.marcadores.filter((marcador): marcador is MarcadorSimpleDeDocx => marcador.tipo === 'simple')
+  const listos = campos.filter(tieneInstruccion).length
 
   /*
     Se abre el primero que falte, no el primero de la lista: al entrar, lo que
     hay que hacer es lo que está sin hacer. Con todo listo, ninguno abierto.
   */
   const [abierto, setAbierto] = useState<string | null>(
-    () => huecos.find((marcador) => !tieneInstruccion(marcador))?.id ?? null,
+    () => campos.find((marcador) => !tieneInstruccion(marcador))?.id ?? null,
   )
 
   useEffect(() => {
@@ -116,6 +157,8 @@ export function ConfirmacionDePlantillaDocx({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Link
             to="/plantillas"
+            viewTransition
+            aria-label="Volver a plantillas"
             className="flex w-fit items-center gap-1 rounded-full py-1 pr-2 text-sm text-texto-tenue transition-colors hover:text-texto"
           >
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
@@ -176,7 +219,11 @@ export function ConfirmacionDePlantillaDocx({
       {codigoDeError === null ? null : <PanelDeError mensaje={mensajeDeError(codigoDeError)} />}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <section aria-label="Vista previa" className="flex min-h-[28rem] min-w-0 flex-1 flex-col gap-3 rounded-[24px] bg-panel p-4">
+        <section
+          aria-label="Vista previa"
+          /* Mismo nombre que su miniatura en la galería: el navegador la hace crecer desde allí. */
+          style={{ viewTransitionName: `plantilla-${plantilla.id}` }}
+          className="flex min-h-[28rem] min-w-0 flex-1 flex-col gap-3 rounded-[24px] bg-panel p-4">
           <p className="flex items-center gap-1.5 px-2 text-sm text-texto-tenue">
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
               visibility
@@ -189,12 +236,12 @@ export function ConfirmacionDePlantillaDocx({
           </div>
         </section>
 
-        <section aria-label="Marcadores" className="flex min-h-0 flex-col gap-3 rounded-[24px] bg-panel p-4 lg:w-[27rem]">
+        <section aria-label="Campos" className="flex min-h-0 flex-col gap-3 rounded-[24px] bg-panel p-4 lg:w-[27rem]">
           <div className="flex items-baseline justify-between gap-3 px-2">
-            <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Qué va en cada hueco</h2>
-            {huecos.length === 0 ? null : (
+            <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Qué va en cada campo</h2>
+            {campos.length === 0 ? null : (
               <span className="shrink-0 text-sm text-texto-tenue">
-                {listos} de {huecos.length}
+                {listos} de {campos.length} listos
               </span>
             )}
           </div>
@@ -206,7 +253,7 @@ export function ConfirmacionDePlantillaDocx({
               Se explica cómo se escriben en vez de solo constatar la ausencia.
             */
             <div className="flex flex-col gap-3 rounded-[20px] bg-fondo p-5">
-              <p className="text-base text-texto">No encontramos ningún marcador en este archivo.</p>
+              <p className="text-base text-texto">No encontramos ningún campo en este archivo.</p>
               <p className="text-sm leading-relaxed text-texto-tenue">
                 Ábrelo en Word y escribe, donde va cada contenido, su nombre entre dobles corchetes:
               </p>
@@ -219,7 +266,7 @@ export function ConfirmacionDePlantillaDocx({
             <ul className="sin-barra-de-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
               {plantilla.marcadores.map((marcador) =>
                 marcador.tipo === 'simple' ? (
-                  <HuecoConfigurable
+                  <CampoConfigurable
                     key={marcador.id}
                     marcador={marcador}
                     abierto={abierto === marcador.id}
@@ -242,7 +289,7 @@ export function ConfirmacionDePlantillaDocx({
         accion="Borrar"
         anclaEn={botonDeBorrado}
         consecuencias={[
-          'Se borra el archivo de Word que subiste y las instrucciones de cada hueco.',
+          'Se borra el archivo de Word que subiste y las instrucciones de cada campo.',
           /* `memorias.id_plantilla` es `on delete cascade`: no quedan huérfanas, desaparecen. */
           'Se borran también todas las memorias que se generaron con ella.',
         ]}
@@ -258,14 +305,19 @@ export function ConfirmacionDePlantillaDocx({
 }
 
 /*
-  Un hueco de la plantilla, plegado o abierto.
+  Un campo de la plantilla, plegado o abierto.
 
   Plegado dice lo justo para saber si ya está: su nombre y si tiene
   instrucción. Abierto enseña dónde cae en el documento —el párrafo que lo
-  rodea, con el marcador resaltado— porque "Resumen" solo no dice si es el de
+  rodea, con el campo resaltado— porque "Resumen" solo no dice si es el de
   la portada o el de la tercera página, y la instrucción depende de eso.
+
+  Las opciones van en el orden en que se piensan: qué se quiere, si se redacta
+  o se copia, cuánto ocupa, cómo se presenta, y qué pasa si no hay de dónde
+  sacarlo. Extensión y formato desaparecen con la cita literal: una cita mide
+  lo que mide, y partirla en viñetas la desfiguraría.
 */
-function HuecoConfigurable({
+function CampoConfigurable({
   marcador,
   abierto,
   alAlternar,
@@ -278,6 +330,8 @@ function HuecoConfigurable({
 }): ReactElement {
   const listo = tieneInstruccion(marcador)
   const indice = marcador.contexto.indexOf(marcador.textoOriginal)
+  const modo = marcador.modo ?? 'redactar'
+  const siVacio = marcador.siVacio ?? 'dejar-vacio'
 
   return (
     <li className={`flex flex-col rounded-[20px] transition-colors ${abierto ? 'bg-fondo' : ''}`}>
@@ -291,9 +345,7 @@ function HuecoConfigurable({
       >
         <span className="min-w-0 flex-1 truncate text-base text-texto">{nombreDeMarcador(marcador.textoOriginal)}</span>
 
-        <span
-          className={`flex shrink-0 items-center gap-1 text-sm ${listo ? 'text-texto' : 'text-texto-tenue'}`}
-        >
+        <span className={`flex shrink-0 items-center gap-1 text-sm ${listo ? 'text-texto' : 'text-texto-tenue'}`}>
           <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-base">
             {listo ? 'check_circle' : 'radio_button_unchecked'}
           </span>
@@ -309,42 +361,91 @@ function HuecoConfigurable({
       </button>
 
       {abierto ? (
-        <div className="flex flex-col gap-4 px-4 pb-4">
+        <div className="flex flex-col gap-5 px-4 pb-5">
           <p className="text-sm leading-relaxed text-texto-tenue">
             {indice === -1 ? (
               marcador.contexto
             ) : (
               <>
                 {marcador.contexto.slice(0, indice)}
-                <mark className="rounded bg-acento-tenue px-1 font-mono text-texto">{marcador.textoOriginal}</mark>
+                <mark className="rounded bg-ilustracion px-1 font-mono text-ilustracion-texto">{marcador.textoOriginal}</mark>
                 {marcador.contexto.slice(indice + marcador.textoOriginal.length)}
               </>
             )}
           </p>
 
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-texto-tenue">Qué debe escribir la IA aquí</span>
-            <textarea
-              value={marcador.instruccion ?? ''}
-              onChange={(evento) => alCambiar({ instruccion: evento.target.value })}
-              rows={3}
-              placeholder="Ej. Resume en dos párrafos la tesis principal del ponente, en tono formal."
-              className={`${CAMPO} resize-none py-3 leading-relaxed`}
-            />
-          </label>
+          <div className="flex flex-col gap-2">
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-texto">Qué debe ir aquí</span>
+              <textarea
+                value={marcador.instruccion ?? ''}
+                onChange={(evento) => alCambiar({ instruccion: evento.target.value })}
+                rows={3}
+                placeholder="Ej. Resume en dos párrafos la tesis principal del ponente."
+                className={`${CAMPO} resize-none py-3 leading-relaxed`}
+              />
+            </label>
+
+            {/* Solo con la caja vacía: con algo escrito, una sugerencia pisaría el trabajo de alguien. */}
+            {(marcador.instruccion ?? '').trim() === '' ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-texto-tenue">Empezar con:</span>
+                {SUGERENCIAS.map((sugerencia) => (
+                  <button
+                    key={sugerencia.etiqueta}
+                    type="button"
+                    onClick={() => alCambiar({ instruccion: sugerencia.texto })}
+                    className="cursor-pointer rounded-full bg-acento-tenue px-2.5 py-1 text-xs text-texto-tenue transition-colors hover:text-texto"
+                  >
+                    {sugerencia.etiqueta}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs leading-relaxed text-texto-tenue">
+                Cuanto más concreta, mejor: di qué parte de la charla buscar y para quién se escribe.
+              </p>
+            )}
+          </div>
 
           <GrupoDePastillas
-            titulo="Cómo se escribe"
-            opciones={FORMATOS}
-            valor={marcador.formato}
-            alCambiar={(formato) => alCambiar({ formato })}
+            titulo="Tipo de texto"
+            ayuda={
+              modo === 'cita'
+                ? 'Copia palabra por palabra el fragmento de la charla que mejor responda. No lo reescribe.'
+                : 'La IA lo escribe con sus palabras a partir de lo que se dijo, sin añadir nada que no esté.'
+            }
+            opciones={MODOS}
+            valor={modo}
+            alCambiar={(valor) => alCambiar({ modo: valor })}
           />
 
+          {modo === 'cita' ? null : (
+            <>
+              <GrupoDePastillas
+                titulo="Extensión"
+                ayuda="Cuánto ocupa en la hoja. Si el campo tiene poco sitio en tu diseño, elige breve: un texto largo empuja todo lo de debajo."
+                opciones={EXTENSIONES}
+                valor={marcador.extension ?? 'media'}
+                alCambiar={(valor) => alCambiar({ extension: valor })}
+              />
+
+              <GrupoDePastillas
+                titulo="Cómo se presenta"
+                ayuda="Las viñetas y la numeración las pone la app, con el formato que el campo tiene en Word."
+                opciones={FORMATOS}
+                valor={marcador.formato}
+                alCambiar={(formato) => alCambiar({ formato })}
+              />
+            </>
+          )}
+
           <GrupoDePastillas
-            titulo="Si la conferencia no da para esto"
+            titulo="Si la charla no da para esto"
+            ayuda={AYUDA_DE_SI_VACIO[siVacio]}
             opciones={SI_VACIO}
-            valor={marcador.siVacio ?? 'dejar-vacio'}
-            alCambiar={(siVacio) => alCambiar({ siVacio })}
+            valor={siVacio}
+            alCambiar={(valor) => alCambiar({ siVacio: valor })}
           />
         </div>
       ) : null}
@@ -376,11 +477,14 @@ function SeccionDeWord({ marcador }: { marcador: Exclude<MarcadorDeDocx, Marcado
 
 function GrupoDePastillas<T extends string>({
   titulo,
+  ayuda,
   opciones,
   valor,
   alCambiar,
 }: {
   titulo: string
+  /* Lo que hace la opción elegida, dicho en una línea. Cambia con la elección. */
+  ayuda?: string
   opciones: readonly { valor: T; etiqueta: string }[]
   valor: T
   alCambiar: (valor: T) => void
@@ -390,7 +494,7 @@ function GrupoDePastillas<T extends string>({
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-medium text-texto-tenue">{titulo}</legend>
+      <legend className="mb-2 text-sm font-medium text-texto">{titulo}</legend>
       <div className="flex flex-wrap gap-1.5">
         {opciones.map((opcion) => {
           const activa = opcion.valor === valor
@@ -414,6 +518,7 @@ function GrupoDePastillas<T extends string>({
           )
         })}
       </div>
+      {ayuda === undefined ? null : <p className="text-xs leading-relaxed text-texto-tenue">{ayuda}</p>}
     </fieldset>
   )
 }

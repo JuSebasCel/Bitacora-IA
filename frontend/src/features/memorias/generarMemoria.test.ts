@@ -3,8 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { Conferencia, Ficha } from '@/features/conferencias/data'
 import { importarDocx } from '@/features/plantillas/editor/importarDocx'
-import { actualizarContenido, crearPlantillaDesdeDocx, crearPlantillaEnBlanco } from '@/features/plantillas/plantillas'
-import type { JSONContent } from '@/features/plantillas/data'
+import { crearPlantillaDesdeDocx } from '@/features/plantillas/plantillas'
 import type { Tema } from '@/features/taxonomia'
 import { generarMemoria } from './generarMemoria'
 
@@ -53,31 +52,6 @@ const FICHAS: readonly Ficha[] = []
 const TEMAS: readonly Tema[] = [{ id: 'tem-de-prueba', nombre: 'Un tema de prueba' }]
 
 describe('generarMemoria', () => {
-  it('para una plantilla en blanco, sustituye su contenido y lo devuelve como origen «blanco»', async () => {
-    const contenidoConMarcador: JSONContent = {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            {
-              type: 'marcador',
-              attrs: { origenTipo: 'campo', campo: 'nombre_ponente', etiquetaPersonalizada: null, formato: 'parrafo' },
-            },
-          ],
-        },
-      ],
-    }
-    const plantilla = actualizarContenido(crearPlantillaEnBlanco(), contenidoConMarcador)
-
-    const resultado = await generarMemoria(plantilla, CONFERENCIA, FICHAS, TEMAS, null)
-
-    expect(resultado.origen).toBe('blanco')
-    if (resultado.origen === 'blanco') {
-      expect(JSON.stringify(resultado.contenido)).toContain('Rodrigo Peñaloza')
-    }
-  })
-
   it('para una plantilla docx, genera un .docx real y lo devuelve como origen «docx»', async () => {
     const importado = await importarDocx(archivoDocxReal())
     expect(importado.ok).toBe(true)
@@ -91,11 +65,8 @@ describe('generarMemoria', () => {
 
     const resultado = await generarMemoria(plantilla, CONFERENCIA, FICHAS, TEMAS, bytesDocxReal())
 
-    expect(resultado.origen).toBe('docx')
-    if (resultado.origen === 'docx') {
-      expect(resultado.blob.type).toBe(TIPO_MIME_DOCX)
-      expect(resultado.blob.size).toBeGreaterThan(0)
-    }
+    expect(resultado.blob.type).toBe(TIPO_MIME_DOCX)
+    expect(resultado.blob.size).toBeGreaterThan(0)
   })
 
   /*

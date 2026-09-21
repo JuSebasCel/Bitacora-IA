@@ -1,8 +1,6 @@
-import { useEditor } from '@tiptap/react'
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
-import { EditorDeDocumento, VistaPreviaDeDocx } from '@/features/plantillas/components'
-import { EXTENSIONES_DE_PLANTILLA } from '@/features/plantillas/editor/extensionesDePlantilla'
+import { VistaPreviaDeDocx } from '@/features/plantillas/components'
 import { hayBackend } from '@/shared/api/backend'
 import type { CodigoError } from '@/shared/errors'
 import { mensajeDeError } from '@/shared/errors'
@@ -148,21 +146,6 @@ function VistaDeMemoriaDocx({ blob, nombre }: { blob: Blob; nombre: string }): R
   )
 }
 
-function VistaPreviaBlanco({ contenido }: { contenido: ResultadoDeMemoria & { origen: 'blanco' } }): ReactElement {
-  const editor = useEditor({
-    extensions: EXTENSIONES_DE_PLANTILLA,
-    content: contenido.contenido,
-    editable: false,
-    immediatelyRender: false,
-  })
-
-  return <EditorDeDocumento editor={editor} />
-}
-
 export function VistaPreviaDeMemoria({ resultado, nombre }: PropsVistaPreviaDeMemoria): ReactElement {
-  return resultado.origen === 'docx' ? (
-    <VistaDeMemoriaDocx blob={resultado.blob} nombre={nombre} />
-  ) : (
-    <VistaPreviaBlanco contenido={resultado} />
-  )
+  return <VistaDeMemoriaDocx blob={resultado.blob} nombre={nombre} />
 }

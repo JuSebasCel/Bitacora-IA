@@ -147,7 +147,7 @@ export function prepararComandos(
             datos[variable] = ''
             pideQuitarse ||= marcador.siVacio === 'quitar'
           } else {
-            datos[variable] = conFormato(redactado, marcador.formato)
+            datos[variable] = conFormato(redactado, marcador.modo === 'cita' ? 'parrafo' : marcador.formato)
             tieneContenido = true
           }
         }

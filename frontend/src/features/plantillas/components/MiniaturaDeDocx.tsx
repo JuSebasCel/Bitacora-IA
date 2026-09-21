@@ -11,11 +11,9 @@ export type PropsMiniaturaDeDocx = {
 /*
   Miniatura de la tarjeta del listado para una plantilla `.docx`: el mismo
   `docx-preview` que usa la pantalla de confirmación, recortado dentro de una
-  caja de altura fija y escalado hacia abajo — mismo principio que la
-  miniatura TipTap de una plantilla en blanco (`TarjetaDePlantillaEnBlanco`
-  en `TarjetaDePlantilla.tsx`), aplicado aquí al documento real en vez de a
-  un documento editable. Mientras carga, o si el renderizado falla, se ve un
-  ícono de respaldo en vez de dejar la tarjeta en blanco.
+  caja de altura fija y escalado hacia abajo. Mientras carga, o si el
+  renderizado falla, se ve un ícono de respaldo en vez de dejar la tarjeta en
+  blanco.
 
   Recibe los bytes ya resueltos en vez de ir a buscarlos: desde B6 el archivo
   se descarga del bucket (`useDocxDePlantilla`), y quien monta la tarjeta es

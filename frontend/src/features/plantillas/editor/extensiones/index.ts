@@ -1,6 +1,0 @@
-export { NodoMarcador } from './NodoMarcador'
-export type { AttrsDeMarcador } from './NodoMarcador'
-export { NodoSeccionMarcador } from './NodoSeccionMarcador'
-export type { AttrsDeSeccion } from './NodoSeccionMarcador'
-export { attrsDesdeOrigen, origenDesdeAttrs } from './origen'
-export type { AttrsDeOrigen } from './origen'

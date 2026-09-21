@@ -169,7 +169,7 @@ export function PantallaDetalleMemoria(): ReactElement {
           </span>
           <p className="text-sm leading-relaxed text-texto">
             La charla no dio material para{' '}
-            <span className="font-medium">{porRevisar.join(', ')}</span>. Esos huecos quedaron en blanco:
+            <span className="font-medium">{porRevisar.join(', ')}</span>. Esos campos quedaron en blanco:
             revísalos antes de enviar la memoria.
           </p>
         </div>

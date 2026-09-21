@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Plantilla } from './data'
-import { crearPlantillaEnBlanco } from './plantillas'
+import { crearPlantillaDesdeDocx } from './plantillas'
 import type { ResultadoPlantilla } from './plantillas'
 import { ESPERA_DE_GUARDADO_MS, usePlantillas } from './usePlantillas'
 
@@ -22,10 +22,13 @@ const repositorio = vi.hoisted(() => ({
 
 vi.mock('./repositorio', () => repositorio)
 
-const PLANTILLA_GUARDADA: Plantilla = {
-  ...crearPlantillaEnBlanco(),
-  nombre: 'Memoria estándar',
-}
+const ID_GUARDADA = 'a2c0f7d1-9b3e-4a52-8f10-6d5c4b3a2e11'
+const PLANTILLA_GUARDADA: Plantilla = crearPlantillaDesdeDocx(
+  ID_GUARDADA,
+  `${ID_GUARDADA}/original.docx`,
+  'Memoria estándar',
+  [],
+)
 
 const ARCHIVO_DOCX = new File([new Uint8Array(8)], 'tem.docx', {
   type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -52,8 +55,8 @@ afterEach(() => {
 })
 
 /** Monta el hook y espera a que la lectura inicial termine, que es el estado desde el que se opera. */
-async function montarCargado(opciones?: { podarAbandonadas: boolean }) {
-  const { result } = renderHook(() => usePlantillas(opciones ?? {}))
+async function montarCargado() {
+  const { result } = renderHook(() => usePlantillas())
   await waitFor(() => expect(result.current.cargando).toBe(false))
   return result
 }
@@ -82,34 +85,6 @@ describe('usePlantillas, carga inicial', () => {
 
     expect(result.current.codigoDeError).toBe('DATOS_SIN_CONEXION')
     expect(result.current.plantillas).toEqual([])
-  })
-})
-
-describe('usePlantillas, crear', () => {
-  it('crea una plantilla en blanco, la persiste y la deja disponible sin recargar', async () => {
-    const result = await montarCargado()
-
-    let creada: ResultadoPlantilla | undefined
-    await act(async () => {
-      creada = await result.current.crear()
-    })
-
-    expect(creada?.ok).toBe(true)
-    expect(repositorio.crearPlantilla).toHaveBeenCalledOnce()
-    expect(result.current.plantillas).toHaveLength(2)
-  })
-
-  it('si el insert falla, no deja la plantilla en el listado', async () => {
-    repositorio.crearPlantilla.mockResolvedValue({ ok: false, codigo: 'DATOS_SIN_PERMISO' })
-    const result = await montarCargado()
-
-    let creada: ResultadoPlantilla | undefined
-    await act(async () => {
-      creada = await result.current.crear()
-    })
-
-    expect(creada).toEqual({ ok: false, codigo: 'DATOS_SIN_PERMISO' })
-    expect(result.current.plantillas).toEqual([PLANTILLA_GUARDADA])
   })
 })
 
@@ -205,18 +180,21 @@ describe('usePlantillas, ediciones diferidas', () => {
     expect(resultado).toEqual({ ok: false, codigo: 'PLANT_NO_ENCONTRADA' })
   })
 
-  it('cambiar colores y contenido actualiza el estado y termina en una escritura', async () => {
+  it('cambiar los marcadores actualiza el estado y termina en una escritura', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const result = await montarCargado()
+    const marcador = {
+      tipo: 'simple',
+      id: 'mar-1',
+      textoOriginal: '[[Tesis]]',
+      contexto: '[[Tesis]]',
+      origenDeDato: { tipo: 'personalizado', etiqueta: 'Tesis' },
+      formato: 'parrafo',
+      instruccion: 'La idea central',
+    } as const
 
     act(() => {
-      result.current.cambiarColores(PLANTILLA_GUARDADA.id, '#101010', '#202020')
-    })
-    act(() => {
-      result.current.actualizarContenido(PLANTILLA_GUARDADA.id, {
-        type: 'doc',
-        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hola' }] }],
-      })
+      result.current.actualizarMarcadoresDeDocx(PLANTILLA_GUARDADA.id, [marcador])
     })
 
     await act(async () => {
@@ -224,9 +202,7 @@ describe('usePlantillas, ediciones diferidas', () => {
     })
 
     expect(repositorio.actualizarPlantilla).toHaveBeenCalledOnce()
-    const guardada = repositorio.actualizarPlantilla.mock.calls[0]?.[0] as Plantilla
-    expect(guardada).toMatchObject({ colorPrincipal: '#101010', colorSecundario: '#202020' })
-    expect(JSON.stringify(guardada)).toContain('hola')
+    expect(repositorio.actualizarPlantilla.mock.calls[0]?.[0]).toMatchObject({ marcadores: [marcador] })
   })
 
   /*
@@ -278,32 +254,5 @@ describe('usePlantillas, eliminar', () => {
     })
 
     expect(repositorio.eliminarDocxDePlantilla).toHaveBeenCalledWith(`${id}/original.docx`)
-  })
-})
-
-describe('usePlantillas, poda de abandonadas', () => {
-  it('con la poda pedida, borra las plantillas en blanco sin tocar y deja las demás', async () => {
-    const abandonada = crearPlantillaEnBlanco()
-    repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [abandonada, PLANTILLA_GUARDADA] })
-
-    const result = await montarCargado({ podarAbandonadas: true })
-
-    expect(result.current.plantillas).toEqual([PLANTILLA_GUARDADA])
-    expect(repositorio.eliminarPlantilla).toHaveBeenCalledWith(abandonada.id)
-  })
-
-  /*
-    El editor monta el mismo hook sobre una plantilla que acaba de crearse y
-    que todavía tiene exactamente la forma de una abandonada. Podar ahí la
-    borraría debajo de la persona que está a punto de escribir en ella.
-  */
-  it('sin pedirla, no borra nada aunque haya plantillas en blanco sin tocar', async () => {
-    const abandonada = crearPlantillaEnBlanco()
-    repositorio.listarPlantillas.mockResolvedValue({ ok: true, datos: [abandonada] })
-
-    const result = await montarCargado()
-
-    expect(result.current.plantillas).toEqual([abandonada])
-    expect(repositorio.eliminarPlantilla).not.toHaveBeenCalled()
   })
 })

@@ -6,16 +6,15 @@
 export type {
   CampoDeMarcador,
   FormatoDeMarcador,
-  JSONContent,
   MarcadorDeDocx,
   MarcadorDeSeccionDeDocx,
   ComportamientoSiVacio,
+  ExtensionDeCampo,
+  ModoDeCampo,
   MarcadorSimpleDeDocx,
-  ModoDeSeccion,
   OrigenDeMarcador,
   Plantilla,
   PlantillaDesdeDocx,
-  PlantillaEnBlanco,
   RegistroDeDatosDeCampo,
 } from './tipos'
 
@@ -30,4 +29,3 @@ export {
   resolverListaDeMarcador,
   resolverMarcador,
 } from './campos'
-export { PLANTILLAS_DE_EJEMPLO } from './plantillas.fixture'

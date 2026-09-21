@@ -1402,7 +1402,7 @@ export function PantallaArchivo({
       </div>
 
       {cargando ? (
-        <Esqueleto filas={4} etiqueta="Cargando el archivo" />
+        <Esqueleto filas={4} etiqueta="Cargando el archivo" variante="columnas" />
       ) : error !== null ? (
         <PanelDeError mensaje={error} />
       ) : /*

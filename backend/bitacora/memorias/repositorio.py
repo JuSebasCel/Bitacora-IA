@@ -37,6 +37,7 @@ def leer_material(
         FichaParaRedactar(
             tipo=str(fila.get("tipo_de_unidad") or ""),
             texto=str(fila.get("condensado") or fila.get("fragmento") or "").strip(),
+            literal=str(fila.get("fragmento") or "").strip(),
         )
         for fila in filas
     )

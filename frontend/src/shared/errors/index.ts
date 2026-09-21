@@ -61,6 +61,8 @@ export type CodigoError =
   */
   | 'PLANT_DOCX_FALLO_SUBIDA'
   | 'PLANT_DOCX_FALLO_DESCARGA'
+  /* Un .docx sin ningún [[campo]]: no hay nada que la IA pueda rellenar, así que no se sube. */
+  | 'PLANT_DOCX_SIN_CAMPOS'
   /* Generador de memoria (F5). */
   | 'MEM_CONFERENCIA_REQUERIDA'
   | 'MEM_PLANTILLA_REQUERIDA'
@@ -209,6 +211,8 @@ const MENSAJES: Record<CodigoError, string> = {
   PLANT_ETIQUETA_REQUERIDA: 'Escribe una descripción para el campo personalizado antes de agregarlo.',
   PLANT_DOCX_FALLO_SUBIDA:
     'No pudimos guardar el archivo de la plantilla. Revisa tu conexión y vuelve a subirlo.',
+  PLANT_DOCX_SIN_CAMPOS:
+    'Esta plantilla no tiene ningún campo, así que no se subió: no habría nada que rellenar. En Word, escribe entre dobles corchetes el nombre de cada campo donde va su contenido —por ejemplo, [[Resumen de la tesis]]— y vuelve a subirla.',
   PLANT_DOCX_FALLO_DESCARGA:
     'No pudimos recuperar el archivo original de esta plantilla. Vuelve a intentarlo en unos momentos.',
 
