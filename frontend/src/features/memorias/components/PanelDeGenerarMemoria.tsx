@@ -1,16 +1,15 @@
-import { XIcon } from '@phosphor-icons/react/dist/csr/X'
-import type { FormEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import type { FormEvent, ReactElement, RefObject } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
 import { usePlantillas } from '@/features/plantillas/usePlantillas'
-import { huecosDePlantilla } from '../redaccion'
-import type { HuecoParaRedactar } from '../redaccion'
 import { mensajeDeError } from '@/shared/errors'
-import { Button, Field, Input, MensajeDeFormulario, Select } from '@/shared/ui'
-import type { OpcionDeSelect } from '@/shared/ui'
+import { Button, Field, Input, MensajeDeFormulario, Modal, SelectorDeOpciones } from '@/shared/ui'
 import type { Memoria } from '../data'
 import type { ResultadoMemoria } from '../memorias'
+import { huecosDePlantilla } from '../redaccion'
+import type { HuecoParaRedactar } from '../redaccion'
 
 const ID_ERROR = 'generar-memoria-error'
 
@@ -19,6 +18,8 @@ export type PropsPanelDeGenerarMemoria = {
   alCerrar: () => void
   /** Preselecciona una conferencia — punto de entrada desde el detalle de una conferencia específica. */
   idConferenciaPreseleccionada?: string
+  /** El botón que lo abrió: el modal crece desde él. */
+  anclaEn?: RefObject<HTMLElement | null>
   /** Se pasa desde la pantalla que ya tiene montado `useMemorias()`, para que el listado se actualice sin un segundo estado desincronizado. */
   generar: (
     idConferencia: string,
@@ -30,33 +31,36 @@ export type PropsPanelDeGenerarMemoria = {
 }
 
 /*
-  Panel lateral deslizable para generar una memoria, mismo esqueleto que
-  `PanelDeCarga.tsx` de F3 (bloqueo de scroll, cierre con Escape, foco
-  devuelto a quien lo abrió). Sin diálogos de creación al vuelo: la
-  conferencia y la plantilla ya existen, solo se eligen.
+  Generar una memoria: una conferencia analizada, una plantilla y un nombre.
 
-  Al enviar, el panel espera a que la memoria quede guardada de verdad y
-  recién entonces se cierra (desde B6 `generar` escribe en Supabase). Cerrarlo
-  antes, como hacía cuando el guardado era instantáneo, dejaría a la persona
-  mirando un listado sin su memoria cuando el insert falla, y sin ningún lugar
-  donde contarle por qué: el error se muestra dentro del formulario que lo
-  provocó. Lo que sigue sin esperarse es la "generación" del documento en sí,
-  que vive en la tarjeta del listado (`TarjetaDeMemoria.tsx`).
+  Es el modal del sistema, con las mismas pastillas que el de cargar una
+  conferencia (el control lleva puesto su valor). Antes era un cajón
+  lateral del diseño anterior, con desplegables nativos y filetes, lo único
+  de la sección que no hablaba como el resto.
+
+  Antes de generar dice qué va a pasar —cuántos campos va a escribir la IA,
+  y cuáles—, porque es la única acción de la app que gasta la clave sin que
+  se vea el trabajo mientras ocurre: el resumen es lo que la persona puede
+  revisar antes de pagarla.
+
+  El modal espera a que la memoria quede guardada de verdad y recién
+  entonces se cierra: si falla, el error se muestra dentro del formulario
+  que lo provocó, en vez de dejar a la persona mirando un listado sin su
+  memoria y sin saber por qué.
 */
 export function PanelDeGenerarMemoria({
   abierto,
   alCerrar,
   idConferenciaPreseleccionada,
+  anclaEn,
   generar,
   alGenerar,
-}: PropsPanelDeGenerarMemoria) {
+}: PropsPanelDeGenerarMemoria): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { visibles } = useConferenciasVisibles(idUsuario)
   const { plantillas } = usePlantillas()
 
-  const panelRef = useRef<HTMLDivElement>(null)
-  const alCerrarRef = useRef(alCerrar)
   const [idConferencia, setIdConferencia] = useState('')
   const [idPlantilla, setIdPlantilla] = useState('')
   const [nombre, setNombre] = useState('')
@@ -64,59 +68,27 @@ export function PanelDeGenerarMemoria({
   const [generando, setGenerando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /* Cada apertura empieza limpia: lo de la vez anterior ya se generó o se descartó. */
   useEffect(() => {
-    alCerrarRef.current = alCerrar
-  })
-
-  useEffect(() => {
-    const panel = panelRef.current
-    if (panel !== null) {
-      panel.inert = !abierto
-    }
-
     if (!abierto) {
       return
     }
 
-    const enfocadoAntes = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const desbordePrevio = document.body.style.overflow
-
-    document.body.style.overflow = 'hidden'
     setIdConferencia(idConferenciaPreseleccionada ?? '')
     setIdPlantilla('')
     setNombre('')
     setNombreTocado(false)
     setGenerando(false)
     setError(null)
-
-    const primerCampo = panel?.querySelector<HTMLElement>('select, input')
-    ;(primerCampo ?? panel)?.focus()
-
-    function alPresionarTecla(evento: KeyboardEvent): void {
-      if (evento.key === 'Escape') {
-        alCerrarRef.current()
-      }
-    }
-
-    document.addEventListener('keydown', alPresionarTecla)
-    return () => {
-      document.removeEventListener('keydown', alPresionarTecla)
-      document.body.style.overflow = desbordePrevio
-
-      const aRestaurar = enfocadoAntes !== null && enfocadoAntes.isConnected ? enfocadoAntes : null
-      aRestaurar?.focus()
-    }
   }, [abierto, idConferenciaPreseleccionada])
 
   const conferenciasProcesadas = visibles.filter((visible) => visible.conferencia.estado === 'procesada')
 
   /*
-    Reactivo a `visibles` a propósito, y no solo al elegir del `Select`: si la
-    conferencia llega preseleccionada por `idConferenciaPreseleccionada`
-    (punto de entrada desde el detalle de una conferencia, con el panel ya
-    abierto en el primer render), `useConferenciasVisibles` puede resolver su
-    propio listado en un commit posterior al que abre este panel — leerlo
-    solo en el efecto de apertura vería el arreglo todavía vacío.
+    Reactivo a `visibles` a propósito, y no solo al elegir: si la conferencia
+    llega preseleccionada con el modal ya abierto en el primer render, el
+    listado puede resolverse en un commit posterior, y leerlo solo al abrir
+    vería el arreglo todavía vacío.
   */
   useEffect(() => {
     if (nombreTocado || idConferencia === '') {
@@ -127,30 +99,16 @@ export function PanelDeGenerarMemoria({
     setNombre(titulo === undefined ? '' : `Memoria de ${titulo}`)
   }, [idConferencia, visibles, nombreTocado])
 
-  function elegirConferencia(valor: string): void {
-    setIdConferencia(valor)
-  }
-
-  function elegirNombre(valor: string): void {
-    setNombreTocado(true)
-    setNombre(valor)
-  }
+  const plantilla = plantillas.find((candidata) => candidata.id === idPlantilla)
+  const huecos = plantilla === undefined ? [] : huecosDePlantilla(plantilla)
+  const listo = idConferencia !== '' && idPlantilla !== ''
 
   async function alEnviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
+    if (!listo || generando) return
 
     setGenerando(true)
-    /*
-      Los huecos salen de la plantilla elegida, con la instrucción que se le
-      escribió al configurarla: es lo que el modelo tiene que redactar.
-    */
-    const plantilla = plantillas.find((candidata) => candidata.id === idPlantilla)
-    const resultado = await generar(
-      idConferencia,
-      idPlantilla,
-      nombre,
-      plantilla === undefined ? [] : huecosDePlantilla(plantilla),
-    )
+    const resultado = await generar(idConferencia, idPlantilla, nombre, huecos)
     setGenerando(false)
 
     if (!resultado.ok) {
@@ -162,88 +120,117 @@ export function PanelDeGenerarMemoria({
     alGenerar(resultado.memoria)
   }
 
-  const opcionesDeConferencia: readonly OpcionDeSelect[] = [
-    { valor: '', texto: 'Elige una conferencia procesada' },
-    ...conferenciasProcesadas.map((visible) => ({ valor: visible.conferencia.id, texto: visible.conferencia.titulo })),
-  ]
-
-  const opcionesDePlantilla: readonly OpcionDeSelect[] = [
-    { valor: '', texto: 'Elige una plantilla' },
-    ...plantillas.map((plantilla) => ({ valor: plantilla.id, texto: plantilla.nombre })),
-  ]
-
   return (
-    <>
-      <div
-        aria-hidden="true"
-        onClick={alCerrar}
-        className={`fixed inset-0 z-40 bg-fondo/70 transition-opacity duration-300 ${
-          abierto ? 'opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-      />
-
-      <div
-        ref={panelRef}
-        {...(abierto ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Generar memoria' } : {})}
-        aria-hidden={abierto ? undefined : 'true'}
+    <Modal
+      abierto={abierto}
+      alCerrar={alCerrar}
+      titulo="Generar memoria"
+      ancho="angosto"
+      {...(anclaEn === undefined ? {} : { anclaEn })}
+    >
+      <form
+        noValidate
+        onSubmit={(evento) => void alEnviar(evento)}
         aria-describedby={error === null ? undefined : ID_ERROR}
-        tabIndex={-1}
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-[min(32rem,100vw)] flex-col border-l border-filete-fuerte bg-panel elevacion transition-transform duration-300 ease-out focus:outline-none ${
-          abierto ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className="flex flex-col gap-6"
       >
-        <div className="flex items-center justify-between border-b border-filete px-6 py-4">
-          <h2 className="text-base font-semibold tracking-tight text-texto">Generar memoria</h2>
-          <button
-            type="button"
-            onClick={alCerrar}
-            aria-label="Cerrar"
-            className="rounded-md p-1 text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-acento"
-          >
-            <XIcon size={14} weight="bold" aria-hidden="true" />
-          </button>
+        <p className="text-base leading-relaxed text-texto-tenue">
+          Elige una conferencia ya analizada y la plantilla con la que se escribe. La IA rellena cada campo con lo que
+          se dijo en la charla.
+        </p>
+
+        <div className="flex flex-col items-start gap-2">
+          {conferenciasProcesadas.length === 0 ? (
+            <p className="rounded-[20px] bg-acento-tenue px-4 py-3 text-sm text-texto-tenue">
+              Todavía no tienes conferencias analizadas.
+            </p>
+          ) : (
+            <SelectorDeOpciones
+              etiquetaAccesible="Conferencia"
+              icono="co_present"
+              vacio="Elige una conferencia"
+              valor={idConferencia}
+              opciones={conferenciasProcesadas.map((visible) => ({
+                valor: visible.conferencia.id,
+                etiqueta: visible.conferencia.titulo,
+              }))}
+              alCambiar={setIdConferencia}
+            />
+          )}
+
+          {plantillas.length === 0 ? (
+            <p className="rounded-[20px] bg-acento-tenue px-4 py-3 text-sm text-texto-tenue">
+              Todavía no hay plantillas.{' '}
+              <Link
+                to="/plantillas?nuevo=1"
+                onClick={alCerrar}
+                className="font-medium text-texto underline underline-offset-2"
+              >
+                Sube la primera
+              </Link>
+              .
+            </p>
+          ) : (
+            <SelectorDeOpciones
+              etiquetaAccesible="Plantilla"
+              icono="description"
+              vacio="Elige una plantilla"
+              valor={idPlantilla}
+              opciones={plantillas.map((candidata) => ({ valor: candidata.id, etiqueta: candidata.nombre }))}
+              alCambiar={setIdPlantilla}
+            />
+          )}
         </div>
 
-        <form noValidate onSubmit={(evento) => void alEnviar(evento)} className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
-          <p className="text-sm text-texto-tenue">
-            Combina una conferencia ya procesada con una plantilla guardada para generar su memoria.
-          </p>
-
-          <div className="flex flex-col gap-4 rounded-md bg-fondo p-4">
-            <h3 className="text-sm font-medium text-texto">Origen de la memoria</h3>
-
-            <Field id="memoria-conferencia" etiqueta="Conferencia">
-              <Select
-                opciones={opcionesDeConferencia}
-                value={idConferencia}
-                onChange={(evento) => elegirConferencia(evento.target.value)}
-              />
-            </Field>
-
-            <Field id="memoria-plantilla" etiqueta="Plantilla">
-              <Select
-                opciones={opcionesDePlantilla}
-                value={idPlantilla}
-                onChange={(evento) => setIdPlantilla(evento.target.value)}
-              />
-            </Field>
+        {plantilla === undefined ? null : (
+          <div className="flex gap-3 rounded-[20px] bg-acento-tenue p-4">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ilustracion text-ilustracion-texto">
+              <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-lg">
+                auto_awesome
+              </span>
+            </span>
+            <p className="text-sm leading-relaxed text-texto-tenue">
+              {huecos.length === 0 ? (
+                'Esta plantilla no tiene campos que la IA deba escribir.'
+              ) : (
+                <>
+                  La IA va a escribir{' '}
+                  <span className="font-medium text-texto">
+                    {huecos.length === 1 ? 'un campo' : `${huecos.length} campos`}
+                  </span>
+                  : {resumenDeCampos(huecos)}.
+                </>
+              )}
+            </p>
           </div>
+        )}
 
-          <Field id="memoria-nombre" etiqueta="Nombre">
-            <Input
-              value={nombre}
-              onChange={(evento) => elegirNombre(evento.target.value)}
-              placeholder="ej. Memoria de <título de la conferencia>"
-            />
-          </Field>
+        <Field id="memoria-nombre" etiqueta="Nombre">
+          <Input
+            value={nombre}
+            onChange={(evento) => {
+              setNombreTocado(true)
+              setNombre(evento.target.value)
+            }}
+            placeholder="ej. Memoria de <título de la conferencia>"
+          />
+        </Field>
 
-          {error === null ? null : <MensajeDeFormulario id={ID_ERROR}>{error}</MensajeDeFormulario>}
+        {error === null ? null : <MensajeDeFormulario id={ID_ERROR}>{error}</MensajeDeFormulario>}
 
-          <Button type="submit" variante="primario" className="mt-1 w-full" cargando={generando}>
+        <div className="flex justify-end">
+          <Button type="submit" variante="primario" disabled={!listo} cargando={generando}>
             Generar memoria
           </Button>
-        </form>
-      </div>
-    </>
+        </div>
+      </form>
+    </Modal>
   )
+}
+
+/* Los nombres de los campos, sin volverse una lista larga: "Tesis, Método, Cifras y 2 más". */
+function resumenDeCampos(huecos: readonly HuecoParaRedactar[]): string {
+  const nombres = huecos.map((hueco) => hueco.nombre)
+  const primeros = nombres.slice(0, 3).join(', ')
+  return nombres.length > 3 ? `${primeros} y ${nombres.length - 3} más` : primeros
 }

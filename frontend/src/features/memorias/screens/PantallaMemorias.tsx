@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PARAMETRO_DE_CREACION } from '@/app/layout/navegacion'
 import { useSession } from '@/features/auth/session'
@@ -52,6 +52,12 @@ export function PantallaMemorias(): ReactElement {
 
   const idConferenciaPreseleccionada = searchParams.get('conferencia') ?? undefined
   const [panelAbierto, setPanelAbierto] = useState(idConferenciaPreseleccionada !== undefined)
+  /* El botón que lo abrió, para que el modal crezca desde él. Desde el dock no hay botón aquí: aparece en el centro. */
+  const botonQueAbrio = useRef<HTMLElement | null>(null)
+  const abrirPanelDesde = (boton: HTMLElement): void => {
+    botonQueAbrio.current = boton
+    setPanelAbierto(true)
+  }
   const [vista, setVista] = useState<Vista>('grilla')
 
   /*
@@ -131,7 +137,7 @@ export function PantallaMemorias(): ReactElement {
 
             <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={setVista} />
 
-            <BotonPildora variante="primario" icono="add" onClick={() => setPanelAbierto(true)}>
+            <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
               Generar memoria
             </BotonPildora>
           </div>
@@ -205,7 +211,7 @@ export function PantallaMemorias(): ReactElement {
             icono="book_2"
             mensaje="Elige una conferencia procesada y una plantilla guardada para generar tu primera memoria"
           >
-            <BotonPildora variante="primario" icono="add" onClick={() => setPanelAbierto(true)}>
+            <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
               Generar memoria
             </BotonPildora>
           </EstadoVacioIlustrado>
@@ -214,6 +220,7 @@ export function PantallaMemorias(): ReactElement {
 
       <PanelDeGenerarMemoria
         abierto={panelAbierto}
+        anclaEn={botonQueAbrio}
         alCerrar={cerrarPanel}
         {...(idConferenciaPreseleccionada === undefined ? {} : { idConferenciaPreseleccionada })}
         generar={generar}

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
 import { mockearSesionAutenticada, reiniciarMocksDeSesion } from '@/test/sesionDePrueba'
@@ -22,9 +23,11 @@ afterEach(() => {
 
 function montar() {
   return render(
-    <SessionProvider>
-      <PanelDeGenerarMemoria abierto alCerrar={vi.fn()} generar={vi.fn()} alGenerar={vi.fn()} />
-    </SessionProvider>,
+    <MemoryRouter>
+      <SessionProvider>
+        <PanelDeGenerarMemoria abierto alCerrar={vi.fn()} generar={vi.fn()} alGenerar={vi.fn()} />
+      </SessionProvider>
+    </MemoryRouter>,
   )
 }
 

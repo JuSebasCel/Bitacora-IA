@@ -144,7 +144,8 @@ describe('PantallaMemorias', () => {
 
     const dialogo = screen.getByRole('dialog', { name: 'Generar memoria' })
     expect(dialogo).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByLabelText('Conferencia')).toHaveValue('cnf-alc-01'))
+    /* La pastilla lleva puesto su valor: el título de la conferencia preseleccionada. */
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Conferencia: Modelos de lenguaje/ })).toBeInTheDocument())
   })
 
   it('eliminar quita la memoria de la lista y la borra en el repositorio', async () => {
@@ -220,6 +221,6 @@ describe('PantallaMemorias', () => {
 
     await usuario.type(screen.getByLabelText(/buscar por memoria, conferencia o plantilla/i), 'modelos')
 
-    expect(screen.getByLabelText('Conferencia')).toHaveValue('cnf-alc-01')
+    expect(screen.getByRole('button', { name: /^Conferencia: Modelos de lenguaje/ })).toBeInTheDocument()
   })
 })
