@@ -12,16 +12,19 @@ import {
   Modal,
   ModalDeConfirmacion,
   SelectorDeFecha,
+  SelectorDeOpciones,
   PanelDeError,
   SelectorDeVista,
 } from '@/shared/ui'
 import type { OpcionDeVista } from '@/shared/ui'
+import { mensajeDeError } from '@/shared/errors'
 import type { ResultadoCreacion } from '../components'
 import { SelectorDeEtiquetas } from '../components'
 import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
 import { densidadDe } from '../carga'
+import { useDirectorio } from '../directorio'
 import {
   CRITERIOS_POR_DEFECTO,
   fichasDelCatalogo,
@@ -672,6 +675,89 @@ function AccionDeColumna({
   )
 }
 
+/*
+  El ponente de una conferencia, al editarla: se elige entre los ya creados
+  de su evento, o se crea uno nuevo en la misma lista, igual que al cargarla.
+
+  Antes era un campo de texto: cambiar de ponente obligaba a borrar el
+  nombre y escribir otro, y un error de dedo creaba en la práctica un
+  ponente nuevo que el directorio no conocía. Eligiéndolo, el nombre es
+  siempre uno que existe.
+
+  La conferencia guarda el nombre, no el id, así que aquí se traduce en los
+  dos sentidos. Dos casos de datos viejos: si el ponente actual no está en
+  el directorio, aparece igual como opción para no dejar la pastilla vacía;
+  y si el evento no está, no hay de dónde colgar uno nuevo, y queda el campo
+  de texto.
+*/
+function SelectorDePonente({
+  evento,
+  ponente,
+  eventos,
+  ponentes,
+  crearPonente,
+  alCambiar,
+}: {
+  evento: string
+  ponente: string
+  eventos: ReturnType<typeof useDirectorio>['eventos']
+  ponentes: ReturnType<typeof useDirectorio>['ponentes']
+  crearPonente: ReturnType<typeof useDirectorio>['crearPonente']
+  alCambiar: (nombre: string) => void
+}): ReactElement {
+  const idEvento = eventos.find((candidato) => candidato.nombre === evento)?.id
+
+  if (idEvento === undefined) {
+    return (
+      <input
+        value={ponente}
+        onChange={(cambio) => alCambiar(cambio.target.value)}
+        aria-label="Ponente"
+        placeholder="Ponente"
+        className={CAMPO_DE_TEXTO}
+      />
+    )
+  }
+
+  const delEvento = ponentes.filter((candidato) => candidato.idEvento === idEvento)
+  const actual = delEvento.find((candidato) => candidato.nombre === ponente)
+  const opciones = [
+    ...(actual === undefined && ponente.trim() !== '' ? [{ valor: VALOR_DEL_PONENTE_ACTUAL, etiqueta: ponente }] : []),
+    ...delEvento.map((candidato) => ({ valor: candidato.id, etiqueta: candidato.nombre })),
+  ]
+
+  return (
+    <div className="flex">
+      <SelectorDeOpciones
+        etiquetaAccesible="Ponente"
+        icono="mic"
+        vacio="Elige un ponente"
+        valor={actual?.id ?? (ponente.trim() === '' ? '' : VALOR_DEL_PONENTE_ACTUAL)}
+        opciones={opciones}
+        textoDeCreacion="Nombre del ponente nuevo"
+        alCrear={async (nombre) => {
+          const resultado = await crearPonente(idEvento, nombre)
+          if (!resultado.ok) {
+            return { ok: false, mensaje: mensajeDeError(resultado.codigo) }
+          }
+
+          alCambiar(resultado.ponente.nombre)
+          return { ok: true, valor: resultado.ponente.id }
+        }}
+        alCambiar={(valor) => {
+          const elegido = ponentes.find((candidato) => candidato.id === valor)
+          if (elegido !== undefined) {
+            alCambiar(elegido.nombre)
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+/* El ponente que ya tenía la conferencia cuando no está en el directorio: no tiene id propio. */
+const VALOR_DEL_PONENTE_ACTUAL = 'ponente-actual'
+
 export type PropsPantallaArchivo = {
   /** Ya filtradas por los criterios: esta pantalla pinta, no decide qué entra. */
   visibles: readonly ConferenciaVisible[]
@@ -746,6 +832,8 @@ export function PantallaArchivo({
   const [edicion, setEdicion] = useState({ titulo: '', ponente: '', fechaDelEvento: '', descripcion: '' })
   const [literalAbierta, setLiteralAbierta] = useState(false)
   const [vista, setVista] = useState<Vista>('columnas')
+  /* Los ponentes ya creados, para cambiar el de una conferencia eligiéndolo en vez de reescribir su nombre. */
+  const { eventos: eventosDelDirectorio, ponentes: ponentesDelDirectorio, crearPonente } = useDirectorio()
 
   const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
   const botonDeFiltros = useRef<HTMLButtonElement>(null)
@@ -1660,12 +1748,13 @@ export function PantallaArchivo({
                 placeholder="Título"
                 className={CAMPO_DE_TEXTO}
               />
-              <input
-                value={edicion.ponente}
-                onChange={(cambio) => setEdicion((a) => ({ ...a, ponente: cambio.target.value }))}
-                aria-label="Ponente"
-                placeholder="Ponente"
-                className={CAMPO_DE_TEXTO}
+              <SelectorDePonente
+                evento={conferenciaEnDetalle.conferencia.evento}
+                ponente={edicion.ponente}
+                eventos={eventosDelDirectorio}
+                ponentes={ponentesDelDirectorio}
+                crearPonente={crearPonente}
+                alCambiar={(ponente) => setEdicion((a) => ({ ...a, ponente }))}
               />
               <SelectorDeFecha
                 etiquetaAccesible="Fecha del evento"
