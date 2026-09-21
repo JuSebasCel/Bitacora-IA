@@ -75,7 +75,6 @@ export function MenuDeCuenta({
             <span className="truncate text-xs text-texto-tenue">{usuario.correo}</span>
           </span>
 
-          <span className="material-symbols-rounded icono-contorno shrink-0 text-lg text-texto-tenue">unfold_more</span>
           <AnimatePresence>
             {apiKeyFaltante ? (
               <motion.span

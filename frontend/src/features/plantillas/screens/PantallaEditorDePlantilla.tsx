@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
 import { Esqueleto, PanelDeError } from '@/shared/ui'
@@ -35,6 +36,13 @@ export function PantallaEditorDePlantilla(): ReactElement {
   const mutadores = usePlantillas()
   const navegar = useNavigate()
   const plantilla = mutadores.plantillas.find((candidata) => candidata.id === idPlantilla)
+  /*
+    Borrar la saca de la lista antes de volver a la galería (el borrado es
+    optimista), y en ese instante la pantalla la buscaba, no la encontraba
+    y pintaba "No encontramos esa plantilla" en rojo hasta que llegaba la
+    navegación. Mientras se borra, no hay nada que decir: se sale.
+  */
+  const [borrando, setBorrando] = useState(false)
 
   /*
     Mientras la lectura no resuelve, "no encontramos esa plantilla" sería
@@ -42,6 +50,10 @@ export function PantallaEditorDePlantilla(): ReactElement {
   */
   if (mutadores.cargando) {
     return <Esqueleto filas={4} etiqueta="Cargando la plantilla" />
+  }
+
+  if (borrando && plantilla === undefined) {
+    return <></>
   }
 
   if (mutadores.codigoDeError !== null || plantilla === undefined) {
@@ -59,6 +71,7 @@ export function PantallaEditorDePlantilla(): ReactElement {
       alRenombrar={(nombre) => mutadores.renombrarPlantilla(plantilla.id, nombre)}
       alCambiarMarcadores={(marcadores) => mutadores.actualizarMarcadoresDeDocx(plantilla.id, marcadores)}
       alEliminar={async () => {
+        setBorrando(true)
         await mutadores.eliminar(plantilla.id)
         void navegar('/plantillas')
       }}

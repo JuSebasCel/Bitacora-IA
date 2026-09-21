@@ -88,7 +88,7 @@ export function BarraLateral({
       */
       style={{ width: plegada ? 0 : undefined }}
       className={`${visibilidad} dock-entra fixed inset-y-0 left-0 z-30 w-70 shrink-0 flex-col border-r border-filete bg-fondo transition-[width] duration-500 ease-(--ease-entrada) focus:outline-none md:sticky md:z-auto md:h-dvh ${
-        plegada ? 'overflow-hidden border-transparent p-0' : 'overflow-x-hidden overflow-y-auto p-4'
+        plegada ? 'overflow-hidden border-transparent' : 'overflow-x-hidden overflow-y-auto'
       }`}
     >
       {/*
@@ -97,8 +97,15 @@ export function BarraLateral({
         en vez de recortarse. Se fija como minimo y no como ancho exacto porque
         el ancho exacto tampoco descontaba el filete de 1px del borde derecho,
         y ese pixel de mas sacaba una barra de scroll horizontal en el dock.
+
+        El relleno vive aquí y no en el dock. Estaba en el dock y pasaba de
+        16px a 0 de golpe al plegarlo —solo el ancho se animaba—, así que todo
+        el contenido saltaba 16px arriba y a la izquierda en el primer cuadro
+        y después se recortaba: se veía como si el dock se truncara y subiera.
+        Aquí dentro, con el ancho fijo, el contenido se queda quieto mientras
+        el dock se cierra sobre él.
       */}
-      <div className="flex w-full min-w-[calc(17.5rem-2rem-1px)] flex-1 flex-col">
+      <div className="flex w-full min-w-[calc(17.5rem-1px)] flex-1 flex-col p-4">
         {/*
         La cuenta vive aquí, no en una barra superior. Esa barra solo repetía
         el nombre de la sección —que el dock y el título de la pantalla ya
