@@ -21,8 +21,24 @@ import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
 import { densidadDe } from '../carga'
-import { CRITERIOS_POR_DEFECTO, fichasDelCatalogo, fueCondensada, textoDeFicha } from '../query'
-import type { ConferenciaVisible, CriteriosDeListado, FichaDelCatalogo, FiltroDeEstado, Segmento } from '../query'
+import {
+  CRITERIOS_POR_DEFECTO,
+  fichasDelCatalogo,
+  fueCondensada,
+  ordenarEventos,
+  ordenarFichas,
+  textoDeFicha,
+} from '../query'
+import type {
+  ConferenciaVisible,
+  CriteriosDeListado,
+  FichaDelCatalogo,
+  FiltroDeEstado,
+  OrdenDeEventos,
+  OrdenDeFichas,
+  OrdenDeListado,
+  Segmento,
+} from '../query'
 import type { EtiquetaVisible } from '../tags'
 
 /*
@@ -247,6 +263,31 @@ const PROCEDENCIAS: readonly { valor: Segmento; etiqueta: string }[] = [
   { valor: 'todas', etiqueta: 'Todas' },
   { valor: 'propias', etiqueta: 'Propias' },
   { valor: 'compartidas', etiqueta: 'Compartidas' },
+]
+
+/*
+  El orden de cada columna del explorador, en el mismo modal que los
+  filtros: los dos deciden qué se ve y cómo, y un segundo botón en la barra
+  sería otro control que buscar. Etiquetas cortas a propósito: cuatro
+  opciones tienen que caber en un segmentado del ancho del modal.
+*/
+const ORDENES_DE_EVENTOS: readonly { valor: OrdenDeEventos; etiqueta: string }[] = [
+  { valor: 'recientes', etiqueta: 'Recientes' },
+  { valor: 'antiguos', etiqueta: 'Antiguos' },
+  { valor: 'alfabetico', etiqueta: 'A–Z' },
+]
+
+const ORDENES_DE_CONFERENCIAS: readonly { valor: OrdenDeListado; etiqueta: string }[] = [
+  { valor: 'fecha-desc', etiqueta: 'Recientes' },
+  { valor: 'fecha-asc', etiqueta: 'Antiguas' },
+  { valor: 'titulo-asc', etiqueta: 'A–Z' },
+  { valor: 'fichas-desc', etiqueta: 'Más fichas' },
+]
+
+const ORDENES_DE_FICHAS: readonly { valor: OrdenDeFichas; etiqueta: string }[] = [
+  { valor: 'charla', etiqueta: 'Como se dijeron' },
+  { valor: 'tema', etiqueta: 'Por tema' },
+  { valor: 'tipo', etiqueta: 'Por tipo' },
 ]
 
 /* Cinco opciones son demasiadas para un segmentado: van como pastillas de una sola elección. */
@@ -779,11 +820,17 @@ export function PantallaArchivo({
     [idEnDetalleMostrado, etiquetasDe],
   )
 
-  const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
+  const entradas = useMemo(
+    () =>
+      ordenarFichas(fichasDelCatalogo(fichas, visibles), criterios.ordenDeFichas, (idTema) =>
+        nombreDeTema(temas, idTema),
+      ),
+    [fichas, visibles, criterios.ordenDeFichas, temas],
+  )
 
   const eventos = useMemo(
-    () => Array.from(new Set(visibles.map((v) => v.conferencia.evento))),
-    [visibles],
+    () => ordenarEventos(visibles, criterios.ordenDeEventos),
+    [visibles, criterios.ordenDeEventos],
   )
 
   /* Filtrado en cascada: cada nivel acota lo que ve el siguiente. */
@@ -1473,7 +1520,7 @@ export function PantallaArchivo({
       <Modal
         abierto={filtrosAbiertos}
         alCerrar={() => setFiltrosAbiertos(false)}
-        titulo="Filtros"
+        titulo="Filtros y orden"
         anclaje="disparador"
         anclaEn={botonDeFiltros}
         ancho="angosto"
@@ -1530,10 +1577,48 @@ export function PantallaArchivo({
           />
         </fieldset>
 
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-2 text-sm font-medium text-texto-tenue">Orden</legend>
+
+          <div className="flex flex-col gap-1.5">
+            <p className="px-1 text-sm text-texto-tenue">Eventos</p>
+            <Segmentado
+              opciones={ORDENES_DE_EVENTOS}
+              valor={criterios.ordenDeEventos}
+              alCambiar={(ordenDeEventos) => alCambiarCriterios({ ordenDeEventos })}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <p className="px-1 text-sm text-texto-tenue">Conferencias</p>
+            <Segmentado
+              opciones={ORDENES_DE_CONFERENCIAS}
+              valor={criterios.orden}
+              alCambiar={(orden) => alCambiarCriterios({ orden })}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <p className="px-1 text-sm text-texto-tenue">Fichas</p>
+            <Segmentado
+              opciones={ORDENES_DE_FICHAS}
+              valor={criterios.ordenDeFichas}
+              alCambiar={(ordenDeFichas) => alCambiarCriterios({ ordenDeFichas })}
+            />
+          </div>
+        </fieldset>
+
+        {/* Quitar los filtros deja el orden como está: ordenar no es filtrar, y perderlo al limpiar sorprendería. */}
         {filtrosActivos === 0 ? null : (
           <button
             type="button"
-            onClick={() => alCambiarCriterios(CRITERIOS_POR_DEFECTO)}
+            onClick={() =>
+              alCambiarCriterios({
+                segmento: CRITERIOS_POR_DEFECTO.segmento,
+                estado: CRITERIOS_POR_DEFECTO.estado,
+                etiquetas: CRITERIOS_POR_DEFECTO.etiquetas,
+              })
+            }
             className="h-10 cursor-pointer rounded-full bg-acento-tenue text-base text-texto transition-colors hover:bg-acento hover:text-acento-contraste"
           >
             Quitar los filtros

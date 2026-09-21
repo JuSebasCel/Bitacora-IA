@@ -1,5 +1,12 @@
 import { CRITERIOS_POR_DEFECTO } from './filtros'
-import type { CriteriosDeListado, FiltroDeEstado, OrdenDeListado, Segmento } from './filtros'
+import type {
+  CriteriosDeListado,
+  FiltroDeEstado,
+  OrdenDeEventos,
+  OrdenDeFichas,
+  OrdenDeListado,
+  Segmento,
+} from './filtros'
 
 /*
   Traducción entre los criterios del listado y la cadena de consulta de la URL.
@@ -22,6 +29,8 @@ const PARAMETRO = {
   estado: 'estado',
   etiquetas: 'etiquetas',
   orden: 'orden',
+  ordenDeEventos: 'orden-eventos',
+  ordenDeFichas: 'orden-fichas',
 } as const
 
 const SEGMENTOS: readonly Segmento[] = ['todas', 'propias', 'compartidas']
@@ -35,6 +44,8 @@ const ESTADOS: readonly FiltroDeEstado[] = [
 ]
 
 const ORDENES: readonly OrdenDeListado[] = ['fecha-desc', 'fecha-asc', 'titulo-asc', 'fichas-desc']
+const ORDENES_DE_EVENTOS: readonly OrdenDeEventos[] = ['recientes', 'antiguos', 'alfabetico']
+const ORDENES_DE_FICHAS: readonly OrdenDeFichas[] = ['charla', 'tema', 'tipo']
 
 function valorConocido<T extends string>(
   candidato: string | null,
@@ -91,6 +102,16 @@ export function leerCriterios(
     estado: valorConocido(params.get(PARAMETRO.estado), ESTADOS, CRITERIOS_POR_DEFECTO.estado),
     etiquetas: leerEtiquetas(params.get(PARAMETRO.etiquetas), etiquetasConocidas),
     orden: valorConocido(params.get(PARAMETRO.orden), ORDENES, CRITERIOS_POR_DEFECTO.orden),
+    ordenDeEventos: valorConocido(
+      params.get(PARAMETRO.ordenDeEventos),
+      ORDENES_DE_EVENTOS,
+      CRITERIOS_POR_DEFECTO.ordenDeEventos,
+    ),
+    ordenDeFichas: valorConocido(
+      params.get(PARAMETRO.ordenDeFichas),
+      ORDENES_DE_FICHAS,
+      CRITERIOS_POR_DEFECTO.ordenDeFichas,
+    ),
   }
 }
 
@@ -122,6 +143,14 @@ export function escribirCriterios(criterios: CriteriosDeListado): URLSearchParam
 
   if (criterios.orden !== CRITERIOS_POR_DEFECTO.orden) {
     params.set(PARAMETRO.orden, criterios.orden)
+  }
+
+  if (criterios.ordenDeEventos !== CRITERIOS_POR_DEFECTO.ordenDeEventos) {
+    params.set(PARAMETRO.ordenDeEventos, criterios.ordenDeEventos)
+  }
+
+  if (criterios.ordenDeFichas !== CRITERIOS_POR_DEFECTO.ordenDeFichas) {
+    params.set(PARAMETRO.ordenDeFichas, criterios.ordenDeFichas)
   }
 
   return params

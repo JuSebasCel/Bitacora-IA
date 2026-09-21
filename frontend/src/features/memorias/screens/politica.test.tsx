@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/features/auth/session'
@@ -68,6 +68,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  /* Desmontar antes de vaciar los simulacros: ver la nota en plantillas/screens/politica.test.tsx. */
+  cleanup()
   vi.resetAllMocks()
   reiniciarMocksDeSesion()
 })

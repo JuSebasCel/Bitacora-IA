@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearPlantillaDesdeDocx } from '../plantillas'
@@ -40,7 +40,15 @@ beforeEach(() => {
   repositorio.descargarDocxDePlantilla.mockImplementation(() => new Promise(() => {}))
 })
 
+/*
+  Se desmonta antes de vaciar los simulacros. Vitest corre este `afterEach`
+  antes que el de `test/setup.ts`, así que sin esto los componentes seguían
+  montados con el simulacro de descarga ya vacío: si React volvía a pintar en
+  ese hueco, `useDocxDePlantilla` llamaba a un simulacro sin implementación
+  y la prueba caía de vez en cuando, según el reloj.
+*/
 afterEach(() => {
+  cleanup()
   vi.resetAllMocks()
 })
 

@@ -115,7 +115,7 @@ async function abrirFiltros(): Promise<HTMLElement> {
   await esperarAlArchivo()
   await userEvent.click(screen.getByRole('button', { name: /Filtros/ }))
 
-  return screen.findByRole('dialog', { name: 'Filtros' })
+  return screen.findByRole('dialog', { name: 'Filtros y orden' })
 }
 
 beforeEach(() => {

@@ -12,6 +12,10 @@ import type { ConferenciaVisible } from './acceso'
 
 export type Segmento = 'todas' | 'propias' | 'compartidas'
 export type OrdenDeListado = 'fecha-desc' | 'fecha-asc' | 'titulo-asc' | 'fichas-desc'
+/** Los eventos, por la fecha de su conferencia más reciente o por nombre. */
+export type OrdenDeEventos = 'recientes' | 'antiguos' | 'alfabetico'
+/** Las fichas: en el orden en que se dijeron, agrupadas por tema o por tipo. */
+export type OrdenDeFichas = 'charla' | 'tema' | 'tipo'
 export type FiltroDeEstado = 'todos' | EstadoDeProcesamiento
 
 export type CriteriosDeListado = {
@@ -21,6 +25,8 @@ export type CriteriosDeListado = {
   /** Identificadores de etiqueta. Se exigen todas a la vez, no cualquiera. */
   readonly etiquetas: readonly string[]
   readonly orden: OrdenDeListado
+  readonly ordenDeEventos: OrdenDeEventos
+  readonly ordenDeFichas: OrdenDeFichas
 }
 
 export const CRITERIOS_POR_DEFECTO: CriteriosDeListado = {
@@ -29,6 +35,8 @@ export const CRITERIOS_POR_DEFECTO: CriteriosDeListado = {
   estado: 'todos',
   etiquetas: [],
   orden: 'fecha-desc',
+  ordenDeEventos: 'recientes',
+  ordenDeFichas: 'charla',
 }
 
 /*
@@ -229,4 +237,88 @@ export function listarConferencias(entrada: EntradaDeListado): readonly Conferen
   )
 
   return ordenar(filtradas, criterios.orden, fichas)
+}
+
+/*
+  Los eventos del explorador, en el orden elegido.
+
+  Un evento no tiene fecha propia: la toma de sus conferencias. "Recientes"
+  lo ordena por la más reciente de las suyas, que es lo que se quiere decir
+  con "el evento más reciente" —el último en el que se estuvo—; tomar la
+  primera haría que un congreso de tres días quedara detrás de una charla
+  suelta del día siguiente a su inauguración.
+*/
+export function ordenarEventos(
+  visibles: readonly ConferenciaVisible[],
+  orden: OrdenDeEventos,
+): readonly string[] {
+  const masReciente = new Map<string, string>()
+  const masAntigua = new Map<string, string>()
+
+  for (const { conferencia } of visibles) {
+    const fecha = conferencia.fechaDelEvento
+    const reciente = masReciente.get(conferencia.evento)
+    const antigua = masAntigua.get(conferencia.evento)
+    if (reciente === undefined || fecha > reciente) masReciente.set(conferencia.evento, fecha)
+    if (antigua === undefined || fecha < antigua) masAntigua.set(conferencia.evento, fecha)
+  }
+
+  const eventos = [...masReciente.keys()]
+  const porNombre = (izquierdo: string, derecho: string): number =>
+    compararCadenas(normalizarTexto(izquierdo), normalizarTexto(derecho))
+
+  return eventos.sort((izquierdo, derecho) => {
+    const principal =
+      orden === 'recientes'
+        ? compararCadenas(masReciente.get(derecho) ?? '', masReciente.get(izquierdo) ?? '')
+        : orden === 'antiguos'
+          ? compararCadenas(masAntigua.get(izquierdo) ?? '', masAntigua.get(derecho) ?? '')
+          : 0
+
+    return principal !== 0 ? principal : porNombre(izquierdo, derecho)
+  })
+}
+
+/*
+  Las fichas del explorador, en el orden elegido.
+
+  "Como se dijeron" respeta el orden de las conferencias —que ya viene
+  ordenado por el criterio de conferencias— y dentro de cada una, el minuto:
+  es leer la charla de principio a fin. Por tema y por tipo agrupan, y
+  dentro de cada grupo vuelven a ese mismo orden, para que el grupo también
+  se lea en el orden en que ocurrió y no al azar.
+
+  Genérica en lo que envuelve a la ficha para no atarse a la forma de la
+  entrada del catálogo: basta con que traiga la ficha y su conferencia.
+*/
+export function ordenarFichas<T extends { readonly ficha: Ficha; readonly conferencia: { readonly id: string } }>(
+  entradas: readonly T[],
+  orden: OrdenDeFichas,
+  nombreDeTema: (idTema: string) => string,
+): readonly T[] {
+  const posicionDeConferencia = new Map<string, number>()
+  for (const entrada of entradas) {
+    if (!posicionDeConferencia.has(entrada.conferencia.id)) {
+      posicionDeConferencia.set(entrada.conferencia.id, posicionDeConferencia.size)
+    }
+  }
+
+  const comoSeDijeron = (izquierda: T, derecha: T): number =>
+    (posicionDeConferencia.get(izquierda.conferencia.id) ?? 0) -
+      (posicionDeConferencia.get(derecha.conferencia.id) ?? 0) ||
+    izquierda.ficha.segundoInicio - derecha.ficha.segundoInicio
+
+  return [...entradas].sort((izquierda, derecha) => {
+    const grupo =
+      orden === 'tema'
+        ? compararCadenas(
+            normalizarTexto(nombreDeTema(izquierda.ficha.idTema)),
+            normalizarTexto(nombreDeTema(derecha.ficha.idTema)),
+          )
+        : orden === 'tipo'
+          ? compararCadenas(izquierda.ficha.tipoDeUnidad, derecha.ficha.tipoDeUnidad)
+          : 0
+
+    return grupo !== 0 ? grupo : comoSeDijeron(izquierda, derecha)
+  })
 }

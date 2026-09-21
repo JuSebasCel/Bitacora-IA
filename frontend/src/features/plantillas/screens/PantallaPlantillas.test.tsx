@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -66,6 +66,8 @@ beforeEach(() => {
 
 afterEach(() => {
   renderAsyncMock.mockReset()
+  /* Desmontar antes de vaciar los simulacros: ver la nota en plantillas/screens/politica.test.tsx. */
+  cleanup()
   vi.resetAllMocks()
 })
 

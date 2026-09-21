@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Memoria } from './data'
 import type { ResultadoMemoria } from './memorias'
@@ -35,6 +35,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  /* Desmontar antes de vaciar los simulacros: ver la nota en plantillas/screens/politica.test.tsx. */
+  cleanup()
   vi.resetAllMocks()
 })
 

@@ -20,6 +20,8 @@ export type {
   CriteriosDeListado,
   EntradaDeListado,
   FiltroDeEstado,
+  OrdenDeEventos,
+  OrdenDeFichas,
   OrdenDeListado,
   Segmento,
 } from './filtros'
@@ -32,6 +34,8 @@ export {
   listarConferencias,
   normalizarTexto,
   ordenar,
+  ordenarEventos,
+  ordenarFichas,
   palabrasDe,
 } from './filtros'
 
