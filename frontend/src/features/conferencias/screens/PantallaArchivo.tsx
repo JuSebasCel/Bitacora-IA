@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from 'motion/react'
+import { motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import type { MouseEvent, ReactElement, ReactNode, RefObject } from 'react'
 import { nombreDeTema } from '@/features/taxonomia'
@@ -203,6 +203,24 @@ function etiquetaDeCuota(maximoDeFichas: number | null, duracionEnSegundos: numb
   }
 
   return densidad === null ? `Pediste hasta ${maximoDeFichas}` : `Pediste ${densidad}`
+}
+
+/*
+  El último valor no nulo que ha tenido `valor`.
+
+  Para los modales cuyo contenido depende de a qué apuntan: mientras el modal
+  sale, `valor` ya es `null`, pero hay que seguir enseñando lo que se estaba
+  enseñando. Se guarda en estado y no en una ref porque el render tiene que
+  reaccionar cuando se abre sobre otra cosa.
+*/
+function useUltimoNoNulo<T>(valor: T | null): T | null {
+  const [ultimo, setUltimo] = useState<T | null>(valor)
+
+  if (valor !== null && valor !== ultimo) {
+    setUltimo(valor)
+  }
+
+  return valor ?? ultimo
 }
 
 /** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
@@ -509,6 +527,29 @@ function FilaDeslizable({
   const reducirMovimiento = useReducedMotion()
 
   /*
+    La papelera no existe en reposo: su opacidad sale de cuánto se ha
+    deslizado la fila, y vale cero con la fila en su sitio.
+
+    Estaba siempre pintada debajo, tapada por la fila, y eso no basta. La
+    fila y la papelera las recorta el mismo borde redondeado del envoltorio, y
+    en la curva los píxeles del antialiasing mezclan la capa de delante con
+    la de detrás: el rojo se filtraba como un hilo en las dos esquinas de la
+    derecha —justo los 76px donde está la papelera—, que en tema oscuro, con
+    el rojo claro del sistema, se veía como un borde naranja. Medido: la
+    papelera ocupaba x 828–904 con fondo `oklch(0.75 0.15 25)` bajo una fila
+    de radio 0.
+
+    Tapar algo no es lo mismo que no tenerlo. Ahora aparece a medida que se
+    tira, que además dice mejor lo que hace el gesto.
+  */
+  const desplazamiento = useMotionValue(0)
+  const opacidadDeLaPapelera = useTransform(
+    desplazamiento,
+    [-ANCHO_DE_LA_PAPELERA / 2, 0],
+    [1, 0],
+  )
+
+  /*
     Sin arrastre no hay gesto, y sin gesto la papelera no tendria como salir:
     con `prefers-reduced-motion` la fila se queda quieta y el borrado sigue
     estando donde siempre estuvo, en el modal de la conferencia.
@@ -519,7 +560,7 @@ function FilaDeslizable({
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
-      <button
+      <motion.button
         type="button"
         onClick={alBorrar}
         tabIndex={revelada ? 0 : -1}
@@ -532,12 +573,12 @@ function FilaDeslizable({
           la superficie" en cada tema.
         */
         className="absolute inset-y-0 right-0 flex cursor-pointer items-center justify-center rounded-r-2xl bg-error text-acento-contraste"
-        style={{ width: ANCHO_DE_LA_PAPELERA }}
+        style={{ width: ANCHO_DE_LA_PAPELERA, opacity: opacidadDeLaPapelera }}
       >
         <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-2xl">
           delete
         </span>
-      </button>
+      </motion.button>
 
       <motion.div
         drag="x"
@@ -547,6 +588,7 @@ function FilaDeslizable({
         animate={{ x: revelada ? -ANCHO_DE_LA_PAPELERA : 0 }}
         transition={{ type: 'spring', stiffness: 520, damping: 42 }}
         onDragEnd={(_, info) => setRevelada(info.offset.x < -ANCHO_DE_LA_PAPELERA / 2)}
+        style={{ x: desplazamiento }}
         /* Sobre el fondo de la columna: sin esto la papelera se ve por debajo de la fila. */
         className="relative bg-panel"
       >
@@ -679,11 +721,34 @@ export function PantallaArchivo({
 
   const filtrosActivos = contarFiltros(criterios)
 
+  /*
+    Lo que un modal enseña no puede desaparecer al cerrarlo.
+
+    `idEnDetalle` dice si el modal está abierto, y al cerrar vuelve a `null`
+    en el acto. Si el contenido se derivara de él, el formulario se
+    desmontaría ANTES de que empezara la animación de salida, y lo que se
+    animaría sería la carcasa vacía: medido, la ventana pasaba de 567px a 112
+    —solo su barra de título, "✕ Conferencia"— y así cruzaba la pantalla
+    hasta desaparecer. Es la trampa 4 de la skill de diseño, y aquí cayó
+    entera.
+
+    Así que se retiene el último id que se mostró y el contenido sale de ahí.
+    Abrir lo actualiza; cerrar no lo toca. La confirmación de borrado tenía el
+    mismo defecto —su título y su recuento de fichas se vaciaban mientras se
+    iba— y lleva el mismo arreglo.
+  */
+  const idEnDetalleMostrado = useUltimoNoNulo(idEnDetalle)
+  const idParaBorrarMostrado = useUltimoNoNulo(idParaBorrar)
+
   const conferenciaEnDetalle =
-    idEnDetalle === null ? undefined : visibles.find((v) => v.conferencia.id === idEnDetalle)
+    idEnDetalleMostrado === null
+      ? undefined
+      : visibles.find((v) => v.conferencia.id === idEnDetalleMostrado)
 
   const conferenciaParaBorrar =
-    idParaBorrar === null ? undefined : visibles.find((v) => v.conferencia.id === idParaBorrar)
+    idParaBorrarMostrado === null
+      ? undefined
+      : visibles.find((v) => v.conferencia.id === idParaBorrarMostrado)
 
   /*
     Abrir el modal carga el formulario con lo que hay.
@@ -706,12 +771,12 @@ export function PantallaArchivo({
   /* Las etiquetas propias de la conferencia abierta en el modal. */
   const etiquetasPropiasDelDetalle = useMemo(
     () =>
-      idEnDetalle === null
+      idEnDetalleMostrado === null
         ? []
-        : etiquetasDe(idEnDetalle)
+        : etiquetasDe(idEnDetalleMostrado)
             .filter((visible) => visible.propia)
             .map((visible) => visible.etiqueta.id),
-    [idEnDetalle, etiquetasDe],
+    [idEnDetalleMostrado, etiquetasDe],
   )
 
   const entradas = useMemo(() => fichasDelCatalogo(fichas, visibles), [fichas, visibles])
@@ -1490,7 +1555,7 @@ export function PantallaArchivo({
         es una reorganizacion del archivo y no una correccion de datos.
       */}
       <Modal
-        abierto={conferenciaEnDetalle !== undefined}
+        abierto={idEnDetalle !== null}
         alCerrar={() => setIdEnDetalle(null)}
         titulo="Conferencia"
         ancho="angosto"
@@ -1505,8 +1570,8 @@ export function PantallaArchivo({
               <input
                 value={edicion.titulo}
                 onChange={(cambio) => setEdicion((a) => ({ ...a, titulo: cambio.target.value }))}
-                aria-label="Titulo de la conferencia"
-                placeholder="Titulo"
+                aria-label="Título de la conferencia"
+                placeholder="Título"
                 className={CAMPO_DE_TEXTO}
               />
               <input
@@ -1534,8 +1599,8 @@ export function PantallaArchivo({
               <textarea
                 value={edicion.descripcion}
                 onChange={(cambio) => setEdicion((a) => ({ ...a, descripcion: cambio.target.value }))}
-                aria-label="Descripcion"
-                placeholder="Descripcion · opcional"
+                aria-label="Descripción"
+                placeholder="Descripción · opcional"
                 rows={3}
                 className={`${CAMPO_DE_TEXTO} h-auto resize-none py-3 leading-relaxed`}
               />
@@ -1646,14 +1711,14 @@ export function PantallaArchivo({
         segundo caso puede no ser la que esta abierta en las columnas.
       */}
       <ModalDeConfirmacion
-        abierto={conferenciaParaBorrar !== undefined}
+        abierto={idParaBorrar !== null}
         alCerrar={() => setIdParaBorrar(null)}
         titulo="Borrar la conferencia"
         accion="Borrar"
         anclaEn={botonDeBorrado}
         limites={marco}
         consecuencias={[
-          `Se pierden sus ${porEvento.filter((e) => e.conferencia.id === idParaBorrar).length} fichas y habría que volver a analizarla desde cero.`,
+          `Se pierden sus ${porEvento.filter((e) => e.conferencia.id === idParaBorrarMostrado).length} fichas y habría que volver a analizarla desde cero.`,
           'Se borra el audio o la transcripción que subiste.',
           'Quien la tuviera compartida deja de verla.',
         ]}
