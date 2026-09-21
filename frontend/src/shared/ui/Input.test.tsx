@@ -25,7 +25,7 @@ describe('Input', () => {
     expect(campo).toHaveAttribute('type', 'email')
     expect(campo).toHaveAttribute('name', 'correo')
     expect(campo).toHaveClass('w-full')
-    expect(campo).toHaveClass('rounded-md')
+    expect(campo).toHaveClass('rounded-2xl')
     expect(campo).toHaveValue('ana@bitacora.ai')
   })
 })

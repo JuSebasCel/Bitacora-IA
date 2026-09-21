@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router'
-import { PanelDeChat } from '@/features/chat/components'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
+import { Modal } from '@/shared/ui'
 import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
 
@@ -25,7 +25,8 @@ function comoElemento(nodo: Element | null): HTMLElement | null {
 */
 export function ShellLayout() {
   const [cajonAbierto, setCajonAbierto] = useState(false)
-  const [panelDeChatAbierto, setPanelDeChatAbierto] = useState(false)
+  const [chatAbierto, setChatAbierto] = useState(false)
+  const botonDelChat = useRef<HTMLElement | null>(null)
 
   /*
     Plegar el dock es una preferencia de quien mira, igual que el tema, así
@@ -140,14 +141,44 @@ export function ShellLayout() {
   return (
     <ProveedorDeApiKey>
       <div className="flex h-dvh overflow-hidden bg-fondo font-sans text-texto">
-        <PanelDeChat abierto={panelDeChatAbierto} alCerrar={() => setPanelDeChatAbierto(false)} />
+        {/*
+          El chat todavía no está listo para usarse: se construyó sobre el
+          mundo de fixtures y le falta el backend real. En vez de abrir un
+          panel a medias, el dock lo anuncia y dice qué va a hacer. El panel
+          (`features/chat`) sigue en el código para cuando se retome.
+        */}
+        <Modal
+          abierto={chatAbierto}
+          alCerrar={() => setChatAbierto(false)}
+          titulo="Chat"
+          ancho="angosto"
+          anclaEn={botonDelChat}
+        >
+          <div className="flex flex-col gap-4 pb-2">
+            <div className="flex size-14 items-center justify-center rounded-full bg-ilustracion text-[color:var(--bitacora-ilustracion-texto)]">
+              <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-[28px]">
+                forum
+              </span>
+            </div>
+            <p className="font-titulo text-xl leading-snug font-semibold text-texto">
+              Pregúntale a tus conferencias
+            </p>
+            <p className="text-base leading-relaxed text-texto-tenue">
+              Estamos terminando el chat. Vas a poder hacer preguntas sobre lo que se dijo en tus charlas y recibir
+              respuestas con las fichas de donde salen. Llega en una próxima versión.
+            </p>
+          </div>
+        </Modal>
 
         <BarraLateral
           id={ID_DE_NAVEGACION}
           abierta={cajonAbierto}
           alNavegar={cerrarCajon}
           refDelCajon={refDelCajon}
-          alAbrirChat={() => setPanelDeChatAbierto(true)}
+          alAbrirChat={(boton) => {
+            botonDelChat.current = boton
+            setChatAbierto(true)
+          }}
           plegada={dockPlegado}
           alPlegar={() => setDockPlegado(true)}
         />

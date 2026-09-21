@@ -43,3 +43,4 @@ export { recordarOrigenDeApertura, useAterrizarDesdeCierre, useCrecerDesdeOrigen
 export type { OpcionDeSelector, PropsSelectorDeOpciones } from './SelectorDeOpciones'
 export { SelectorDeVista } from './SelectorDeVista'
 export type { OpcionDeVista, PropsSelectorDeVista } from './SelectorDeVista'
+export { Logo, MarcaDeMenti } from './Logo'

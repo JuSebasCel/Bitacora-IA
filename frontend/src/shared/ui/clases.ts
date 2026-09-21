@@ -26,8 +26,13 @@ export const TEXTO_ERROR = 'text-error'
   verdad lo distingue (`placeholder` en Input; `appearance-none` y el cursor
   de puntero en Select) — antes las dos copias completas ya habían divergido
   una vez de forma silenciosa.
+
+  Con el lenguaje nuevo: superficie tenue sin filete, radio de 16 y texto de
+  16, igual que los campos del modal de carga. El borde sigue existiendo,
+  transparente, para que el de error y el de foco no cambien el tamaño de
+  la caja al aparecer.
 */
 export const CLASES_CONTROL_BASE =
-  'block w-full rounded-md border bg-panel px-3 py-2 text-sm text-texto ' +
-  'transition-colors enabled:hover:border-acento focus:border-acento ' +
+  'block w-full rounded-2xl border bg-acento-tenue px-4 py-2.5 text-base text-texto ' +
+  'transition-colors enabled:hover:border-filete-fuerte focus:border-acento focus:outline-none ' +
   'disabled:cursor-not-allowed disabled:opacity-55'

@@ -23,7 +23,7 @@ export function Input({
       aria-invalid={invalido ? 'true' : ariaInvalid}
       className={unirClases(
         CLASES_BASE,
-        invalido ? BORDE_ERROR : 'border-filete-fuerte',
+        invalido ? BORDE_ERROR : 'border-transparent',
         className,
       )}
     />

@@ -1,16 +1,20 @@
 import type { ReactElement, ReactNode } from 'react'
 import { motion, useReducedMotion, type Variants } from 'motion/react'
+import { Logo } from '@/shared/ui'
 
 /*
   Marco visual común a las dos pantallas públicas de autenticación.
 
-  Se compone en dos paneles: a la izquierda el formulario, a la derecha el panel
-  de identidad del producto. Bajo 1024px el panel de identidad desaparece y su
-  encabezado compacto ocupa su lugar sobre el formulario.
+  Dos paneles sobre el fondo de la app, con los radios y la tipografía del
+  resto: a la izquierda el formulario, a la derecha el producto. Antes el
+  panel de la derecha era un campo azul profundo con su propia paleta, lo
+  único que quedaba del diseño anterior; ahora es un panel más, y lo que lo
+  distingue es su contenido —el nombre grande y una ficha de ejemplo que
+  enseña qué se guarda—, no un color que el resto de la app ya no usa.
 
-  El h1 aparece dos veces en el marcado, una por panel, pero solo uno existe a la
-  vez: `hidden` resuelve a `display: none`, que también lo saca del árbol de
-  accesibilidad. Así cada viewport expone exactamente un h1.
+  Sin cabecera compacta para pantallas estrechas: la app no se abre en
+  móvil (ver `app/SoloEscritorio.tsx`), así que el panel de marca siempre
+  está a la vista y lleva el único h1.
 */
 
 const DESCRIPCION = 'Archivo consultable de lo que se dijo en cada conferencia.'
@@ -21,11 +25,12 @@ const CONTENEDOR: Variants = {
 }
 
 const ELEMENTO: Variants = {
-  oculto: { opacity: 0, y: 14 },
+  oculto: { opacity: 0, y: 14, filter: 'blur(8px)' },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+    filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: [0.37, 0.35, 0, 1] },
   },
 }
 
@@ -41,25 +46,24 @@ export function MarcoDeAcceso({ idTitulo, titulo, children }: PropsMarcoDeAcceso
   const estadoInicial = reducirMovimiento ? 'visible' : 'oculto'
 
   return (
-    <main className="min-h-dvh bg-fondo font-sans lg:grid lg:min-h-dvh lg:grid-cols-[1fr_1.05fr]">
+    <main className="grid h-dvh grid-cols-[1fr_1.05fr] gap-4 overflow-hidden bg-fondo p-4 font-sans text-texto">
       <motion.div
         variants={CONTENEDOR}
         initial={estadoInicial}
         animate="visible"
-        className="flex min-h-dvh items-center justify-center px-5 py-12 lg:min-h-0 lg:px-10"
+        className="flex min-h-0 flex-col overflow-y-auto px-6 py-8"
       >
-        <div className="w-full max-w-sm">
-          <motion.header variants={ELEMENTO} className="mb-7 lg:hidden">
-            <h1 className="text-3xl font-semibold tracking-tight text-texto">Menti Vault</h1>
-            <p className="mt-2 text-sm text-texto-tenue">{DESCRIPCION}</p>
-          </motion.header>
+        <motion.div variants={ELEMENTO}>
+          <Logo />
+        </motion.div>
 
+        <div className="flex flex-1 items-center justify-center py-8">
           <motion.section
             variants={ELEMENTO}
             aria-labelledby={idTitulo}
-            className="elevacion rounded-md border border-filete bg-panel p-6 sm:p-7"
+            className="w-full max-w-[26rem] rounded-[32px] bg-panel p-8"
           >
-            <h2 id={idTitulo} className="text-base font-semibold tracking-tight text-texto">
+            <h2 id={idTitulo} className="font-titulo text-[28px] leading-tight font-semibold text-texto">
               {titulo}
             </h2>
 
@@ -68,37 +72,41 @@ export function MarcoDeAcceso({ idTitulo, titulo, children }: PropsMarcoDeAcceso
         </div>
       </motion.div>
 
-      <aside className="panel-de-marca relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
-        <motion.div
-          variants={CONTENEDOR}
-          initial={estadoInicial}
-          animate="visible"
-          className="relative"
-        >
+      <motion.aside
+        variants={CONTENEDOR}
+        initial={estadoInicial}
+        animate="visible"
+        className="flex min-h-0 flex-col justify-between overflow-hidden rounded-[32px] bg-panel p-12"
+      >
+        <div>
           <motion.h1
             variants={ELEMENTO}
-            className="text-5xl leading-[1.05] font-semibold tracking-tight text-marca-texto xl:text-6xl"
+            className="font-titulo text-6xl leading-[1.02] font-semibold tracking-tight text-texto"
           >
             Menti Vault
           </motion.h1>
 
-          <motion.p
-            variants={ELEMENTO}
-            className="mt-5 max-w-sm text-base leading-relaxed text-marca-tenue"
-          >
+          <motion.p variants={ELEMENTO} className="mt-5 max-w-sm text-lg leading-relaxed text-texto-tenue">
             {DESCRIPCION}
           </motion.p>
-        </motion.div>
+        </div>
 
-        <motion.p
-          variants={ELEMENTO}
-          initial={estadoInicial}
-          animate="visible"
-          className="coordenada relative max-w-xs text-xs leading-relaxed tracking-wide text-marca-tenue"
-        >
-          Cada ficha conserva quién lo dijo, en qué conferencia y en qué minuto exacto.
-        </motion.p>
-      </aside>
+        {/*
+          Una ficha de ejemplo, con la forma de las de verdad: el texto que se
+          lee, quién lo dijo y en qué minuto. Enseña qué hace el producto
+          mejor que una frase sobre él. Es ilustrativa y lo dice.
+        */}
+        <motion.figure variants={ELEMENTO} aria-label="Ficha de ejemplo" className="max-w-md rounded-[24px] bg-fondo p-6">
+          <p className="text-xs font-medium tracking-wide text-texto-tenue uppercase">Ficha de ejemplo</p>
+          <blockquote className="mt-3 font-titulo text-xl leading-snug font-medium text-texto">
+            Un archivo no sirve por lo que guarda, sino por lo que te deja volver a encontrar.
+          </blockquote>
+          <figcaption className="mt-4 flex items-center gap-2 text-sm text-texto-tenue">
+            <span className="rounded-full bg-ilustracion px-2.5 py-0.5 text-ilustracion-texto">Tesis</span>
+            Minuto 12:40 de la conferencia
+          </figcaption>
+        </motion.figure>
+      </motion.aside>
     </main>
   )
 }
@@ -108,7 +116,7 @@ export function MarcoDeAcceso({ idTitulo, titulo, children }: PropsMarcoDeAcceso
   formulario con un filete para que no compita con el botón principal.
 */
 export function PieDeMarco({ children }: { children: ReactNode }): ReactElement {
-  return <p className="mt-6 border-t border-filete pt-4 text-sm text-texto-tenue">{children}</p>
+  return <p className="mt-6 border-t border-filete pt-5 text-sm text-texto-tenue">{children}</p>
 }
 
 /* Enlace de texto dentro del panel. Subrayado siempre visible: no depende del color. */

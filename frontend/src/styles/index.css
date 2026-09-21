@@ -392,24 +392,6 @@
   }
 
   /*
-    Panel de identidad de las pantallas públicas. La profundidad sale de tres
-    capas apiladas en el mismo tono, no de un degradado de colores distintos:
-    una luz suave arriba a la izquierda, la pauta horizontal del cuaderno de
-    campo, y un asentamiento hacia el borde inferior.
-  */
-  .panel-de-marca {
-    background-color: var(--bitacora-marca);
-    background-image:
-      radial-gradient(115% 85% at 14% 0%, oklch(1 0 0 / 0.12), transparent 58%),
-      repeating-linear-gradient(
-        to bottom,
-        var(--bitacora-marca-pauta) 0 1px,
-        transparent 1px 2.5rem
-      ),
-      linear-gradient(180deg, transparent 45%, var(--bitacora-marca-profunda) 100%);
-  }
-
-  /*
     Ítems del dock. La jerarquía es puramente tipográfica: el activo no lleva
     fondo ni pastilla, solo crece de 24 a 28px y sube de peso. El
     `line-height` queda clavado en 24px aunque la letra crezca, y por eso la

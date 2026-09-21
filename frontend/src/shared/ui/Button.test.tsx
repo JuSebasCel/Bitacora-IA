@@ -75,12 +75,12 @@ describe('Button', () => {
 
     // Todos comparten el radio unico del sistema de diseno.
     for (const clases of [primario, secundario, sutil]) {
-      expect(clases).toContain('rounded-md')
+      expect(clases).toContain('rounded-full')
       expect(clases).toContain('active:translate-y-px')
     }
     expect(primario).toContain('bg-acento')
     expect(primario).toContain('text-acento-contraste')
-    expect(secundario).toContain('border-filete-fuerte')
+    expect(secundario).toContain('shadow-[inset_0_0_0_1px_var(--bitacora-filete)]')
   })
 
   it('sin type explicito no envia el formulario que lo contiene', async () => {
@@ -124,6 +124,6 @@ describe('Button', () => {
     expect(boton).toHaveAttribute('type', 'submit')
     expect(boton).toHaveAttribute('name', 'accion')
     expect(boton).toHaveClass('w-full')
-    expect(boton).toHaveClass('rounded-md')
+    expect(boton).toHaveClass('rounded-full')
   })
 })

@@ -14,8 +14,8 @@ type PropiedadesBarraLateral = {
   alNavegar: () => void
   /** El shell lo enfoca al abrir el cajón y recorre lo enfocable de dentro. */
   refDelCajon: RefObject<HTMLElement | null>
-  /** El chat es una sección del dock pero se abre como panel, no como ruta. */
-  alAbrirChat: () => void
+  /** El chat es una sección del dock pero se abre como modal, no como ruta. Recibe el botón, para crecer desde él. */
+  alAbrirChat: (boton: HTMLElement) => void
   /** Solo en escritorio: el dock plegado se va del todo y deja el ancho al contenido. */
   plegada: boolean
   alPlegar: () => void
@@ -183,9 +183,9 @@ export function BarraLateral({
         */}
           <button
             type="button"
-            onClick={() => {
+            onClick={(evento) => {
               alNavegar()
-              alAbrirChat()
+              alAbrirChat(evento.currentTarget)
             }}
             className={clasesDeItem(false)}
           >

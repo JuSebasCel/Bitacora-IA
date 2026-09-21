@@ -9,12 +9,13 @@ export type PropsBoton = ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 /*
-  Base comun a las tres variantes: radio unico del sistema (`rounded-md`),
-  realimentacion tactil minima al presionar y estado deshabilitado legible.
-  El anillo de foco vive en la hoja de estilos global (`:focus-visible`).
+  Base comun a las tres variantes: la misma pildora de `BotonPildora` —40 px
+  de alto, radio completo, texto de 16—, para que un formulario viejo y una
+  pantalla nueva no tengan dos botones distintos. El anillo de foco vive en
+  la hoja de estilos global (`:focus-visible`).
 */
 const CLASES_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium ' +
+  'inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-base font-medium ' +
   'transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55'
 
 /*
@@ -23,12 +24,10 @@ const CLASES_BASE =
   mostrar `cursor-not-allowed`).
 */
 const CLASES_VARIANTE: Record<VarianteBoton, string> = {
-  primario:
-    'border border-acento bg-acento text-acento-contraste enabled:hover:border-acento-fuerte enabled:hover:bg-acento-fuerte',
+  primario: 'bg-acento text-acento-contraste enabled:hover:bg-acento-fuerte',
   secundario:
-    'border border-filete-fuerte bg-panel text-texto enabled:hover:border-acento enabled:hover:text-acento',
-  sutil:
-    'border border-transparent bg-transparent text-texto-tenue enabled:hover:bg-acento-tenue enabled:hover:text-acento',
+    'text-texto-tenue shadow-[inset_0_0_0_1px_var(--bitacora-filete)] enabled:hover:text-texto',
+  sutil: 'bg-transparent text-texto-tenue enabled:hover:bg-acento-tenue enabled:hover:text-texto',
 }
 
 /*
