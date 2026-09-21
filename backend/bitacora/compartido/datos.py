@@ -152,11 +152,32 @@ def verificar_sesion(cliente: ClienteSupabase, token: str) -> Sesion:
     return Sesion(id_usuario=str(id_usuario), token=token)
 
 
-Proposito = Literal["analisis", "chat"]
-"""Para qué se usa una API key. Cada persona puede tener una por propósito."""
+def reservar_cupo_de_audio(cliente: ClienteSupabase, segundos: int, secreto_del_servidor: str) -> bool:
+    """
+    Aparta del cupo diario común los segundos de una carga, si caben.
+
+    Solo tiene sentido con las claves compartidas de la administración: con
+    las propias, el límite es el de la cuenta de cada quien. La reserva es
+    atómica del lado de Postgres, así que dos cargas a la vez no se pasan
+    juntas del techo.
+    """
+    try:
+        respuesta = cliente.rpc(
+            "reservar_cupo_de_audio", {"segundos": max(0, int(segundos)), "secreto": secreto_del_servidor}
+        ).execute()
+    except Exception as fallo:  # noqa: BLE001
+        raise traducir_fallo_de_datos(fallo) from fallo
+
+    return getattr(respuesta, "data", None) is True
 
 
-def leer_api_key_de_openai(cliente: ClienteSupabase, proposito: Proposito = "analisis") -> ClaveDeOpenAI:
+Proposito = Literal["transcripcion", "fichas", "chat"]
+"""Para qué se usa una API key. Cada persona puede tener una por uso."""
+
+
+def leer_api_key_de_openai(
+    cliente: ClienteSupabase, proposito: Proposito = "transcripcion", secreto_del_servidor: str = ""
+) -> ClaveDeOpenAI:
     """
     `leer_mi_api_key()` no recibe el usuario: lo resuelve con `auth.uid()`
     del lado de Postgres, así que es estructuralmente imposible pedir la
@@ -164,23 +185,29 @@ def leer_api_key_de_openai(cliente: ClienteSupabase, proposito: Proposito = "ana
     recibe el propósito: hay una clave para el análisis y otra, opcional,
     para el chat.
 
-    Sin clave de chat, el chat usa la de análisis: la separación existe para
-    quien quiera dos límites de gasto distintos, no para obligar a nadie a
-    pegar dos claves.
+    Una por uso (transcripción, fichas, chat), y la que falte se cubre con la
+    primera que haya, en ese orden: la separación existe para quien quiera
+    repartir los límites entre cuentas, no para obligar a nadie a pegar tres.
+
+    Con el secreto del servidor y las claves compartidas encendidas, la
+    función devuelve las de la cuenta administradora (`clave_para`, migración
+    20260922130000), y lo dice, para que la carga gaste del cupo común.
 
     El valor devuelto se envuelve de inmediato en `ClaveDeOpenAI` y nunca toca
     un log: la única forma de sacarlo es leer `.valor` a propósito.
     """
     try:
-        respuesta = cliente.rpc("leer_mi_api_key", {"proposito": proposito}).execute()
+        respuesta = cliente.rpc(
+            "clave_para", {"proposito": proposito, "secreto": secreto_del_servidor}
+        ).execute()
     except Exception as fallo:  # noqa: BLE001
         raise traducir_fallo_de_datos(fallo) from fallo
 
-    valor = getattr(respuesta, "data", None)
+    filas = getattr(respuesta, "data", None) or []
+    fila = filas[0] if isinstance(filas, list) and filas else {}
+    valor = fila.get("clave") if isinstance(fila, dict) else None
 
     if not isinstance(valor, str) or valor.strip() == "":
-        if proposito == "chat":
-            return leer_api_key_de_openai(cliente, "analisis")
         raise ErrorDeBitacora("CONFIG_API_KEY_REQUERIDA")
 
-    return ClaveDeOpenAI(valor.strip())
+    return ClaveDeOpenAI(valor.strip(), compartida=bool(fila.get("compartida")))

@@ -7,9 +7,10 @@ import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { nombreDePersona } from '@/features/conferencias/data'
 import { privacidadEfectiva } from '@/features/conferencias/query'
 import type { ConferenciaVisible } from '@/features/conferencias/query'
-import { Button, CLASES_DE_PILDORA, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import { Button, CLASES_DE_PILDORA, EleccionEnPastillas, Field, Input, MensajeDeFormulario } from '@/shared/ui'
 import type { ColorDePildora } from '@/shared/ui'
-import type { PropositoDeClave } from '../contextoApiKey'
+import { PROPOSITOS } from '../contextoApiKey'
+import type { AjustesDeIa, PropositoDeClave } from '../contextoApiKey'
 import { useApiKey } from '../useApiKey'
 
 const ID_CAMPO_API_KEY = 'config-api-key'
@@ -28,10 +29,10 @@ const ID_CAMPO_API_KEY = 'config-api-key'
 */
 
 /*
-  Dos claves, una por uso, en vez de una sola. Separarlas deja poner en
-  OpenAI un límite de gasto distinto a cada una —analizar una charla larga
-  cuesta mucho más que una pregunta de chat— y cortar una sin tocar la otra.
-  La del chat es opcional: sin ella, el chat usa la de análisis.
+  Una clave por uso. Con Groq cada cuenta tiene sus propios límites, así que
+  repartir los usos entre cuentas multiplica lo que aguanta el servicio. Con
+  una sola clave basta: la que falte se cubre con la primera que haya, en
+  este mismo orden.
 */
 const USOS: readonly {
   proposito: PropositoDeClave
@@ -40,18 +41,30 @@ const USOS: readonly {
   icono: string
 }[] = [
   {
-    proposito: 'analisis',
-    titulo: 'Análisis y memorias',
-    descripcion: 'Transcribe y analiza las conferencias que cargas, y redacta las memorias. Sin ella no se puede cargar nada.',
+    proposito: 'transcripcion',
+    titulo: 'Transcripción',
+    descripcion: 'Convierte el audio de las conferencias en texto.',
+    icono: 'graphic_eq',
+  },
+  {
+    proposito: 'fichas',
+    titulo: 'Fichas y memorias',
+    descripcion: 'Analiza lo que se dijo, escribe las fichas y redacta las memorias.',
     icono: 'auto_awesome',
   },
   {
     proposito: 'chat',
     titulo: 'Chat',
-    descripcion: 'Responde las preguntas del chat. Es opcional: si no pones una, el chat usa la de análisis.',
+    descripcion: 'Responde las preguntas del chat.',
     icono: 'forum',
   },
 ]
+
+const NOMBRE_DE_USO: Record<PropositoDeClave, string> = {
+  transcripcion: 'Transcripción',
+  fichas: 'Fichas y memorias',
+  chat: 'Chat',
+}
 
 /* Lo justo para reconocer cuál es sin poder copiarla: `sk-…a1b2`. */
 function claveAbreviada(clave: string): string {
@@ -69,8 +82,10 @@ function TarjetaDeClave({
   descripcion: string
   icono: string
 }): ReactElement {
-  const { clave: claveDeAnalisis, claveDeChat, cargando, guardar, borrar } = useApiKey()
-  const clave = proposito === 'chat' ? claveDeChat : claveDeAnalisis
+  const { claves, cargando, guardar, borrar } = useApiKey()
+  const clave = claves[proposito]
+  /* La que cubre este uso cuando no tiene la suya: la primera que haya, en el orden de respaldo. */
+  const deRespaldo = PROPOSITOS.find((otro) => otro !== proposito && claves[otro] !== null)
   const [valor, setValor] = useState('')
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -100,10 +115,8 @@ function TarjetaDeClave({
   const estado =
     cargando ? null : clave !== null ? (
       <Estado color="verde">Guardada · {claveAbreviada(clave)}</Estado>
-    ) : proposito === 'chat' ? (
-      <Estado color={claveDeAnalisis === null ? 'rosa' : 'azul'}>
-        {claveDeAnalisis === null ? 'Sin clave' : 'Usa la de análisis'}
-      </Estado>
+    ) : deRespaldo !== undefined ? (
+      <Estado color="azul">Usa la de {NOMBRE_DE_USO[deRespaldo]}</Estado>
     ) : (
       <Estado color="rosa">Falta</Estado>
     )
@@ -125,7 +138,7 @@ function TarjetaDeClave({
       </div>
 
       <Field
-        id={proposito === 'analisis' ? ID_CAMPO_API_KEY : `config-api-key-${proposito}`}
+        id={proposito === 'transcripcion' ? ID_CAMPO_API_KEY : `config-api-key-${proposito}`}
         etiqueta={clave === null ? 'Pega tu clave' : 'Reemplazar por otra'}
       >
         <Input
@@ -138,7 +151,7 @@ function TarjetaDeClave({
               void alGuardar()
             }
           }}
-          placeholder="sk-…"
+          placeholder="gsk_… o sk-…"
         />
       </Field>
 
@@ -202,17 +215,17 @@ const PASOS_PARA_CONSEGUIR_UNA_CLAVE: readonly ReactElement[] = [
   <>
     Entra a{' '}
     <a
-      href="https://platform.openai.com/api-keys"
+      href="https://console.groq.com/keys"
       target="_blank"
       rel="noreferrer"
       className="font-medium text-texto underline underline-offset-2"
     >
-      platform.openai.com/api-keys
+      console.groq.com/keys
     </a>{' '}
-    con tu cuenta de OpenAI.
+    con tu cuenta de Groq.
   </>,
-  <>Pulsa «Create new secret key» y ponle un nombre, por ejemplo «Menti Vault».</>,
-  <>Copia la clave, que empieza por «sk-», y pégala arriba. OpenAI solo la muestra una vez.</>,
+  <>Pulsa «Create API Key» y ponle un nombre, por ejemplo «Menti Vault».</>,
+  <>Copia la clave, que empieza por «gsk_», y pégala arriba. Groq solo la muestra una vez.</>,
 ]
 
 function ComoConseguirUnaClave(): ReactElement {
@@ -232,6 +245,65 @@ function ComoConseguirUnaClave(): ReactElement {
       </ol>
 
     </section>
+  )
+}
+
+/*
+  Solo para la cuenta administradora: si todos usan sus claves o cada quien
+  las suyas. Con las suyas compartidas, lo que gastan todos sale de sus
+  cuentas, así que va con el cupo de audio de hoy a la vista.
+*/
+function SeccionDeAdministracion(): ReactElement {
+  const { ajustes, cambiarClavesCompartidas } = useApiKey()
+  const [error, setError] = useState<string | null>(null)
+
+  return (
+    <section aria-label="Administración" className="flex flex-col gap-4 rounded-[24px] bg-panel p-6">
+      <div className="flex items-center gap-3">
+        <span className={`flex size-11 items-center justify-center rounded-full ${CLASES_DE_PILDORA.violeta}`}>
+          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-[22px]">
+            admin_panel_settings
+          </span>
+        </span>
+        <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Administración</h2>
+      </div>
+
+      <EleccionEnPastillas
+        etiqueta="Claves de IA"
+        opciones={[
+          { valor: 'propias', etiqueta: 'Cada quien las suyas', icono: 'person' },
+          { valor: 'compartidas', etiqueta: 'Todos usan las mías', icono: 'group' },
+        ]}
+        valor={ajustes.clavesCompartidas ? 'compartidas' : 'propias'}
+        alCambiar={(valor) => {
+          void cambiarClavesCompartidas(valor === 'compartidas').then((resultado) =>
+            setError(resultado.ok ? null : resultado.mensaje),
+          )
+        }}
+      />
+
+      {error === null ? null : <MensajeDeFormulario id="config-administracion-error">{error}</MensajeDeFormulario>}
+
+      {ajustes.clavesCompartidas ? <CupoDeHoy ajustes={ajustes} /> : null}
+    </section>
+  )
+}
+
+/* El audio que ya se transcribió hoy con las claves compartidas, contra el techo diario. */
+function CupoDeHoy({ ajustes }: { ajustes: AjustesDeIa }): ReactElement {
+  const minutos = (segundos: number): number => Math.round(segundos / 60)
+  const proporcion =
+    ajustes.limiteDiarioDeAudioS > 0 ? Math.min(1, ajustes.audioUsadoHoyS / ajustes.limiteDiarioDeAudioS) : 0
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm">
+        Audio de hoy: {minutos(ajustes.audioUsadoHoyS)} de {minutos(ajustes.limiteDiarioDeAudioS)} minutos
+      </p>
+      <div className="h-2 overflow-hidden rounded-full bg-fondo">
+        <div style={{ width: `${proporcion * 100}%` }} className="h-full rounded-full bg-acento" />
+      </div>
+    </div>
   )
 }
 
@@ -282,6 +354,7 @@ export function PantallaConfiguracion(): ReactElement {
   const idUsuario = usuario?.id ?? ''
   const { visibles } = useConferenciasVisibles(idUsuario)
   const ubicacion = useLocation()
+  const { ajustes } = useApiKey()
 
   /*
     Quien llega desde el aviso de clave faltante (el menú de cuenta, o el
@@ -302,13 +375,32 @@ export function PantallaConfiguracion(): ReactElement {
     <div className="flex flex-col gap-6 pb-6">
       <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Configuración</h1>
 
-      <div className="grid grid-cols-2 gap-4">
-        {USOS.map((uso) => (
-          <TarjetaDeClave key={uso.proposito} {...uso} />
-        ))}
-      </div>
+      {ajustes.soyAdministracion ? <SeccionDeAdministracion /> : null}
 
-      <ComoConseguirUnaClave />
+      {/*
+        Con las claves compartidas, las de cada quien no se usan: el backend
+        toma las de la administración. Enseñarlas invitaría a configurar algo
+        que no tiene efecto.
+      */}
+      {ajustes.clavesCompartidas && !ajustes.soyAdministracion ? (
+        <section className="flex flex-col gap-3 rounded-[24px] bg-ilustracion p-6 text-ilustracion-texto">
+          <h2 className="font-titulo text-xl leading-tight font-semibold">Claves compartidas</h2>
+          <p className="text-sm leading-relaxed">
+            La administración comparte sus claves de IA: no necesitas poner las tuyas.
+          </p>
+          <CupoDeHoy ajustes={ajustes} />
+        </section>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-4">
+            {USOS.map((uso) => (
+              <TarjetaDeClave key={uso.proposito} {...uso} />
+            ))}
+          </div>
+
+          <ComoConseguirUnaClave />
+        </>
+      )}
       <SeccionCompartidasConmigo visibles={visibles} />
     </div>
   )

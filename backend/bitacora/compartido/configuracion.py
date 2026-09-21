@@ -42,6 +42,16 @@ MODELO_DE_AGENTE_POR_DEFECTO = "gpt-4.1-mini"
 
 ORIGENES_PERMITIDOS_POR_DEFECTO = "http://localhost:5173"
 
+"""
+Las cadenas de modelos de Groq, del preferido a los respaldos. Solo modelos
+de producción: los de vista previa pueden desaparecer sin aviso, y un
+respaldo que ya no existe no respalda nada. La transcripción tiene uno solo
+de respaldo porque Groq no ofrece más modelos de voz.
+"""
+MODELOS_GROQ_TRANSCRIPCION_POR_DEFECTO = "whisper-large-v3-turbo,whisper-large-v3"
+MODELOS_GROQ_FICHAS_POR_DEFECTO = "openai/gpt-oss-120b,llama-3.3-70b-versatile,openai/gpt-oss-20b"
+MODELOS_GROQ_CHAT_POR_DEFECTO = "openai/gpt-oss-20b,openai/gpt-oss-120b,llama-3.1-8b-instant"
+
 
 @dataclass(frozen=True)
 class Configuracion:
@@ -62,6 +72,15 @@ class Configuracion:
     modelo_de_analisis: str
     modelo_de_agente: str
     origenes_permitidos: tuple[str, ...]
+    modelos_groq_transcripcion: tuple[str, ...] = tuple(MODELOS_GROQ_TRANSCRIPCION_POR_DEFECTO.split(","))
+    modelos_groq_fichas: tuple[str, ...] = tuple(MODELOS_GROQ_FICHAS_POR_DEFECTO.split(","))
+    modelos_groq_chat: tuple[str, ...] = tuple(MODELOS_GROQ_CHAT_POR_DEFECTO.split(","))
+    """
+    El secreto que habilita leer las claves compartidas de la administración.
+    Vacío, el backend solo usa las claves de cada quien (ver la migración
+    `20260922130000`).
+    """
+    secreto_del_servidor: str = ""
 
 
 def _requerida(entorno: Mapping[str, str], nombre: str) -> str:
@@ -100,4 +119,16 @@ def leer_configuracion(entorno: Mapping[str, str]) -> Configuracion:
         origenes_permitidos=tuple(
             origen.strip() for origen in origenes.split(",") if origen.strip() != ""
         ),
+        modelos_groq_transcripcion=_lista(
+            _opcional(entorno, "BITACORA_MODELOS_GROQ_TRANSCRIPCION", MODELOS_GROQ_TRANSCRIPCION_POR_DEFECTO)
+        ),
+        modelos_groq_fichas=_lista(
+            _opcional(entorno, "BITACORA_MODELOS_GROQ_FICHAS", MODELOS_GROQ_FICHAS_POR_DEFECTO)
+        ),
+        modelos_groq_chat=_lista(_opcional(entorno, "BITACORA_MODELOS_GROQ_CHAT", MODELOS_GROQ_CHAT_POR_DEFECTO)),
+        secreto_del_servidor=_opcional(entorno, "BITACORA_SECRETO_DEL_SERVIDOR", ""),
     )
+
+
+def _lista(valor: str) -> tuple[str, ...]:
+    return tuple(parte.strip() for parte in valor.split(",") if parte.strip() != "")

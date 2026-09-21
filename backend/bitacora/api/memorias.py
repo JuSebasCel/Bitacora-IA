@@ -60,7 +60,7 @@ def redactar(cuerpo: PedidoDeRedaccion, usuario: Usuario) -> RespuestaDeRedaccio
         raise ErrorDeBitacora("MEM_SIN_HUECOS")
 
     charla, fichas = leer_material(usuario.cliente, cuerpo.id_conferencia)
-    redactar_con = redactor_para(usuario, cliente_de_openai(usuario))
+    redactar_con = redactor_para(usuario, cliente_de_openai(usuario, "fichas"))
 
     secciones = redactar_con(
         charla,

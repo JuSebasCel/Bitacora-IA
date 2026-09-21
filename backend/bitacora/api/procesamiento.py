@@ -21,10 +21,12 @@ from bitacora.api.dependencias import (
     Usuario,
     analizador_para,
     cliente_de_openai,
+    cliente_para,
     condensador_para,
     repositorio_de_conferencias,
     transcriptor_de,
 )
+from bitacora.compartido.datos import reservar_cupo_de_audio
 from bitacora.compartido.errores import ErrorDeBitacora
 
 router = APIRouter(prefix="/conferencias", tags=["conferencias"])
@@ -75,16 +77,37 @@ def procesar(
     if conferencia.estado not in ESTADOS_PROCESABLES:
         raise ErrorDeBitacora("PROC_ESTADO_NO_PROCESABLE", conferencia.estado)
 
-    cliente = cliente_de_openai(usuario)
+    """
+    Dos clientes y no uno: la transcripción y las fichas pueden ir con claves
+    distintas (cuentas distintas de Groq, cada una con sus límites), y cada
+    uno lleva la cadena de modelos de su uso.
+
+    Con la clave compartida de la administración, la carga gasta del cupo
+    diario común, y se reserva AQUÍ, antes de aceptar: descubrir en segundo
+    plano que ya no quedaba cupo dejaría la conferencia `fallida` por algo
+    que se sabía de entrada. Solo cuenta el audio, que es lo que Groq limita
+    más; una transcripción en texto no gasta de ese cupo.
+    """
+    clave_de_voz = usuario.clave_de_openai("transcripcion")
+
+    if clave_de_voz.compartida and conferencia.fuente == "audio":
+        cabe = reservar_cupo_de_audio(
+            usuario.cliente, conferencia.duracion_en_segundos, usuario.configuracion.secreto_del_servidor
+        )
+        if not cabe:
+            raise ErrorDeBitacora("IA_CUPO_DIARIO_AGOTADO")
+
+    cliente_de_voz = cliente_para(usuario, clave_de_voz, "transcripcion")
+    cliente_de_texto = cliente_de_openai(usuario, "fichas")
 
     tareas.add_task(
         procesar_sin_propagar,
         id_conferencia,
         repositorio,
-        transcriptor_de(usuario, cliente),
-        analizador_para(usuario, cliente),
+        transcriptor_de(usuario, cliente_de_voz),
+        analizador_para(usuario, cliente_de_texto),
         registrar_fallo,
-        condensador_para(usuario, cliente),
+        condensador_para(usuario, cliente_de_texto),
     )
 
     return RespuestaDeProcesamiento(

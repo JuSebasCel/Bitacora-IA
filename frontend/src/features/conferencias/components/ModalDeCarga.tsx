@@ -125,7 +125,7 @@ export function ModalDeCarga({
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
   const { eventos, ponentes, crearEvento, crearPonente } = useDirectorio()
-  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey()
+  const { puedeUsarIa, cargando: cargandoApiKey } = useApiKey()
   const navegar = useNavigate()
 
   const entradaDeArchivo = useRef<HTMLInputElement>(null)
@@ -389,7 +389,7 @@ export function ModalDeCarga({
       .map((ponente) => ({ valor: ponente.id, etiqueta: ponente.nombre })),
   ]
 
-  const sinClave = !cargandoApiKey && apiKey === null
+  const sinClave = !cargandoApiKey && !puedeUsarIa
 
   return (
     <>

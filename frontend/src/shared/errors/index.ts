@@ -79,6 +79,7 @@ export type CodigoError =
   /* Fallos de OpenAI que llegan desde el backend. Sin ellos, quedarse sin saldo se leía como un error genérico. */
   | 'IA_API_KEY_RECHAZADA'
   | 'IA_LIMITE_DE_USO'
+  | 'IA_CUPO_DIARIO_AGOTADO'
   | 'IA_SIN_RESPUESTA'
   | 'IA_RESPUESTA_ILEGIBLE'
   | 'IA_FALLO_INESPERADO'
@@ -224,11 +225,13 @@ const MENSAJES: Record<CodigoError, string> = {
   MEM_FALLO_GENERACION:
     'No pudimos generar la memoria. Puede que la conferencia o la plantilla de origen ya no estén disponibles.',
   IA_API_KEY_RECHAZADA:
-    'OpenAI rechazó tu API key. Revísala en Configuración y vuelve a guardarla.',
+    'El proveedor de IA rechazó la API key. Revísala en Configuración y vuelve a guardarla.',
   IA_LIMITE_DE_USO:
-    'Tu cuenta de OpenAI alcanzó su límite de uso. Revísalo y vuelve a intentarlo más tarde.',
+    'La cuenta de IA alcanzó su límite de uso, también en los modelos de respaldo. Vuelve a intentarlo en un rato.',
+  IA_CUPO_DIARIO_AGOTADO:
+    'Hoy ya se usó todo el cupo de audio compartido. Vuelve a intentarlo mañana, o usa tus propias claves en Configuración.',
   IA_SIN_RESPUESTA:
-    'No pudimos comunicarnos con OpenAI. Vuelve a intentarlo en unos momentos.',
+    'No pudimos comunicarnos con el proveedor de IA. Vuelve a intentarlo en unos momentos.',
   IA_RESPUESTA_ILEGIBLE:
     'El análisis devolvió un resultado que no pudimos interpretar. Vuelve a intentarlo.',
   IA_FALLO_INESPERADO:

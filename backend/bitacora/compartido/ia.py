@@ -19,7 +19,8 @@ Dos responsabilidades, las dos de seguridad antes que de comodidad:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from types import SimpleNamespace
+from typing import Any, Callable, Protocol
 
 from bitacora.compartido.errores import ErrorDeBitacora
 
@@ -27,6 +28,11 @@ from bitacora.compartido.errores import ErrorDeBitacora
 @dataclass(frozen=True)
 class ClaveDeOpenAI:
     valor: str
+    """
+    Si es la de la cuenta administradora, compartida con todos. Decide si la
+    carga gasta del cupo diario común (`reservar_cupo_de_audio`).
+    """
+    compartida: bool = False
 
     def __repr__(self) -> str:
         return "ClaveDeOpenAI(<oculta>)"
@@ -51,11 +57,82 @@ class ClienteDeOpenAI(Protocol):
     def chat(self) -> Any: ...
 
 
-def crear_cliente(clave: ClaveDeOpenAI) -> ClienteDeOpenAI:
-    """Se importa aquí dentro para que los módulos puros no arrastren el SDK."""
+URL_DE_GROQ = "https://api.groq.com/openai/v1"
+
+
+def es_de_groq(clave: ClaveDeOpenAI) -> bool:
+    """
+    El proveedor sale de la propia clave: las de Groq empiezan por `gsk_`, las
+    de OpenAI por `sk-`. Así conviven sin un ajuste aparte: quien todavía tenga
+    una clave de OpenAI sigue funcionando, y quien pegue una de Groq pasa a
+    Groq sin tocar nada más.
+    """
+    return clave.valor.startswith("gsk_")
+
+
+"""
+Los fallos que hacen pasar al siguiente modelo de la cadena: el límite de uso
+de ese modelo (en Groq cada modelo tiene el suyo dentro de la misma cuenta),
+un modelo que ya no existe, o el proveedor que no responde. Una clave
+rechazada o una petición mal formada no mejoran cambiando de modelo: esas
+suben tal cual.
+"""
+_FALLOS_QUE_PASAN_AL_RESPALDO = frozenset(
+    {"RateLimitError", "NotFoundError", "InternalServerError", "APIConnectionError", "APITimeoutError"}
+)
+
+
+def _pasa_al_respaldo(fallo: BaseException) -> bool:
+    return any(clase.__name__ in _FALLOS_QUE_PASAN_AL_RESPALDO for clase in type(fallo).__mro__)
+
+
+class _CrearConRespaldo:
+    """Un `create` del SDK que prueba cada modelo de la cadena, en orden, hasta que uno responda."""
+
+    def __init__(self, crear: Callable[..., Any], cadena: tuple[str, ...]) -> None:
+        self._crear = crear
+        self._cadena = cadena
+
+    def create(self, **argumentos: Any) -> Any:
+        ultimo: BaseException | None = None
+
+        for modelo in self._cadena:
+            try:
+                return self._crear(**{**argumentos, "model": modelo})
+            except Exception as fallo:  # noqa: BLE001
+                if not _pasa_al_respaldo(fallo):
+                    raise
+                ultimo = fallo
+
+        assert ultimo is not None
+        raise ultimo
+
+
+class ClienteConRespaldo:
+    """
+    El cliente del SDK con una cadena de modelos: el primero es el preferido,
+    los demás los respaldos, del más capaz al de límite más holgado. Quien lo
+    usa sigue llamando `chat.completions.create(model=...)` como siempre; el
+    modelo que pida se sustituye por la cadena, así que ningún paso del
+    análisis necesita saber que existen los respaldos.
+    """
+
+    def __init__(self, cliente: Any, cadena: tuple[str, ...]) -> None:
+        self.audio = SimpleNamespace(transcriptions=_CrearConRespaldo(cliente.audio.transcriptions.create, cadena))
+        self.chat = SimpleNamespace(completions=_CrearConRespaldo(cliente.chat.completions.create, cadena))
+
+
+def crear_cliente(clave: ClaveDeOpenAI, cadena: tuple[str, ...] = ()) -> ClienteDeOpenAI:
+    """
+    Se importa aquí dentro para que los módulos puros no arrastren el SDK.
+
+    Groq habla el mismo protocolo que OpenAI: basta con cambiar la dirección.
+    Sin cadena, el cliente usa el modelo que cada llamada pida.
+    """
     from openai import OpenAI
 
-    return OpenAI(api_key=clave.valor)
+    cliente = OpenAI(api_key=clave.valor, base_url=URL_DE_GROQ if es_de_groq(clave) else None)
+    return ClienteConRespaldo(cliente, cadena) if cadena else cliente
 
 
 """

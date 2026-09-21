@@ -35,8 +35,9 @@ export function MenuDeCuenta({
   cerrarSesion: () => void
 }): ReactElement {
   const { tema, establecerTema } = useTema()
-  const { clave: apiKey, cargando: cargandoApiKey } = useApiKey()
-  const apiKeyFaltante = !cargandoApiKey && apiKey === null
+  /* Con las claves compartidas por la administración, a nadie le falta una. */
+  const { puedeUsarIa, cargando: cargandoApiKey } = useApiKey()
+  const apiKeyFaltante = !cargandoApiKey && !puedeUsarIa
   const nombreVisible = usuario.nombre === '' ? usuario.correo : usuario.nombre
   const reducirMovimiento = useReducedMotion()
   const [abierto, setAbierto] = useState(false)

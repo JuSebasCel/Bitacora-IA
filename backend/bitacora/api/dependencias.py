@@ -39,6 +39,7 @@ from bitacora.compartido.ia import (
     ClaveDeOpenAI,
     ClienteDeOpenAI,
     crear_cliente as crear_cliente_de_openai,
+    es_de_groq,
 )
 from bitacora.conferencias.repositorio import RepositorioSupabase
 from bitacora.conferencias.tipos import Segmento
@@ -81,13 +82,13 @@ class ContextoDeUsuario:
     cliente: ClienteSupabase
     configuracion: Configuracion
 
-    def clave_de_openai(self, proposito: Proposito = "analisis") -> ClaveDeOpenAI:
+    def clave_de_openai(self, proposito: Proposito = "transcripcion") -> ClaveDeOpenAI:
         """
         Se lee tarde, no al construir el contexto: los endpoints que no llaman
         a OpenAI no deberían fallar con `CONFIG_API_KEY_REQUERIDA` ni descifrar
         un secreto de Vault que no van a usar.
         """
-        return leer_api_key_de_openai(self.cliente, proposito)
+        return leer_api_key_de_openai(self.cliente, proposito, self.configuracion.secreto_del_servidor)
 
 
 def contexto_de_usuario(
@@ -115,7 +116,7 @@ def repositorio_del_agente(contexto: ContextoDeUsuario) -> RepositorioSupabaseDe
     return RepositorioSupabaseDelAgente(contexto.cliente, contexto.sesion.id_usuario)
 
 
-def cliente_de_openai(contexto: ContextoDeUsuario, proposito: Proposito = "analisis") -> ClienteDeOpenAI:
+def cliente_de_openai(contexto: ContextoDeUsuario, proposito: Proposito = "transcripcion") -> ClienteDeOpenAI:
     """
     Un cliente por petición, no uno por colaborador.
 
@@ -123,7 +124,22 @@ def cliente_de_openai(contexto: ContextoDeUsuario, proposito: Proposito = "anali
     `analizador_para` costaría dos llamadas RPC a `leer_mi_api_key()` —dos
     descifrados en Vault— para el mismo endpoint y la misma clave.
     """
-    return crear_cliente_de_openai(contexto.clave_de_openai(proposito))
+    return cliente_para(contexto, contexto.clave_de_openai(proposito), proposito)
+
+
+def cliente_para(contexto: ContextoDeUsuario, clave: ClaveDeOpenAI, proposito: Proposito) -> ClienteDeOpenAI:
+    """
+    Con una clave de Groq, el cliente lleva la cadena de modelos de su uso
+    (el preferido y sus respaldos). Con una de OpenAI, sin cadena: cada paso
+    pide su modelo de siempre.
+    """
+    ajustes = contexto.configuracion
+    cadenas = {
+        "transcripcion": ajustes.modelos_groq_transcripcion,
+        "fichas": ajustes.modelos_groq_fichas,
+        "chat": ajustes.modelos_groq_chat,
+    }
+    return crear_cliente_de_openai(clave, cadenas[proposito] if es_de_groq(clave) else ())
 
 
 def transcriptor_de(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Transcriptor:
