@@ -281,11 +281,6 @@ const EJES: readonly { valor: Eje; etiqueta: string }[] = [
   { valor: 'temas', etiqueta: 'Temas' },
 ]
 
-const AMBITOS: readonly { valor: Ambito; etiqueta: string }[] = [
-  { valor: 'seleccion', etiqueta: 'En esta selección' },
-  { valor: 'todo', etiqueta: 'En todo el archivo' },
-]
-
 const PROCEDENCIAS: readonly { valor: Segmento; etiqueta: string; icono: string }[] = [
   { valor: 'todas', etiqueta: 'Todas', icono: 'select_all' },
   { valor: 'propias', etiqueta: 'Propias', icono: 'person' },
@@ -732,6 +727,7 @@ function SelectorDePonente({
   eventos,
   ponentes,
   crearPonente,
+  eliminarPonente,
   alCambiar,
 }: {
   evento: string
@@ -739,6 +735,7 @@ function SelectorDePonente({
   eventos: ReturnType<typeof useDirectorio>['eventos']
   ponentes: ReturnType<typeof useDirectorio>['ponentes']
   crearPonente: ReturnType<typeof useDirectorio>['crearPonente']
+  eliminarPonente: ReturnType<typeof useDirectorio>['eliminarPonente']
   alCambiar: (nombre: string) => void
 }): ReactElement {
   const idEvento = eventos.find((candidato) => candidato.nombre === evento)?.id
@@ -779,6 +776,12 @@ function SelectorDePonente({
 
           alCambiar(resultado.ponente.nombre)
           return { ok: true, valor: resultado.ponente.id }
+        }}
+        /* Solo los del directorio: el nombre que ya traía la conferencia no es una entrada que borrar. */
+        alEliminar={(valor) => {
+          if (valor !== VALOR_DEL_PONENTE_ACTUAL) {
+            void eliminarPonente(valor)
+          }
         }}
         alCambiar={(valor) => {
           const elegido = ponentes.find((candidato) => candidato.id === valor)
@@ -864,7 +867,6 @@ export function PantallaArchivo({
   const [idFicha, setIdFicha] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [ambito, setAmbito] = useState<Ambito>('seleccion')
-  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   /*
     La conferencia abierta en su modal, por id y no por bandera: el modal se
@@ -887,9 +889,13 @@ export function PantallaArchivo({
   const [vista, setVista] = useState<Vista>('columnas')
   const tareas = useTareasEnSegundoPlano()
   /* Los ponentes ya creados, para cambiar el de una conferencia eligiéndolo en vez de reescribir su nombre. */
-  const { eventos: eventosDelDirectorio, ponentes: ponentesDelDirectorio, crearPonente } = useDirectorio()
+  const {
+    eventos: eventosDelDirectorio,
+    ponentes: ponentesDelDirectorio,
+    crearPonente,
+    eliminarPonente,
+  } = useDirectorio()
 
-  const pastillaDeBusqueda = useRef<HTMLDivElement>(null)
   const botonDeFiltros = useRef<HTMLButtonElement>(null)
   /*
     Anclas vivas, no fijas: hay un boton por fila, asi que el disparador se
@@ -1345,13 +1351,25 @@ export function PantallaArchivo({
       }
     >
       {fichasListadas.length === 0 ? (
-        <p className="px-6 py-4 text-base text-texto-tenue">
-          {textoBuscado.length === 0
-            ? 'No hay fichas en esta selección.'
-            : buscandoEnTodo
-              ? 'Ninguna ficha del archivo coincide con lo que buscaste.'
-              : `Ninguna ficha de ${nombreDeLaSeleccion} coincide. Prueba a buscar en todo el archivo.`}
-        </p>
+        <div className="flex flex-col items-start gap-3 px-6 py-4">
+          <p className="text-base text-texto-tenue">
+            {textoBuscado.length === 0
+              ? 'No hay fichas en esta selección.'
+              : buscandoEnTodo
+                ? 'Ninguna ficha del archivo coincide con lo que buscaste.'
+                : `Ninguna ficha de ${nombreDeLaSeleccion} coincide.`}
+          </p>
+          {/* Buscar dentro de lo elegido es lo primero; salir de ahí es un gesto aparte. */}
+          {textoBuscado.length > 0 && !buscandoEnTodo ? (
+            <button
+              type="button"
+              onClick={() => setAmbito('todo')}
+              className="cursor-pointer rounded-full bg-acento-tenue px-4 py-2 text-sm text-texto transition-colors hover:bg-ilustracion"
+            >
+              Buscar en todo el archivo
+            </button>
+          ) : null}
+        </div>
       ) : (
         fichasListadas.map((entrada) => (
           <Fila
@@ -1569,42 +1587,37 @@ export function PantallaArchivo({
           {/* Buscar, filtrar y cambiar de vista no significan nada sobre un archivo vacío. */}
           <div className="flex flex-wrap items-center gap-3">
             {/*
-              El buscador abre el modal anclado del sistema, que crece desde
-              esta pastilla. Con algo escrito se rellena y aparece la ✕: antes
-              el texto quedaba puesto sin forma de sacarlo si no era borrándolo
-              a mano dentro del modal.
+              Un campo a la vista, como en Memorias. Antes era una pastilla
+              que abría un modal con el campo dentro: dos gestos para algo que
+              se hace escribiendo, y el texto buscado quedaba escondido.
             */}
-            <div
-              ref={pastillaDeBusqueda}
-              className={`flex h-10 items-center rounded-full transition-colors ${
-                textoBuscado.length > 0 ? 'bg-acento text-acento-contraste' : 'bg-acento-tenue text-texto-tenue'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setBuscadorAbierto(true)}
-                className={`flex h-10 max-w-70 cursor-pointer items-center gap-2 rounded-full px-4 text-base transition-colors ${
-                  textoBuscado.length > 0 ? '' : 'hover:text-texto'
-                }`}
+            <div className="relative w-72">
+              <span
+                aria-hidden="true"
+                className="material-symbols-rounded icono-contorno pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-lg text-texto-tenue"
               >
-                <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
-                  search
-                </span>
-                <span className="truncate">{textoBuscado.length > 0 ? busqueda.trim() : 'Buscar'}</span>
-              </button>
-
-              {textoBuscado.length > 0 ? (
+                search
+              </span>
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(cambio) => setBusqueda(cambio.target.value)}
+                placeholder="Buscar fichas, conferencias o temas"
+                aria-label="Buscar entre las fichas"
+                className="block h-10 w-full rounded-full bg-acento-tenue pr-11 pl-11 text-base text-texto transition-colors placeholder:text-texto-tenue focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+              />
+              {textoBuscado.length === 0 ? null : (
                 <button
                   type="button"
                   onClick={limpiarBusqueda}
                   aria-label="Limpiar la búsqueda"
-                  className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100"
+                  className="absolute top-1/2 right-3 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:text-texto"
                 >
                   <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
                     close
                   </span>
                 </button>
-              ) : null}
+              )}
             </div>
 
             {/* El contador dice cuántos filtros hay puestos sin tener que abrirlo. */}
@@ -1727,42 +1740,6 @@ export function PantallaArchivo({
           {enCompleta && nivelActual !== 'detalle' ? null : detalle}
         </div>
       )}
-
-      <Modal
-        abierto={buscadorAbierto}
-        alCerrar={() => setBuscadorAbierto(false)}
-        titulo="Buscar"
-        anclaje="disparador"
-        anclaEn={pastillaDeBusqueda}
-        ancho="angosto"
-        limites={marco}
-      >
-        <input
-          autoFocus
-          type="search"
-          value={busqueda}
-          onChange={(cambio) => setBusqueda(cambio.target.value)}
-          placeholder="Fragmento, conferencia o tema"
-          aria-label="Buscar entre las fichas"
-          className="block h-12 w-full rounded-full bg-acento-tenue px-5 text-base text-texto placeholder:text-texto-tenue focus:outline-none [&::-webkit-search-cancel-button]:hidden"
-        />
-
-        {/*
-          El ámbito solo se ofrece cuando hay selección: sin nada elegido las
-          dos opciones buscan sobre lo mismo y el control sería decorativo.
-        */}
-        {nombreDeLaSeleccion === null ? null : <Segmentado opciones={AMBITOS} valor={ambito} alCambiar={setAmbito} />}
-
-        <p className="text-sm text-texto-tenue">
-          {textoBuscado.length === 0
-            ? buscandoEnTodo || nombreDeLaSeleccion === null || ambito === 'todo'
-              ? 'Busca entre todas las fichas del archivo.'
-              : `Busca solo dentro de ${nombreDeLaSeleccion}.`
-            : `${fichasListadas.length} ${fichasListadas.length === 1 ? 'ficha' : 'fichas'} ${
-                buscandoEnTodo ? 'en todo el archivo' : `en ${nombreDeLaSeleccion}`
-              }`}
-        </p>
-      </Modal>
 
       {/*
         Los filtros acotan qué conferencias entran al explorador entero: los
@@ -1887,6 +1864,7 @@ export function PantallaArchivo({
                 eventos={eventosDelDirectorio}
                 ponentes={ponentesDelDirectorio}
                 crearPonente={crearPonente}
+                eliminarPonente={eliminarPonente}
                 alCambiar={(ponente) => setEdicion((a) => ({ ...a, ponente }))}
               />
               <SelectorDeFecha
@@ -1997,22 +1975,66 @@ export function PantallaArchivo({
 
               {alEliminarConferencia === undefined ||
               conferenciaEnDetalle.procedencia !== 'propia' ? null : (
-                <AccionDeColumna
-                  icono="delete"
-                  /*
-                    Sin ancla a proposito. El modal de detalle se cierra al
-                    pulsar aqui, asi que este boton se desmonta: anclarse a el
-                    daria una caja de ceros y la confirmacion creceria desde la
-                    esquina de la pantalla. Centrada es lo correcto.
-                  */
-                  onClick={() => {
-                    botonDeBorrado.current = null
-                    setIdParaBorrar(conferenciaEnDetalle.conferencia.id)
-                    setIdEnDetalle(null)
-                  }}
+                /*
+                  La confirmación cuelga del propio botón, sobre el modal, igual
+                  que las etiquetas. Antes el detalle se cerraba al pulsar y la
+                  confirmación salía centrada, lejos de donde se había pedido:
+                  el botón ya no existía y no había a qué anclarla.
+                */
+                <Popover
+                  alinear="izquierda"
+                  etiquetaAccesible="Borrar la conferencia"
+                  claseDelBoton={`${FILA} text-error transition-colors hover:bg-acento-tenue`}
+                  claseDelPanel="w-[22rem] max-w-[90vw] p-5"
+                  boton={
+                    <>
+                      <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-xl">
+                        delete
+                      </span>
+                      Borrar la conferencia
+                    </>
+                  }
                 >
-                  Borrar la conferencia
-                </AccionDeColumna>
+                  {(cerrar) => (
+                    <div className="flex flex-col gap-4">
+                      <ul className="flex flex-col gap-2 text-sm leading-relaxed text-texto-tenue">
+                        <li>
+                          Se pierden sus{' '}
+                          {porEvento.filter((e) => e.conferencia.id === conferenciaEnDetalle.conferencia.id).length}{' '}
+                          fichas.
+                        </li>
+                        <li>Se borra el audio o la transcripción que subiste.</li>
+                        <li>Quien la tuviera compartida deja de verla.</li>
+                      </ul>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          autoFocus
+                          onClick={cerrar}
+                          className="h-10 cursor-pointer rounded-full px-4 text-sm text-texto transition-colors hover:bg-acento-tenue"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const id = conferenciaEnDetalle.conferencia.id
+                            cerrar()
+                            setIdEnDetalle(null)
+                            alEliminarConferencia(id)
+                            if (id === rama) {
+                              setRama(null)
+                              setIdFicha(null)
+                            }
+                          }}
+                          className="h-10 cursor-pointer rounded-full bg-error px-4 text-sm font-medium text-acento-contraste"
+                        >
+                          Borrar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </Popover>
               )}
             </div>
           </>

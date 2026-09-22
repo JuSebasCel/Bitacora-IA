@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Evento, Ponente } from '../data'
 import { crearEvento, crearPonente } from './directorio'
 import type { ResultadoEvento, ResultadoPonente } from './directorio'
-import { crearEventoRemoto, crearPonenteRemoto, listarDirectorio } from './repositorio'
+import {
+  crearEventoRemoto,
+  crearPonenteRemoto,
+  eliminarEventoRemoto,
+  eliminarPonenteRemoto,
+  listarDirectorio,
+} from './repositorio'
 
 /*
   Directorio compartido de eventos y ponentes (B10).
@@ -23,6 +29,13 @@ export type ValorDeDirectorio = {
   readonly cargando: boolean
   readonly crearEvento: (nombre: string) => Promise<ResultadoEvento>
   readonly crearPonente: (idEvento: string, nombre: string) => Promise<ResultadoPonente>
+  /**
+   * Quitar del directorio. Solo retira la sugerencia: las conferencias ya
+   * cargadas guardan el nombre como texto y no cambian (ver el repositorio).
+   * Borrar un evento se lleva sus ponentes.
+   */
+  readonly eliminarEvento: (idEvento: string) => Promise<void>
+  readonly eliminarPonente: (idPonente: string) => Promise<void>
 }
 
 export function useDirectorio(): ValorDeDirectorio {
@@ -83,11 +96,44 @@ export function useDirectorio(): ValorDeDirectorio {
     [ponentes],
   )
 
+  /*
+    Se quita de la lista antes de preguntar a la base: la ✓ ya se pulsó, y
+    esperar al viaje dejaría la opción a la vista como si no se hubiera
+    borrado. Si la base se niega, se vuelve a leer el directorio entero.
+  */
+  const eliminarEvento = useCallback(async (idEvento: string): Promise<void> => {
+    setEventos((anteriores) => anteriores.filter((evento) => evento.id !== idEvento))
+    setPonentes((anteriores) => anteriores.filter((ponente) => ponente.idEvento !== idEvento))
+
+    const remoto = await eliminarEventoRemoto(idEvento)
+    if (!remoto.ok) {
+      const releido = await listarDirectorio()
+      if (releido.ok) {
+        setEventos(releido.datos.eventos)
+        setPonentes(releido.datos.ponentes)
+      }
+    }
+  }, [])
+
+  const eliminarPonente = useCallback(async (idPonente: string): Promise<void> => {
+    setPonentes((anteriores) => anteriores.filter((ponente) => ponente.id !== idPonente))
+
+    const remoto = await eliminarPonenteRemoto(idPonente)
+    if (!remoto.ok) {
+      const releido = await listarDirectorio()
+      if (releido.ok) {
+        setPonentes(releido.datos.ponentes)
+      }
+    }
+  }, [])
+
   return {
     eventos,
     ponentes,
     cargando,
     crearEvento: crearEventoNuevo,
     crearPonente: crearPonenteNuevo,
+    eliminarEvento,
+    eliminarPonente,
   }
 }

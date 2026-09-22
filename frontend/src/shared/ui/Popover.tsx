@@ -100,8 +100,17 @@ export function Popover({
     }
 
     const ancla = disparador.getBoundingClientRect()
-    const { height } = panel.getBoundingClientRect()
-    const width = anchoDelBoton ? ancla.width : panel.getBoundingClientRect().width
+    /*
+      El alto del CONTENIDO, no el de la caja. La primera vez que se abre, la
+      caja todavía lleva el `maxHeight: 0` del estado inicial: medida con
+      `getBoundingClientRect` salía casi sin alto, "cabía" debajo, y el
+      calendario se abría hacia abajo fuera de la pantalla. La segunda vez
+      acertaba porque heredaba el alto de la anterior. `scrollHeight` y
+      `offsetWidth` tampoco se ven afectados por la escala de la animación
+      de entrada.
+    */
+    const height = Math.min(panel.scrollHeight, window.innerHeight - MARGEN * 2)
+    const width = anchoDelBoton ? ancla.width : panel.offsetWidth
 
     const izquierdaBase = alinear === 'derecha' ? ancla.right - width : ancla.left
     const izquierda = Math.min(

@@ -117,7 +117,7 @@ export function ModalDeCarga({
 }: PropsModalDeCarga): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { eventos, ponentes, crearEvento, crearPonente } = useDirectorio()
+  const { eventos, ponentes, crearEvento, crearPonente, eliminarEvento, eliminarPonente } = useDirectorio()
   const { puedeUsarIa, cargando: cargandoApiKey } = useApiKey()
   const navegar = useNavigate()
 
@@ -503,6 +503,12 @@ export function ModalDeCarga({
                 opciones={opcionesDeEvento}
                 textoDeCreacion="Nombre del evento nuevo"
                 alCrear={alCrearEvento}
+                alEliminar={(idEvento) => {
+                  if (campos.idEvento === idEvento) {
+                    actualizar({ idEvento: '', idPonente: '' })
+                  }
+                  void eliminarEvento(idEvento)
+                }}
                 alCambiar={(valor) => {
                   /* Cambiar de evento invalida el ponente: los ponentes cuelgan del evento. */
                   actualizar({ idEvento: valor, idPonente: '' })
@@ -520,6 +526,12 @@ export function ModalDeCarga({
                 opciones={opcionesDePonente}
                 textoDeCreacion="Nombre del ponente nuevo"
                 alCrear={alCrearPonente}
+                alEliminar={(idPonente) => {
+                  if (campos.idPonente === idPonente) {
+                    actualizar({ idPonente: '' })
+                  }
+                  void eliminarPonente(idPonente)
+                }}
                 alCambiar={(valor) => actualizar({ idPonente: valor })}
               />
             </div>

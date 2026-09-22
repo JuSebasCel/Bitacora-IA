@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
+import { ConfirmacionEnSitio } from '@/shared/ui/ConfirmacionEnSitio'
 import type { Etiqueta } from '../data'
 import type { ResultadoCreacion } from './CreadorDeEtiqueta'
 
@@ -87,40 +88,18 @@ export function SelectorDeEtiquetas({
             const marcada = marcadas.includes(etiqueta.id)
             const confirmando = porBorrar === etiqueta.id
 
-            /*
-              Borrar pide un segundo clic sobre la propia pastilla, que se
-              vuelve roja y dice "¿Borrar?". Sin ese paso, una ✕ pequeña
-              pegada al nombre se pulsa sin querer al intentar marcarla — y
-              con la etiqueta se van todas sus asignaciones, que es lo que
-              hace el descuido caro.
-            */
+            /* Borrar se confirma sobre la propia pastilla (ver `ConfirmacionEnSitio`). */
             if (confirmando) {
               return (
-                <span
+                <ConfirmacionEnSitio
                   key={etiqueta.id}
-                  className="flex items-center gap-1 rounded-full bg-error px-1 py-0.5 text-sm text-acento-contraste"
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPorBorrar(null)
-                      void alEliminar?.(etiqueta.id)
-                    }}
-                    className="cursor-pointer rounded-full px-2 py-0.5"
-                  >
-                    ¿Borrar «{etiqueta.nombre}»?
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPorBorrar(null)}
-                    aria-label="Conservar la etiqueta"
-                    className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-acento-contraste/20"
-                  >
-                    <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
-                      close
-                    </span>
-                  </button>
-                </span>
+                  nombre={etiqueta.nombre}
+                  alCancelar={() => setPorBorrar(null)}
+                  alConfirmar={() => {
+                    setPorBorrar(null)
+                    void alEliminar?.(etiqueta.id)
+                  }}
+                />
               )
             }
 

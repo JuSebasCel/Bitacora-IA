@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { ConfirmacionEnSitio } from './ConfirmacionEnSitio'
 import { Popover } from './Popover'
 
 /*
@@ -59,6 +60,12 @@ export type PropsSelectorDeOpciones<T extends string> = {
    * no se sabía cuál era cuál.
    */
   rotulo?: string
+  /**
+   * Si se pasa, cada opción trae una ✕ para borrarla, que se confirma sobre
+   * la propia opción (ver `ConfirmacionEnSitio`). Para listas que la persona
+   * mantiene —eventos, ponentes—, no para opciones fijas.
+   */
+  alEliminar?: (valor: T) => void
 }
 
 export function SelectorDeOpciones<T extends string>({
@@ -74,7 +81,9 @@ export function SelectorDeOpciones<T extends string>({
   textoDeCreacion = 'Crear',
   completo = false,
   rotulo,
+  alEliminar,
 }: PropsSelectorDeOpciones<T>): ReactElement {
+  const [porBorrar, setPorBorrar] = useState<T | null>(null)
   const [nombre, setNombre] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [creando, setCreando] = useState(false)
@@ -157,28 +166,58 @@ export function SelectorDeOpciones<T extends string>({
             const activa = opcion.valor === valor
             const enUnExtremo = indice === 0 || indice === opciones.length - 1
 
+            if (porBorrar === opcion.valor) {
+              return (
+                <div key={opcion.valor} className="flex h-12 items-center px-2">
+                  <ConfirmacionEnSitio
+                    nombre={opcion.etiqueta}
+                    alCancelar={() => setPorBorrar(null)}
+                    alConfirmar={() => {
+                      setPorBorrar(null)
+                      alEliminar?.(opcion.valor)
+                    }}
+                  />
+                </div>
+              )
+            }
+
             return (
-              <button
-                key={opcion.valor}
-                type="button"
-                aria-pressed={activa}
-                onClick={() => {
-                  alCambiar(opcion.valor)
-                  cerrar()
-                }}
-                className={`flex h-12 shrink-0 cursor-pointer items-center gap-2 px-4 text-left text-sm transition-colors ${
-                  activa
-                    ? `bg-ilustracion text-ilustracion-texto ${enUnExtremo ? 'rounded-3xl' : 'rounded-2xl'}`
-                    : 'rounded-3xl text-texto-tenue hover:bg-acento-tenue hover:text-texto'
-                }`}
-              >
-                {opcion.icono === undefined ? null : (
-                  <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
-                    {opcion.icono}
-                  </span>
+              <div key={opcion.valor} className="group flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-pressed={activa}
+                  onClick={() => {
+                    alCambiar(opcion.valor)
+                    cerrar()
+                  }}
+                  className={`flex h-12 min-w-0 flex-1 cursor-pointer items-center gap-2 px-4 text-left text-sm transition-colors ${
+                    activa
+                      ? `bg-ilustracion text-ilustracion-texto ${enUnExtremo ? 'rounded-3xl' : 'rounded-2xl'}`
+                      : 'rounded-3xl text-texto-tenue hover:bg-acento-tenue hover:text-texto'
+                  }`}
+                >
+                  {opcion.icono === undefined ? null : (
+                    <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-lg">
+                      {opcion.icono}
+                    </span>
+                  )}
+                  <span className="truncate">{opcion.etiqueta}</span>
+                </button>
+
+                {alEliminar === undefined ? null : (
+                  <button
+                    type="button"
+                    onClick={() => setPorBorrar(opcion.valor)}
+                    aria-label={`Borrar ${opcion.etiqueta}`}
+                    /* Aparece al pasar por encima o al enfocar: no ensucia la lista en reposo. */
+                    className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue opacity-0 transition-opacity group-hover:opacity-70 hover:!opacity-100 focus-visible:opacity-100"
+                  >
+                    <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+                      close
+                    </span>
+                  </button>
                 )}
-                <span className="truncate">{opcion.etiqueta}</span>
-              </button>
+              </div>
             )
           })}
 

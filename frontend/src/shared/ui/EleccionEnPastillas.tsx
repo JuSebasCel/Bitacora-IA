@@ -38,6 +38,19 @@ export type PropsEleccionEnPastillas<T extends string> = {
   etiqueta?: string
 }
 
+function contenido<T extends string>(opcion: OpcionEnPastilla<T>): ReactElement {
+  return (
+    <>
+      {opcion.icono === undefined ? null : (
+        <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-[14px]">
+          {opcion.icono}
+        </span>
+      )}
+      {opcion.etiqueta}
+    </>
+  )
+}
+
 export function EleccionEnPastillas<T extends string>({
   opciones,
   valor,
@@ -58,16 +71,23 @@ export function EleccionEnPastillas<T extends string>({
               type="button"
               aria-pressed={elegida}
               onClick={() => alCambiar(opcion.valor)}
-              className={`opcion-en-pastilla flex h-10 flex-1 basis-0 cursor-pointer items-center justify-center gap-1 rounded-3xl text-sm font-medium whitespace-nowrap ${
+              className={`opcion-en-pastilla grid h-10 flex-1 basis-0 cursor-pointer place-items-center rounded-3xl text-sm font-medium whitespace-nowrap ${
                 elegida ? 'bg-acento px-6 text-acento-contraste' : 'bg-acento-tenue px-3 text-texto-tenue hover:text-texto'
               }`}
             >
-              {opcion.icono === undefined ? null : (
-                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-[14px]">
-                  {opcion.icono}
+              <span className="col-start-1 row-start-1 flex items-center gap-1">{contenido(opcion)}</span>
+              {/*
+                El ancho que tendría elegida, reservado. Sin esto, elegir una
+                pastilla le sumaba 24px de relleno a su ancho mínimo, y en un
+                renglón justo eso bastaba para mandar una vecina al siguiente:
+                todo el grupo se reacomodaba al tocarlo. Con la reserva, elegir
+                solo reparte el ancho dentro del mismo renglón.
+              */}
+              {elegida ? null : (
+                <span aria-hidden="true" className="invisible col-start-1 row-start-1 flex items-center gap-1 px-3">
+                  {contenido(opcion)}
                 </span>
               )}
-              {opcion.etiqueta}
             </button>
           )
         })}

@@ -35,6 +35,23 @@ const VISTAS: readonly [OpcionDeVista<Vista>, OpcionDeVista<Vista>] = [
   { valor: 'lista', icono: 'view_agenda', etiqueta: 'Ver en lista' },
 ]
 
+/*
+  La vista elegida se recuerda en este navegador. Es una preferencia de
+  quien mira, como plegar el dock, y no describe qué se está viendo, así que
+  no va en la URL: sin recordarla, cada visita volvía a la cuadrícula.
+  `localStorage` puede no estar (ventana privada, datos bloqueados), y
+  entonces simplemente no se recuerda.
+*/
+const CLAVE_DE_LA_VISTA = 'menti-vault:vista-de-memorias'
+
+function vistaRecordada(): Vista {
+  try {
+    return localStorage.getItem(CLAVE_DE_LA_VISTA) === 'lista' ? 'lista' : 'grilla'
+  } catch {
+    return 'grilla'
+  }
+}
+
 function nombreDeConferencia(visibles: readonly { conferencia: { id: string; titulo: string } }[], id: string): string {
   return visibles.find((visible) => visible.conferencia.id === id)?.conferencia.titulo ?? 'Conferencia no disponible'
 }
@@ -59,7 +76,16 @@ export function PantallaMemorias(): ReactElement {
     botonQueAbrio.current = boton
     setPanelAbierto(true)
   }
-  const [vista, setVista] = useState<Vista>('grilla')
+  const [vista, setVista] = useState<Vista>(vistaRecordada)
+
+  function cambiarVista(siguiente: Vista): void {
+    setVista(siguiente)
+    try {
+      localStorage.setItem(CLAVE_DE_LA_VISTA, siguiente)
+    } catch {
+      /* Sin almacenamiento, la vista vale para esta visita. */
+    }
+  }
 
   /*
     "Generar memoria" vive en el dock y llega como `?nuevo=1`. En un efecto y
@@ -136,7 +162,7 @@ export function PantallaMemorias(): ReactElement {
               <BarraDeBusquedaDeMemorias valor={criterios.busqueda} alCambiar={alBuscar} />
             </div>
 
-            <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={setVista} />
+            <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={cambiarVista} />
 
             <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
               Generar memoria
