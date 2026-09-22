@@ -139,6 +139,7 @@ describe('mapearConferencia', () => {
       duracionEnSegundos: 2700,
       /* La fila no trae la columna: se cargó sin elegir tope, y cae a null. */
       maximoDeFichas: null,
+      tiemposEstimados: false,
       idDueno: 'usuario-1',
       estado: 'procesada',
       idTemaPrincipal: 'tema-1',

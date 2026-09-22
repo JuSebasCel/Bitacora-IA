@@ -262,9 +262,28 @@ export async function crearConferencia(
     return { ok: true, datos: conferencia }
   }
 
-  const { error } = await supabase.storage
-    .from(BUCKET_DE_AUDIO)
-    .upload(rutaDeAudio(datos.idDueno, conferencia.id, archivo.name), archivo)
+  const subida = await subirArchivoDeConferencia(datos.idDueno, conferencia.id, archivo)
+
+  if (!subida.ok) {
+    await supabase.from('conferencias').delete().eq('id', conferencia.id)
+    return subida
+  }
+
+  return { ok: true, datos: conferencia }
+}
+
+/*
+  El archivo de una conferencia que ya existe. Va aparte de `crearConferencia`
+  para que la interfaz pueda enseñar la tarjeta en cuanto la fila está creada
+  y subir el archivo después, sin nadie esperando con el modal abierto.
+*/
+export async function subirArchivoDeConferencia(
+  idDueno: string,
+  idConferencia: string,
+  archivo: File,
+): Promise<ResultadoDeConsulta<null>> {
+  const ruta = rutaDeAudio(idDueno, idConferencia, archivo.name)
+  const { error } = await supabase.storage.from(BUCKET_DE_AUDIO).upload(ruta, archivo)
 
   if (error !== null) {
     /*
@@ -278,14 +297,12 @@ export async function crearConferencia(
     console.error('[carga] el almacenamiento rechazó el archivo:', error.message, {
       archivo: archivo.name,
       bytes: archivo.size,
-      ruta: rutaDeAudio(datos.idDueno, conferencia.id, archivo.name),
+      ruta,
     })
-
-    await supabase.from('conferencias').delete().eq('id', conferencia.id)
     return { ok: false, codigo: 'CARGA_ARCHIVO_RECHAZADO' }
   }
 
-  return { ok: true, datos: conferencia }
+  return { ok: true, datos: null }
 }
 
 /*
@@ -380,4 +397,28 @@ export async function eliminarConferencia(
   return error === null
     ? { ok: true, datos: null }
     : resultadoDe({ data: null, error }, () => ({ ok: false, codigo: 'DATOS_SIN_PERMISO' }))
+}
+
+export type EstadoDeAnalisis = { readonly id: string; readonly titulo: string; readonly estado: string }
+
+/*
+  Solo lo necesario para saber si un análisis terminó: id, título y estado de
+  las conferencias propias. Es una consulta pequeña a propósito, porque se
+  repite cada pocos segundos mientras haya algo en marcha.
+*/
+export async function listarEstadosDeAnalisis(
+  idDueno: string,
+): Promise<ResultadoDeConsulta<readonly EstadoDeAnalisis[]>> {
+  try {
+    const respuesta = await supabase.from('conferencias').select('id, titulo, estado').eq('id_dueno', idDueno)
+
+    if (respuesta.error !== null || respuesta.data === null) {
+      return { ok: false, codigo: 'DATOS_FALLO_INESPERADO' }
+    }
+
+    return { ok: true, datos: respuesta.data as EstadoDeAnalisis[] }
+  } catch {
+    /* Una pasada perdida no importa: la siguiente vuelve a preguntar. */
+    return { ok: false, codigo: 'DATOS_SIN_CONEXION' }
+  }
 }

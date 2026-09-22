@@ -158,8 +158,6 @@ export function PantallaArchivoDePrueba(): ReactElement {
         <ModalDeCarga
           abierto={cargaAbierta}
           alCerrar={() => setCargaAbierta(false)}
-          etiquetas={etiquetas}
-          alCrearEtiqueta={crearEtiqueta}
           alCargar={() => setCargaAbierta(false)}
         />
       </div>

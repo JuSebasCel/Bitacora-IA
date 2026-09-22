@@ -12,6 +12,7 @@ import type { ColorDePildora } from '@/shared/ui'
 import { PROPOSITOS } from '../contextoApiKey'
 import type { AjustesDeIa, PropositoDeClave } from '../contextoApiKey'
 import { useApiKey } from '../useApiKey'
+import { cambiarPreferencia, usePreferencias } from '../preferencias'
 
 const ID_CAMPO_API_KEY = 'config-api-key'
 
@@ -253,6 +254,41 @@ function ComoConseguirUnaClave(): ReactElement {
   las suyas. Con las suyas compartidas, lo que gastan todos sale de sus
   cuentas, así que va con el cupo de audio de hoy a la vista.
 */
+/*
+  Cómo se comporta la app para esta persona. Pastillas y no interruptores:
+  cada opción dice lo que pasa, en vez de un "sí/no" que obliga a leer la
+  pregunta dos veces para saber qué significa apagado.
+*/
+function SeccionDePreferencias(): ReactElement {
+  const { analizarAlCargar, avisarAlTerminar } = usePreferencias()
+
+  return (
+    <section aria-label="Preferencias" className="flex flex-col gap-5 rounded-[24px] bg-panel p-6">
+      <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Preferencias</h2>
+
+      <EleccionEnPastillas
+        etiqueta="Al cargar una conferencia"
+        opciones={[
+          { valor: 'analizar', etiqueta: 'Analizarla en seguida', icono: 'auto_awesome' },
+          { valor: 'esperar', etiqueta: 'Dejarla en cola', icono: 'schedule' },
+        ]}
+        valor={analizarAlCargar ? 'analizar' : 'esperar'}
+        alCambiar={(valor) => void cambiarPreferencia('analizarAlCargar', valor === 'analizar')}
+      />
+
+      <EleccionEnPastillas
+        etiqueta="Cuando termina un análisis o una memoria"
+        opciones={[
+          { valor: 'avisar', etiqueta: 'Sonido y aviso en la pestaña', icono: 'notifications_active' },
+          { valor: 'callar', etiqueta: 'Sin aviso', icono: 'notifications_off' },
+        ]}
+        valor={avisarAlTerminar ? 'avisar' : 'callar'}
+        alCambiar={(valor) => void cambiarPreferencia('avisarAlTerminar', valor === 'avisar')}
+      />
+    </section>
+  )
+}
+
 function SeccionDeAdministracion(): ReactElement {
   const { ajustes, cambiarClavesCompartidas } = useApiKey()
   const [error, setError] = useState<string | null>(null)
@@ -376,6 +412,8 @@ export function PantallaConfiguracion(): ReactElement {
       <h1 className="font-titulo text-[32px] leading-none font-semibold text-texto">Configuración</h1>
 
       {ajustes.soyAdministracion ? <SeccionDeAdministracion /> : null}
+
+      <SeccionDePreferencias />
 
       {/*
         Con las claves compartidas, las de cada quien no se usan: el backend

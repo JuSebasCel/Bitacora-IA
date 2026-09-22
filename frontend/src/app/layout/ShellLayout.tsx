@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router'
 import { ChatEnCamino } from '@/features/chat/components'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
+import { useSession } from '@/features/auth/session'
+import { useAvisoDeAnalisis } from '@/features/conferencias/useAvisoDeAnalisis'
 import { despertarBackend } from '@/shared/api/backend'
 import { Modal } from '@/shared/ui'
 import { BarraLateral } from './BarraLateral'
@@ -33,6 +35,9 @@ export function ShellLayout() {
   useEffect(() => {
     despertarBackend()
   }, [])
+
+  const { usuario } = useSession()
+  useAvisoDeAnalisis(usuario?.id ?? '')
   const botonDelChat = useRef<HTMLElement | null>(null)
 
   /*

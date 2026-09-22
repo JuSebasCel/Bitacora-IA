@@ -16,12 +16,12 @@ import {
   validarArchivo,
 } from '../carga'
 import type { Densidad } from '../carga'
-import type { Conferencia, Etiqueta, FuenteDeConferencia } from '../data'
+import type { Conferencia, FuenteDeConferencia } from '../data'
 import { formatearTimestamp } from '../data'
 import { useDirectorio } from '../directorio'
-import { crearConferencia, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
-import type { ResultadoCreacion } from './CreadorDeEtiqueta'
-import { SelectorDeEtiquetas } from './SelectorDeEtiquetas'
+import { crearConferencia } from '../repositorio'
+import { subirEnSegundoPlano } from '../carga/segundoPlano'
+import { usePreferencias } from '@/features/configuracion/preferencias'
 
 /*
   Cargar una conferencia.
@@ -38,9 +38,8 @@ import { SelectorDeEtiquetas } from './SelectorDeEtiquetas'
   con el nombre del fichero. La fuente era además una pregunta que se podía
   contestar mal —elegir "audio", subir un .docx— y enterarse solo al enviar.
 
-  Lo que la IA hará se dice, no se calla: sin esa línea, quien carga no tiene
-  forma de saber que el tema y el resumen no son campos que se le olvidó
-  llenar.
+  Lo que hará la IA no se explica en un recuadro: el formulario ya no pide
+  tema ni resumen, y un párrafo que lo justificara era texto que nadie leía.
 
   Es un modal centrado y no anclado porque se abre desde tres sitios —el dock,
   la cabecera y el pie de la columna— y anclarlo lo haría nacer en un lugar
@@ -105,11 +104,8 @@ export type PropsModalDeCarga = {
   anclaEn?: RefObject<HTMLElement | null>
   /** Región dentro de la cual debe caber, para no montarse sobre la navegación. */
   limites?: RefObject<HTMLElement | null>
-  /** La conferencia ya guardada, y las etiquetas que se le eligieron al crearla. */
-  alCargar: (conferencia: Conferencia, idsDeEtiqueta: readonly string[]) => void
-  etiquetas: readonly Etiqueta[]
-  alCrearEtiqueta: (nombre: string) => Promise<ResultadoCreacion>
-  alEliminarEtiqueta?: (idEtiqueta: string) => void
+  /** La conferencia recién creada; su archivo y su análisis siguen en segundo plano. */
+  alCargar: (conferencia: Conferencia) => void
 }
 
 export function ModalDeCarga({
@@ -118,9 +114,6 @@ export function ModalDeCarga({
   anclaEn,
   limites,
   alCargar,
-  etiquetas,
-  alCrearEtiqueta,
-  alEliminarEtiqueta,
 }: PropsModalDeCarga): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
@@ -134,20 +127,10 @@ export function ModalDeCarga({
   const [archivo, setArchivo] = useState<File | null>(null)
   const [duracion, setDuracion] = useState(0)
   const [densidad, setDensidad] = useState<Densidad>('equilibrado')
-  const [etiquetasElegidas, setEtiquetasElegidas] = useState<readonly string[]>([])
   const [errores, setErrores] = useState<ErroresDeCampo>({})
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
-  /*
-    Cancelar no aborta la subida: `supabase.storage.upload` no acepta un
-    `AbortSignal` en esta version del SDK, asi que los bytes siguen viajando.
-    Lo que si se garantiza es el resultado: cuando la carga termina se deshace,
-    y no queda ninguna conferencia a medias ni ningun audio huerfano.
-
-    Es una `ref` y no estado porque `alEnviar` la lee despues de un `await`, y
-    una variable de estado le llegaria con el valor que tenia al empezar.
-  */
-  const cancelada = useRef(false)
+  const { analizarAlCargar } = usePreferencias()
   const formulario = useRef<HTMLFormElement>(null)
   const finDelFormulario = useRef<HTMLSpanElement>(null)
 
@@ -161,7 +144,6 @@ export function ModalDeCarga({
     setArchivo(null)
     setDuracion(0)
     setDensidad('equilibrado')
-    setEtiquetasElegidas([])
     setErrores({})
     setError(null)
   }, [abierto])
@@ -329,11 +311,15 @@ export function ModalDeCarga({
 
     setEnviando(true)
     setError(null)
-    cancelada.current = false
 
     const nombreEvento = eventos.find((candidato) => candidato.id === campos.idEvento)?.nombre ?? ''
     const nombrePonente = ponentes.find((candidato) => candidato.id === campos.idPonente)?.nombre ?? ''
 
+    /*
+      Aquí solo se espera a la fila: es lo que hace falta para que exista la
+      tarjeta. El archivo y el análisis siguen en segundo plano (ver
+      `carga/segundoPlano.ts`), y la tarjeta va diciendo por dónde van.
+    */
     const resultado = await crearConferencia(
       {
         titulo: campos.titulo.trim(),
@@ -346,32 +332,21 @@ export function ModalDeCarga({
         duracionEnSegundos: duracion,
         maximoDeFichas: fichasPedidas(densidad, duracion),
       },
-      archivo,
+      null,
     )
 
+    setEnviando(false)
+
     if (!resultado.ok) {
-      setEnviando(false)
       setError(mensajeDeError(resultado.codigo))
       return
     }
 
-    /* Se cancelo mientras subia: se deshace lo creado y el analisis ni se pide. */
-    if (cancelada.current) {
-      void eliminarConferencia(resultado.datos.id, idUsuario)
-      setEnviando(false)
-      alCerrar()
-      return
+    if (archivo !== null) {
+      void subirEnSegundoPlano(resultado.datos, archivo, analizarAlCargar)
     }
 
-    /*
-      Poner en marcha el análisis es lo último y no bloquea la carga: la fila
-      ya existe. Si el backend no está o rechaza, la conferencia se queda
-      `en-cola` —un estado válido, no un error— y se procesará más tarde.
-    */
-    await solicitarProcesamiento(resultado.datos.id)
-
-    setEnviando(false)
-    alCargar(resultado.datos, etiquetasElegidas)
+    alCargar(resultado.datos)
   }
 
   /*
@@ -398,12 +373,11 @@ export function ModalDeCarga({
         alCerrar={alCerrar}
         titulo="Cargar conferencia"
         /*
-          Angosto, no normal. A 720px el formulario ocupaba media pantalla de
-          ancho y aun asi se salia por abajo, que es lo peor de las dos cosas:
-          grande y cortado. En una columna de 440px todo el formulario es una
-          sola lectura vertical y el desplazamiento cae donde se espera.
+          Ancho y centrado. Angosto y pegado a su botón se veía como un menú
+          desplegable al que le habían metido un formulario; centrado se lee
+          como lo que es, un paso aparte. Sigue creciendo desde el botón.
         */
-        ancho="angosto"
+        ancho="normal"
         /*
           Aquí dentro hay un archivo elegido, un título escrito, un evento, un
           ponente y una fecha. Un clic fuera se lleva las cinco cosas, y el
@@ -411,7 +385,8 @@ export function ModalDeCarga({
           resbalar. Se sale con la X o con Escape.
         */
         cerrarAlPulsarElVelo={false}
-        {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
+        anclaje="centro"
+        {...(anclaEn === undefined ? {} : { anclaEn })}
         {...(limites === undefined ? {} : { limites })}
       >
         <form
@@ -427,8 +402,6 @@ export function ModalDeCarga({
             resueltas y el título llega sugerido.
           */}
           <div data-campo="archivo" className="flex flex-col gap-1.5">
-            <p className="px-1 text-sm font-medium text-texto-tenue">Audio o transcripción</p>
-
             <input
               ref={entradaDeArchivo}
               type="file"
@@ -449,11 +422,7 @@ export function ModalDeCarga({
                 <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-3xl text-texto">
                   upload_file
                 </span>
-                <span className="text-base text-texto">Elige el archivo de la charla</span>
-                <span className="text-sm text-texto-tenue">
-                  Audio {EXTENSIONES_POR_FUENTE.audio.join(' ')} · Texto{' '}
-                  {EXTENSIONES_POR_FUENTE.transcripcion.join(' ')}
-                </span>
+                <span className="text-base text-texto">Elige el audio o la transcripción</span>
               </button>
             ) : (
               <div className="flex items-center gap-4 rounded-[24px] bg-acento-tenue px-6 py-4">
@@ -516,19 +485,16 @@ export function ModalDeCarga({
             piden lo que les falta ("Elige un evento").
           */}
           {/*
-            Una debajo de otra, siempre, y no en un `flex-wrap`.
+            Tres celdas fijas, una por pastilla, y no un `flex-wrap`.
 
             Con el reparto automático la posición de cada pastilla dependía de
-            cuánto texto llevaba puesto. Vacías, "Elige un evento" y "Elige
-            primero el evento" no cabían juntas y quedaban apiladas; en cuanto
-            se elegía un evento y un ponente de nombre corto, sí cabían, y el
-            ponente saltaba a la fila de arriba justo al usarlo. La fecha tenía
-            el mismo problema y por eso ya iba aparte. Ahora las tres son una
-            columna y nada se mueve por rellenarlo. `items-start` para que cada
-            pastilla siga midiendo lo que su valor, sin estirarse a lo ancho.
+            cuánto texto llevaba puesto: al elegir un ponente de nombre corto,
+            saltaba a la fila de arriba justo al usarlo. En una rejilla cada
+            una tiene su sitio y nada se mueve por rellenarlo. `items-start`
+            para que cada pastilla siga midiendo lo que su valor.
           */}
-          <div className="flex flex-col items-start gap-2">
-            <div data-campo="evento">
+          <div className="grid grid-cols-3 items-start gap-2">
+            <div data-campo="evento" className="min-w-0">
               <SelectorDeOpciones
                 etiquetaAccesible="Evento"
                 icono="folder"
@@ -544,7 +510,7 @@ export function ModalDeCarga({
               />
             </div>
 
-            <div data-campo="ponente">
+            <div data-campo="ponente" className="min-w-0">
               <SelectorDeOpciones
                 etiquetaAccesible="Ponente"
                 icono="mic"
@@ -558,7 +524,7 @@ export function ModalDeCarga({
               />
             </div>
 
-            <div data-campo="fecha">
+            <div data-campo="fecha" className="min-w-0">
               <SelectorDeFecha
                 etiquetaAccesible="Fecha del evento"
                 vacio="Fecha del evento"
@@ -577,7 +543,7 @@ export function ModalDeCarga({
             {[errores.idEvento, errores.idPonente, errores.fechaDelEvento]
               .filter((mensaje): mensaje is string => mensaje !== undefined)
               .map((mensaje) => (
-                <p key={mensaje} role="alert" className="px-1 text-sm text-error">
+                <p key={mensaje} role="alert" className="col-span-3 px-1 text-sm text-error">
                   {mensaje}
                 </p>
               ))}
@@ -611,44 +577,6 @@ export function ModalDeCarga({
             />
           </div>
 
-          {/*
-            Etiquetas al crear, no después: quien sube una charla suele saber
-            ya para qué artículo la quiere. Se asignan en cuanto la fila existe.
-          */}
-          <div className="flex flex-col gap-2">
-            <p className="px-1 text-sm font-medium text-texto-tenue">
-              Etiquetas <span className="font-normal">· opcional</span>
-            </p>
-            <SelectorDeEtiquetas
-              etiquetas={etiquetas}
-              marcadas={etiquetasElegidas}
-              alAlternar={(idEtiqueta) =>
-                setEtiquetasElegidas((anteriores) =>
-                  anteriores.includes(idEtiqueta)
-                    ? anteriores.filter((id) => id !== idEtiqueta)
-                    : [...anteriores, idEtiqueta],
-                )
-              }
-              alCrear={alCrearEtiqueta}
-              {...(alEliminarEtiqueta === undefined ? {} : { alEliminar: alEliminarEtiqueta })}
-              vacio="Todavía no tienes etiquetas. Puedes crear una aquí y quedará puesta al cargar."
-            />
-          </div>
-
-          {/*
-            Decir qué se hace solo. Sin esto, el tema y el resumen parecen
-            campos que se olvidó pedir.
-          */}
-          <div className="flex gap-3 rounded-[24px] bg-fondo px-5 py-4 shadow-[inset_0_0_0_1px_var(--bitacora-filete)]">
-            <span aria-hidden="true" className="material-symbols-rounded icono-contorno shrink-0 text-xl text-texto-tenue">
-              auto_awesome
-            </span>
-            <p className="text-sm leading-relaxed text-texto-tenue">
-              Del contenido se encarga el análisis: saca el tema principal, el resumen y las fichas, cada
-              una con su minuto exacto y su tipo. Podrás revisarlas y validarlas cuando termine.
-            </p>
-          </div>
-
           {sinClave ? (
             <div className="flex flex-col gap-3 rounded-[24px] bg-fondo px-5 py-4 shadow-[inset_0_0_0_1px_var(--color-error-borde)]">
               <p className="text-sm leading-relaxed text-texto">
@@ -673,29 +601,13 @@ export function ModalDeCarga({
             </p>
           )}
 
-          {enviando ? (
-            <div className="flex gap-2">
-              <span className="flex h-12 flex-1 items-center justify-center rounded-full bg-acento-tenue text-base text-texto-tenue">
-                Cargando…
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  cancelada.current = true
-                }}
-                className="h-12 cursor-pointer rounded-full px-6 text-base text-texto transition-colors hover:bg-acento-tenue"
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <button
-              type="submit"
-              className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity"
-            >
-              Cargar conferencia
-            </button>
-          )}
+          <button
+            type="submit"
+            disabled={enviando}
+            className="h-12 cursor-pointer rounded-full bg-acento text-base font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-60"
+          >
+            Cargar conferencia
+          </button>
 
           <span ref={finDelFormulario} aria-hidden="true" />
         </form>

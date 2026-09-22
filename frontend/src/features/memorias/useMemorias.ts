@@ -7,6 +7,8 @@ import type { ResultadoMemoria } from './memorias'
 import { memoriasRecordadas, recordarMemorias } from './memoriasRecordadas'
 import { crearMemoria, eliminarMemoria, listarMemorias } from './repositorio'
 import { redactarSecciones } from './redaccion'
+import { preferenciasActuales } from '@/features/configuracion/preferencias'
+import { avisarTermino } from '@/shared/avisos/avisoDeTermino'
 import type { HuecoParaRedactar, SeccionesRedactadas } from './redaccion'
 
 /*
@@ -137,6 +139,10 @@ export function useMemorias(idUsuario: string): ValorDeMemorias {
 
       /* Al principio, no al final: el listado va de la más reciente a la más antigua. */
       setMemorias((anteriores) => [resultado.memoria, ...anteriores])
+
+      if (secciones !== undefined && preferenciasActuales().avisarAlTerminar) {
+        avisarTermino('Memoria lista')
+      }
 
       return resultado
     },

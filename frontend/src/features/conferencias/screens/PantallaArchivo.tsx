@@ -27,6 +27,8 @@ import { TIPO_EN_SINGULAR } from '../components/vocabulario'
 import { formatearTimestamp } from '../data'
 import type { Conferencia, Etiqueta, EstadoDeProcesamiento, Ficha } from '../data'
 import { densidadDe } from '../carga'
+import { estadoParaMostrar, useTareasEnSegundoPlano } from '../carga/segundoPlano'
+import type { TareaEnSegundoPlano } from '../carga/segundoPlano'
 import { useDirectorio } from '../directorio'
 import {
   CRITERIOS_POR_DEFECTO,
@@ -247,10 +249,27 @@ function useUltimoNoNulo<T>(valor: T | null): T | null {
   return valor ?? ultimo
 }
 
-/** Los dos estados desde los que el backend acepta (re)analizar. Ver `ESTADOS_PROCESABLES`. */
-function sePuedeAnalizar(estado: EstadoDeProcesamiento): boolean {
+/**
+ * Los dos estados desde los que el backend acepta (re)analizar. Ver
+ * `ESTADOS_PROCESABLES`. Con el archivo subiendo o el análisis ya pedido, no:
+ * un segundo clic solo mandaría otra petición igual.
+ */
+function sePuedeAnalizar(estado: EstadoDeProcesamiento, tarea: TareaEnSegundoPlano | null): boolean {
+  if (tarea !== null && tarea.fase !== 'error') {
+    return false
+  }
+
   return estado === 'en-cola' || estado === 'fallida'
 }
+
+/*
+  Lo que dice la fila cuando hay una tarea de este navegador en marcha: manda
+  sobre lo que dice la base, que todavía no se ha enterado.
+*/
+const TEXTO_DE_TAREA = {
+  subiendo: { texto: 'Subiendo el archivo…', icono: 'upload' },
+  iniciando: { texto: 'Analizando…', icono: 'autorenew' },
+} as const
 
 const VISTAS: readonly [OpcionDeVista<Vista>, OpcionDeVista<Vista>] = [
   { valor: 'columnas', icono: 'view_column', etiqueta: 'Ver en columnas' },
@@ -866,6 +885,7 @@ export function PantallaArchivo({
     setAudioAbierto(false)
   }, [idFicha])
   const [vista, setVista] = useState<Vista>('columnas')
+  const tareas = useTareasEnSegundoPlano()
   /* Los ponentes ya creados, para cambiar el de una conferencia eligiéndolo en vez de reescribir su nombre. */
   const { eventos: eventosDelDirectorio, ponentes: ponentesDelDirectorio, crearPonente } = useDirectorio()
 
@@ -1230,22 +1250,33 @@ export function PantallaArchivo({
             </Fila>
           ))
         : conferenciasDelEvento.map((v) => {
+            const tarea = estadoParaMostrar(v.conferencia, tareas.get(v.conferencia.id))
             const fila = (
               <Fila
                 icono="mic"
                 secundario={
-                  ESTADO_DEL_ANALISIS[v.conferencia.estado] ??
-                  `${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`
+                  tarea?.fase === 'error'
+                    ? `No se pudo analizar · ${tarea.mensaje}`
+                    : tarea !== null
+                      ? TEXTO_DE_TAREA[tarea.fase].texto
+                      : (ESTADO_DEL_ANALISIS[v.conferencia.estado] ??
+                        `${porEvento.filter((e) => e.conferencia.id === v.conferencia.id).length} fichas · ${v.conferencia.ponente}`)
                 }
                 etiquetas={etiquetasDe(v.conferencia.id)}
                 cuota={etiquetaDeCuota(
                   v.conferencia.maximoDeFichas,
                   v.conferencia.duracionEnSegundos,
                 )}
-                {...(v.conferencia.estado === 'procesada'
-                  ? {}
-                  : { icono: ICONO_DE_ESTADO[v.conferencia.estado] })}
-                trabajando={v.conferencia.estado === 'procesando'}
+                {...(tarea?.fase === 'error'
+                  ? { icono: 'error' }
+                  : tarea !== null
+                    ? { icono: TEXTO_DE_TAREA[tarea.fase].icono }
+                    : v.conferencia.estado === 'procesada'
+                      ? {}
+                      : { icono: ICONO_DE_ESTADO[v.conferencia.estado] })}
+                trabajando={
+                  (tarea !== null && tarea.fase !== 'error') || v.conferencia.estado === 'procesando'
+                }
                 activa={rama === v.conferencia.id}
                 onClick={() => {
                   setRama(v.conferencia.id)
@@ -1898,7 +1929,11 @@ export function PantallaArchivo({
             </button>
 
             <div className="mt-2 flex flex-col border-t border-filete pt-2">
-              {alAnalizar !== undefined && sePuedeAnalizar(conferenciaEnDetalle.conferencia.estado) ? (
+              {alAnalizar !== undefined &&
+              sePuedeAnalizar(
+                conferenciaEnDetalle.conferencia.estado,
+                estadoParaMostrar(conferenciaEnDetalle.conferencia, tareas.get(conferenciaEnDetalle.conferencia.id)),
+              ) ? (
                 <AccionDeColumna
                   icono="auto_awesome"
                   onClick={() => {

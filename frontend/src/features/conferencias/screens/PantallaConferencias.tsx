@@ -17,7 +17,13 @@ import {
 } from '../query'
 import { responderComparticion } from '@/features/configuracion/comparticiones/repositorio'
 import type { CriteriosDeListado } from '../query'
-import { actualizarConferencia, editarFicha, eliminarConferencia, solicitarProcesamiento } from '../repositorio'
+import { actualizarConferencia, editarFicha, eliminarConferencia } from '../repositorio'
+import {
+  alTerminarUnaTarea,
+  analizarEnSegundoPlano,
+  descartarAviso,
+  useAvisosDeCarga,
+} from '../carga/segundoPlano'
 import { useEtiquetas } from '../tags'
 import { PantallaArchivo } from './PantallaArchivo'
 
@@ -54,6 +60,20 @@ export function PantallaConferencias(): ReactElement {
   const [params, setParams] = useSearchParams()
   const [panelDeCargaAbierto, setPanelDeCargaAbierto] = useState(false)
   const [compartirAbierto, setCompartirAbierto] = useState(false)
+  const avisosDeCarga = useAvisosDeCarga()
+
+  /*
+    Cuando una subida o una petición de análisis termina en segundo plano, la
+    lista se vuelve a leer: es la única forma de que la tarjeta pase de lo
+    que sabía este navegador a lo que ya dice la base.
+  */
+  useEffect(() => {
+    alTerminarUnaTarea(() => {
+      recargar()
+      recargarTemas()
+    })
+    return () => alTerminarUnaTarea(null)
+  }, [recargar, recargarTemas])
 
   /*
     El modal de carga crece desde el botón de la cabecera. También cuando lo
@@ -175,6 +195,29 @@ export function PantallaConferencias(): ReactElement {
 
   return (
     <div ref={marco} className="flex min-h-0 flex-1 flex-col">
+      {avisosDeCarga.map((aviso) => (
+        <div
+          key={aviso.id}
+          role="alert"
+          className="mx-6 mt-4 flex items-center gap-3 rounded-[24px] bg-acento-tenue px-5 py-3 text-sm text-texto"
+        >
+          <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-lg text-error">
+            error
+          </span>
+          <span className="min-w-0 flex-1">{aviso.texto}</span>
+          <button
+            type="button"
+            onClick={() => descartarAviso(aviso.id)}
+            aria-label="Cerrar el aviso"
+            className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-full text-texto-tenue transition-colors hover:bg-fondo hover:text-texto"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded text-lg">
+              close
+            </span>
+          </button>
+        </div>
+      ))}
+
       {/* El título y los controles viven dentro del archivo, en el mismo renglón. */}
       <PantallaArchivo
         visibles={listadas}
@@ -197,15 +240,11 @@ export function PantallaConferencias(): ReactElement {
         alAlternarAsignacion={alAlternarAsignacion}
         alEliminarEtiqueta={(idEtiqueta) => void eliminar(idEtiqueta)}
         /*
-          Se recarga en cuanto el backend acepta: la fila pasa a `procesando` y
-          la fila de la conferencia lo dice, que es la única señal de que algo
-          empezó a moverse.
+          La fila dice "Analizando…" en el acto, sin esperar a que el backend
+          despierte y conteste; si no acepta, la propia fila dice por qué.
         */
         alAnalizar={(idConferencia) => {
-          void solicitarProcesamiento(idConferencia).then(() => {
-            recargar()
-            recargarTemas()
-          })
+          void analizarEnSegundoPlano(idConferencia)
         }}
         alEditarFicha={async (idFicha, texto) => {
           const resultado = await editarFicha(idFicha, texto)
@@ -257,22 +296,11 @@ export function PantallaConferencias(): ReactElement {
       <ModalDeCarga
         abierto={panelDeCargaAbierto}
         alCerrar={() => setPanelDeCargaAbierto(false)}
-        etiquetas={espacio.etiquetas}
-        alCrearEtiqueta={alCrearEtiqueta}
-        alEliminarEtiqueta={(idEtiqueta) => void eliminar(idEtiqueta)}
         anclaEn={botonDeCarga}
         limites={marco}
-        /*
-          Las etiquetas elegidas al cargar se asignan aquí y no dentro del
-          modal: antes de guardar no hay conferencia a la que pegarlas, así
-          que solo pueden ponerse cuando la fila ya existe.
-        */
-        alCargar={(conferencia, idsDeEtiqueta) => {
+        alCargar={() => {
           setPanelDeCargaAbierto(false)
-
-          void Promise.all(idsDeEtiqueta.map((idEtiqueta) => asignar(idEtiqueta, conferencia.id))).then(
-            recargar,
-          )
+          recargar()
         }}
       />
     </div>
