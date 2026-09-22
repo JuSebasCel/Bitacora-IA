@@ -13,6 +13,7 @@ import { PROPOSITOS } from '../contextoApiKey'
 import type { AjustesDeIa, PropositoDeClave } from '../contextoApiKey'
 import { useApiKey } from '../useApiKey'
 import { cambiarPreferencia, usePreferencias } from '../preferencias'
+import { cambiarCierreDelSitio, useCierreDelSitio } from '../cierreDelSitio'
 
 const ID_CAMPO_API_KEY = 'config-api-key'
 
@@ -292,6 +293,8 @@ function SeccionDePreferencias(): ReactElement {
 function SeccionDeAdministracion(): ReactElement {
   const { ajustes, cambiarClavesCompartidas } = useApiKey()
   const [error, setError] = useState<string | null>(null)
+  const { usuario } = useSession()
+  const { cerrado } = useCierreDelSitio(usuario?.id ?? '')
 
   return (
     <section aria-label="Administración" className="flex flex-col gap-4 rounded-[24px] bg-panel p-6">
@@ -314,6 +317,24 @@ function SeccionDeAdministracion(): ReactElement {
         alCambiar={(valor) => {
           void cambiarClavesCompartidas(valor === 'compartidas').then((resultado) =>
             setError(resultado.ok ? null : resultado.mensaje),
+          )
+        }}
+      />
+
+      {/*
+        Cerrar la app a los demás mientras se trabaja en ella: ven una
+        pantalla de "estamos trabajando" y la administración sigue entrando.
+      */}
+      <EleccionEnPastillas
+        etiqueta="Acceso a la app"
+        opciones={[
+          { valor: 'abierta', etiqueta: 'Abierta', icono: 'lock_open' },
+          { valor: 'cerrada', etiqueta: 'Cerrada, en construcción', icono: 'construction' },
+        ]}
+        valor={cerrado ? 'cerrada' : 'abierta'}
+        alCambiar={(valor) => {
+          void cambiarCierreDelSitio(valor === 'cerrada').then((resultado) =>
+            setError(resultado.ok ? null : 'No se pudo cambiar el acceso. Vuelve a intentarlo.'),
           )
         }}
       />

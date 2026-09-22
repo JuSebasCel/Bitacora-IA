@@ -4,6 +4,7 @@ import { PantallaAcceso, PantallaRegistro } from '@/features/auth/screens'
 import { SessionProvider } from '@/features/auth/session'
 import { ShellLayout } from '@/app/layout'
 import { RutaProtegida } from '@/app/RutaProtegida'
+import { CompuertaDelSitio } from '@/app/CompuertaDelSitio'
 import { RutaPublica } from '@/app/RutaPublica'
 import { SoloEscritorio } from '@/app/SoloEscritorio'
 import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
@@ -41,6 +42,7 @@ export function App(): ReactElement {
             </Route>
 
             <Route element={<RutaProtegida />}>
+              <Route element={<CompuertaDelSitio />}>
               <Route element={<ShellLayout />}>
                 <Route index element={<Navigate to="/conferencias" replace />} />
                 <Route path="/conferencias" element={<PantallaConferencias />} />
@@ -60,6 +62,7 @@ export function App(): ReactElement {
                 <Route path="/plantillas" element={<PantallaPlantillas />} />
                 <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
                 <Route path="/configuracion" element={<PantallaConfiguracion />} />
+              </Route>
               </Route>
             </Route>
 
