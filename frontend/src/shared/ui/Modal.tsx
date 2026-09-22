@@ -105,6 +105,37 @@ function anclaUtilizable(elemento: HTMLElement | null | undefined): DOMRect | nu
   return caja.width > 0 && caja.height > 0 ? caja : null
 }
 
+/*
+  Coloca la ventana pegada a su disparador y dentro de la pantalla: alineada
+  por la derecha con el botón (o a su derecha, con `crecerHacia`), y con el
+  borde superior subido lo necesario para que su alto quepa.
+*/
+function situarAnclado(
+  ventana: HTMLElement,
+  caja: DOMRect,
+  crecerHacia: 'izquierda' | 'derecha',
+  bordeIzquierdo: number,
+): void {
+  ventana.style.position = 'absolute'
+  ventana.style.top = `${caja.top}px`
+  ventana.style.right = `${window.innerWidth - caja.right}px`
+
+  const { width: anchoVentana, height: altoVentana } = ventana.getBoundingClientRect()
+
+  ventana.style.top = `${Math.max(MARGEN, Math.min(caja.top, window.innerHeight - altoVentana - MARGEN))}px`
+
+  if (crecerHacia === 'derecha') {
+    const izquierda = Math.min(caja.right + MARGEN / 2, window.innerWidth - anchoVentana - MARGEN)
+    ventana.style.right = ''
+    ventana.style.left = `${Math.max(bordeIzquierdo, izquierda)}px`
+  } else {
+    const derecha = window.innerWidth - caja.right
+    if (window.innerWidth - derecha - anchoVentana < bordeIzquierdo) {
+      ventana.style.right = `${window.innerWidth - bordeIzquierdo - anchoVentana}px`
+    }
+  }
+}
+
 export function Modal({
   abierto,
   alCerrar,
@@ -121,6 +152,7 @@ export function Modal({
   const ventanaRef = useRef<HTMLDivElement>(null)
   const veloRef = useRef<HTMLDivElement>(null)
   const pulsadoEnElVelo = useRef(false)
+  const observadorDeTamano = useRef<ResizeObserver | null>(null)
   const alCerrarRef = useRef(alCerrar)
 
   /* Sobrevive a `abierto`: al cerrar hay que seguir en el DOM lo que dure la salida. */
@@ -143,31 +175,32 @@ export function Modal({
 
     const ancla = anclaUtilizable(anclaEn?.current)
 
-    if (anclaje === 'disparador' && ancla !== null) {
-      const caja = ancla
-      ventana.style.position = 'absolute'
-      ventana.style.top = `${caja.top}px`
-      ventana.style.right = `${window.innerWidth - caja.right}px`
-
-      const { width: anchoVentana, height: altoVentana } = ventana.getBoundingClientRect()
+    function situarJuntoAlAncla(elemento: HTMLElement, caja: DOMRect): void {
       const zona = limites?.current?.getBoundingClientRect()
-      const bordeIzquierdo = (zona?.left ?? 0) + MARGEN
+      situarAnclado(elemento, caja, crecerHacia, (zona?.left ?? 0) + MARGEN)
+    }
 
-      ventana.style.top = `${Math.max(MARGEN, Math.min(caja.top, window.innerHeight - altoVentana - MARGEN))}px`
+    if (anclaje === 'disparador' && ancla !== null) {
+      situarJuntoAlAncla(ventana, ancla)
 
-      if (crecerHacia === 'derecha') {
-        const izquierda = Math.min(
-          caja.right + MARGEN / 2,
-          window.innerWidth - anchoVentana - MARGEN,
-        )
-        ventana.style.right = ''
-        ventana.style.left = `${Math.max(bordeIzquierdo, izquierda)}px`
-      } else {
-        const derecha = window.innerWidth - caja.right
-        if (window.innerWidth - derecha - anchoVentana < bordeIzquierdo) {
-          ventana.style.right = `${window.innerWidth - bordeIzquierdo - anchoVentana}px`
+      /*
+        Y otra vez cada vez que la ventana cambie de alto.
+
+        El primer cálculo se hace con lo que hay dentro en ese instante, y
+        varios modales crecen después: el de generar memoria mide un par de
+        renglones hasta que llegan las conferencias y las plantillas. Medido
+        solo al abrir, un modal que nace abajo —el botón del estado vacío está
+        a media pantalla— acababa saliéndose por el borde inferior. El
+        observador vuelve a subirlo en cuanto crece.
+      */
+      const observador = new ResizeObserver(() => {
+        const anclaAhora = anclaUtilizable(anclaEn?.current)
+        if (anclaAhora !== null) {
+          situarJuntoAlAncla(ventana, anclaAhora)
         }
-      }
+      })
+      observador.observe(ventana)
+      observadorDeTamano.current = observador
     }
 
     if (ancla === null) {
@@ -194,7 +227,11 @@ export function Modal({
       ventana.style.transform = ''
     })
 
-    return () => cancelAnimationFrame(cuadro)
+    return () => {
+      cancelAnimationFrame(cuadro)
+      observadorDeTamano.current?.disconnect()
+      observadorDeTamano.current = null
+    }
   }, [abierto, montado, anclaje, anclaEn, limites, crecerHacia])
 
   /* Salida: el mismo FLIP al revés; al terminar, recién ahí se desmonta. */

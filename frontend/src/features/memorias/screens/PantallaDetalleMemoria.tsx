@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { useConferenciasVisibles } from '@/features/conferencias/components/useConferenciasVisibles'
@@ -9,7 +9,7 @@ import { usePlantillas } from '@/features/plantillas/usePlantillas'
 import { useTemas } from '@/features/taxonomia'
 import type { CodigoError } from '@/shared/errors'
 import { mensajeDeError } from '@/shared/errors'
-import { Esqueleto, PanelDeError } from '@/shared/ui'
+import { Esqueleto, PanelDeError, useCrecerDesdeOrigen } from '@/shared/ui'
 import { VistaPreviaDeMemoria } from '../components'
 import type { ResultadoDeMemoria } from '../generarMemoria'
 import { generarMemoria } from '../generarMemoria'
@@ -53,6 +53,9 @@ export function PantallaDetalleMemoria(): ReactElement {
   const { memorias, cargando: cargandoMemorias } = useMemorias(idUsuario)
   const { visibles, fichas: fichasVisiblesTodas, carga } = useConferenciasVisibles(idUsuario)
   const { plantillas, cargando: cargandoPlantillas } = usePlantillas()
+  const pantalla = useRef<HTMLDivElement>(null)
+  /* Crece desde la tarjeta de la que se abrió (ver `shared/ui/crecerDesde.ts`). */
+  useCrecerDesdeOrigen(pantalla, idMemoria)
 
   const memoria = memorias.find((candidata) => candidata.id === idMemoria)
   const conferenciaVisible = visibles.find((visible) => visible.conferencia.id === memoria?.idConferencia)
@@ -156,7 +159,7 @@ export function PantallaDetalleMemoria(): ReactElement {
     plantilla === undefined || memoria.secciones === undefined ? [] : huecosPorRevisar(plantilla, memoria.secciones)
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
+    <div ref={pantalla} className="flex min-h-0 flex-1 flex-col gap-6">
       <div className="flex flex-col gap-1">
         <EnlaceDeRegreso />
         <h1 className="font-titulo text-[32px] leading-tight font-semibold text-texto">{memoria.nombre}</h1>

@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactElement } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { esCorreoValido, useSession } from '@/features/auth/session'
 import { mensajeDeError } from '@/shared/errors'
-import { Button, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import { Button, CampoDeContrasena, Field, Input, MensajeDeFormulario } from '@/shared/ui'
 import { destinoTrasAcceder } from './destino'
 import { CLASES_ENLACE, MarcoDeAcceso, PieDeMarco } from './MarcoDeAcceso'
 
@@ -104,8 +104,7 @@ export function PantallaAcceso(): ReactElement {
           obligatorio
           error={erroresDeCampo.contrasena}
         >
-          <Input
-            type="password"
+          <CampoDeContrasena
             name="contrasena"
             autoComplete="current-password"
             placeholder="••••••••"

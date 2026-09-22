@@ -56,7 +56,12 @@ export type MarcadorSimpleDeDocx = {
    * campo no pidió migración, pero tampoco lo rellenó en las filas viejas.
    */
   readonly instruccion?: string
-  /** Qué hacer cuando la IA no encuentra nada para este campo. Sin valor, `dejar-vacio`. */
+  /**
+   * Qué hacer cuando la IA no encuentra nada para este campo. Sin valor,
+   * `quitar`: en "Tema: [[Tema]]", dejar el renglón deja un "Tema:" colgando,
+   * que se lee como un descuido. Quitarlo entero no deja rastro de que ese
+   * campo existía.
+   */
   readonly siVacio?: ComportamientoSiVacio
   /**
    * Si la IA redacta o copia. Sin valor, `redactar`.

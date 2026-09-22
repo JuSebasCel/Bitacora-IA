@@ -85,9 +85,9 @@ const FORMATOS: readonly OpcionDeSelector<FormatoDeMarcador>[] = [
   marcador `[[SI: ...]]` de Word, que envuelve lo que haga falta.
 */
 const SI_VACIO: readonly OpcionDeSelector<ComportamientoSiVacio>[] = [
-  { valor: 'dejar-vacio', etiqueta: 'Dejarlo en blanco', icono: 'check_box_outline_blank' },
   { valor: 'quitar', etiqueta: 'Quitar el renglón', icono: 'backspace' },
-  { valor: 'avisar', etiqueta: 'Avisarme', icono: 'notifications' },
+  { valor: 'dejar-vacio', etiqueta: 'Dejarlo en blanco', icono: 'check_box_outline_blank' },
+  { valor: 'avisar', etiqueta: 'Dejarlo y avisarme', icono: 'notifications' },
 ]
 
 /*
@@ -375,7 +375,7 @@ function CampoConfigurable({
   const listo = tieneInstruccion(marcador)
   const indice = marcador.contexto.indexOf(marcador.textoOriginal)
   const modo = marcador.modo ?? 'redactar'
-  const siVacio = marcador.siVacio ?? 'dejar-vacio'
+  const siVacio = marcador.siVacio ?? 'quitar'
 
   /* Un color por campo, siempre el mismo: su disco en la lista y su marcador en el contexto. */
   const color = colorPorClave(marcador.id)

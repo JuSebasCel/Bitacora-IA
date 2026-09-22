@@ -145,7 +145,8 @@ export function prepararComandos(
 
           if (redactado === null) {
             datos[variable] = ''
-            pideQuitarse ||= marcador.siVacio === 'quitar'
+            /* Sin elección explícita se quita el renglón: ver `ComportamientoSiVacio`. */
+            pideQuitarse ||= (marcador.siVacio ?? 'quitar') === 'quitar'
           } else {
             datos[variable] = conFormato(redactado, marcador.modo === 'cita' ? 'parrafo' : marcador.formato)
             tieneContenido = true

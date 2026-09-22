@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { motion, useReducedMotion } from 'motion/react'
 import { esCorreoValido, useSession } from '@/features/auth/session'
 import { mensajeDeError, type CodigoError } from '@/shared/errors'
-import { Button, Field, Input, MensajeDeFormulario } from '@/shared/ui'
+import { Button, CampoDeContrasena, Field, Input, MensajeDeFormulario } from '@/shared/ui'
 import { ChecklistDeContrasena } from './ChecklistDeContrasena'
 import { contrasenaCumpleTodo } from './reglasDeContrasena'
 import { destinoTrasAcceder } from './destino'
@@ -224,8 +224,7 @@ export function PantallaRegistro(): ReactElement {
                 obligatorio
                 error={erroresDeCampo.contrasena}
               >
-                <Input
-                  type="password"
+                <CampoDeContrasena
                   name="contrasena"
                   autoComplete="new-password"
                   placeholder="••••••••"

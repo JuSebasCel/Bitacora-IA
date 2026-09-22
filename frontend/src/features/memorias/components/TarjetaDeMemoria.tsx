@@ -1,4 +1,6 @@
 import type { ReactElement } from 'react'
+import { useRef } from 'react'
+import { recordarOrigenDeApertura, useAterrizarDesdeCierre } from '@/shared/ui'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { formatearFecha } from '@/features/conferencias/data'
@@ -37,6 +39,9 @@ export function TarjetaDeMemoria({
   variante = 'tarjeta',
 }: PropsTarjetaDeMemoria): ReactElement {
   const esFila = variante === 'fila'
+  const tarjeta = useRef<HTMLDivElement>(null)
+  /* Al volver del detalle, la tarjeta se recompone desde donde estaba la pantalla. */
+  useAterrizarDesdeCierre(tarjeta, memoria.id)
   const [progreso, setProgreso] = useState(() => progresoDeGeneracion(memoria.generadaEl, Date.now()))
 
   useEffect(() => {
@@ -73,6 +78,8 @@ export function TarjetaDeMemoria({
       que se va a pulsar.
     */
     <div
+      ref={tarjeta}
+      data-memoria={memoria.id}
       /*
         `bg-fondo` y no `bg-panel`: el panel que las contiene pasó a ser gris,
         y una tarjeta del mismo tono sobre él deja de leerse como tarjeta.
@@ -83,8 +90,15 @@ export function TarjetaDeMemoria({
         esFila ? 'flex items-center gap-4 py-3 pr-14 pl-4' : 'flex flex-col gap-3 p-6'
       }`}
     >
+      {/*
+        Abrir una memoria la hace crecer hasta su pantalla, y volver la
+        devuelve a su sitio en el listado: el mismo recorrido de las
+        plantillas (`shared/ui/crecerDesde.ts`). Sin esto, el detalle
+        aparecía de golpe y costaba saber de cuál de las tarjetas venía.
+      */}
       <Link
         to={`/memorias/${memoria.id}`}
+        onClick={(evento) => recordarOrigenDeApertura(evento.currentTarget.closest('[data-memoria]'))}
         className={esFila ? 'flex min-w-0 flex-1 items-center gap-4' : 'flex flex-col gap-3'}
       >
         <div className={esFila ? 'flex min-w-0 flex-1 items-center gap-3' : 'flex items-center gap-3'}>
