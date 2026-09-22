@@ -144,17 +144,6 @@ export function BarraLateral({
               <CampanaDeAvisos idUsuario={usuario.id} />
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={alPlegar}
-            aria-label="Ocultar el panel lateral"
-            className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto md:flex"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
-              left_panel_close
-            </span>
-          </button>
         </div>
 
 
@@ -210,6 +199,26 @@ export function BarraLateral({
             <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
               lock
             </span>
+          </button>
+        </div>
+
+        {/*
+          Plegar vive abajo, al pie del dock, y no en el renglón del logo: ahí
+          le quitaba el sitio al nombre, que se cortaba en "Menti Va…". Al pie
+          no compite con nada, y es donde se busca un control que no es de
+          navegar.
+        */}
+        <div className="mt-auto hidden pt-4 md:flex">
+          <button
+            type="button"
+            onClick={alPlegar}
+            aria-label="Ocultar el panel lateral"
+            className="flex h-9 cursor-pointer items-center gap-2 rounded-full px-2.5 text-sm text-texto-tenue transition-colors hover:bg-acento-tenue hover:text-texto"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
+              left_panel_close
+            </span>
+            Ocultar
           </button>
         </div>
       </div>
