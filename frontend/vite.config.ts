@@ -4,7 +4,24 @@ import tailwindcss from '@tailwindcss/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig({
+/*
+  En producción la app vive en `menti.site/apps/vault`: la raíz del dominio
+  queda para una futura página que reúna todas las apps. La salida se escribe
+  en `dist/apps/vault` para que la ruta de cada archivo en disco sea la misma
+  que en la URL; si se dejara en `dist/` con `base` apuntando a otra ruta,
+  Vercel no encontraría los recursos y haría falta reescribirlos uno por uno.
+
+  Solo al construir: en desarrollo la app sigue en la raíz de
+  `localhost:5173`, que es el origen que el backend acepta por CORS.
+*/
+const RUTA_EN_PRODUCCION = '/apps/vault/'
+
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? RUTA_EN_PRODUCCION : '/',
+  build: {
+    outDir: command === 'build' ? `dist${RUTA_EN_PRODUCCION}` : 'dist',
+    emptyOutDir: true,
+  },
   /*
     `docx-templates` (F4, generación de vistas previas de .docx) usa el
     global `Buffer` de Node internamente al construir el XML de salida.
@@ -69,4 +86,4 @@ export default defineConfig({
     */
     testTimeout: 15_000,
   },
-})
+}))
