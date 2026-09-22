@@ -1,20 +1,61 @@
 # Despliegue de Menti Vault
 
-Tres piezas, las tres en plan gratuito:
+Tres piezas, las tres en plan gratuito y sin tarjeta:
 
 | Pieza | Dónde | Qué |
 |---|---|---|
 | Base de datos, sesiones, archivos | Supabase | Ya está en producción. |
 | Frontend | Vercel | La app de React, con tu dominio. |
-| Backend | Oracle Cloud "Always Free" | La API de IA, en un servidor propio con Docker. |
+| Backend | **Koyeb** | La API de IA, construida desde `backend/Dockerfile`. |
 
-El dominio de Hostinger apunta a las dos últimas: `tudominio.com` a Vercel y
-`api.tudominio.com` al servidor de Oracle. En toda la guía, cambia
-`tudominio.com` por el tuyo.
+`tudominio.com` apunta a Vercel. El backend queda en una dirección de Koyeb
+(`https://<algo>.koyeb.app`) que solo usa el frontend, así que no necesita
+subdominio propio. En toda la guía, cambia `tudominio.com` por el tuyo.
+
+Oracle Cloud (sección 1, más abajo) queda como alternativa con más memoria,
+pero pide una tarjeta que acepte su verificación.
 
 ---
 
-## 1. El servidor en Oracle Cloud
+## 0. El backend en Koyeb (sin tarjeta)
+
+Plan gratuito: 512 MB de RAM, 0,1 CPU, un servicio. Se duerme tras una hora
+sin tráfico y despierta en segundos, así que un análisis de una hora de
+audio (unos 10 minutos de trabajo) no se corta.
+
+1. Crea la cuenta en <https://www.koyeb.com> entrando con **GitHub**.
+2. **Create Service → Web Service → GitHub**, y elige el repositorio
+   `Menti-Vault`, rama `dev`.
+3. **Builder**: `Dockerfile`, con **Work directory** `backend` (ahí está el
+   `Dockerfile`).
+4. **Instance**: `Free`. **Region**: Washington, D.C. o Frankfurt (las únicas
+   del plan gratuito).
+5. **Exposed ports**: `8000`, protocolo HTTP, ruta `/`.
+6. **Health check**: HTTP en la ruta `/docs`.
+7. **Environment variables** (marca como *Secret* las dos últimas):
+
+   | Variable | Valor |
+   |---|---|
+   | `BITACORA_ORIGENES_PERMITIDOS` | `https://tudominio.com,https://www.tudominio.com` |
+   | `SUPABASE_URL` | La de Supabase (Project Settings → API). |
+   | `SUPABASE_ANON_KEY` | La anon key de Supabase. |
+   | `BITACORA_SECRETO_DEL_SERVIDOR` | **El mismo** de `backend/.env` en tu computador. |
+
+8. **Deploy**. La primera construcción tarda varios minutos (instala
+   LibreOffice). Cuando diga *Healthy*, copia la dirección pública del
+   servicio (`https://….koyeb.app`) y comprueba que `…/docs` abre.
+
+Esa dirección es el `VITE_API_URL` del frontend (sección 4).
+
+Cada `git push` a `dev` vuelve a desplegar solo.
+
+**Si algo falla**: la pestaña *Logs* del servicio. Lo que más probablemente
+se quede corto con 512 MB es la conversión de una memoria a PDF; si pasa, la
+memoria se sigue pudiendo descargar en Word.
+
+---
+
+## 1. Alternativa: el servidor en Oracle Cloud
 
 ### 1.1 Crear la cuenta
 
@@ -163,7 +204,7 @@ cd ~/Menti-Vault && git pull && cd despliegue && docker compose up -d --build
    |---|---|
    | `VITE_SUPABASE_URL` | La de Supabase. |
    | `VITE_SUPABASE_ANON_KEY` | La anon key de Supabase. |
-   | `VITE_API_URL` | `https://api.tudominio.com` |
+   | `VITE_API_URL` | La dirección del backend: `https://….koyeb.app` (o `https://api.tudominio.com` si usaste Oracle). |
 
 4. **Deploy**. En **Settings → Git**, la rama de producción debería ser
    `main`; mientras el trabajo siga en `dev`, cambia esa rama a `dev` o une
