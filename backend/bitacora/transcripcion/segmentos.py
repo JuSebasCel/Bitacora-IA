@@ -194,9 +194,11 @@ def segmentos_desde_transcripcion(texto: str, duracion_en_segundos: int) -> tupl
     forma silenciosa: la coordenada existiría, se vería igual de fiable en la
     interfaz, y estaría siempre mal.
 
-    Sin marcas y sin duración declarada no hay ninguna base sobre la que
-    estimar, y ahí se falla en vez de inventar: es el único caso en que este
-    backend se niega a procesar contenido que sí podría analizar.
+    Sin marcas y sin duración declarada, la duración se estima por ritmo de
+    habla. Antes se fallaba en vez de estimar, pero la interfaz nunca declara
+    duración al subir una transcripción —solo la conoce de un audio—, así que
+    todo texto sin marcas moría ahí. Los segmentos siguen saliendo con
+    `estimado=True`: la coordenada se sabe aproximada y se trata como tal.
     """
     marcadas = _lineas_con_marca(texto)
 
@@ -228,7 +230,7 @@ def segmentos_desde_transcripcion(texto: str, duracion_en_segundos: int) -> tupl
         raise ErrorDeBitacora("PROC_TRANSCRIPCION_VACIA")
 
     if duracion_en_segundos <= 0:
-        raise ErrorDeBitacora("PROC_TRANSCRIPCION_SIN_COORDENADAS")
+        duracion_en_segundos = _segundos_de_lectura(contenido)
 
     return tuple(
         _repartir_dentro_del_tramo(0, duracion_en_segundos, None, contenido, estimado=True)

@@ -109,11 +109,12 @@ def test_sin_marcas_pero_con_duracion_se_estima_y_queda_marcado_como_estimado() 
     assert len(segmentos) > 1, "600 segundos en un solo segmento no serían una coordenada útil"
 
 
-def test_sin_marcas_y_sin_duracion_se_falla_en_vez_de_inventar() -> None:
-    with pytest.raises(ErrorDeBitacora) as fallo:
-        segmentos_desde_transcripcion("Una charla sin ninguna referencia temporal.", 0)
+def test_sin_marcas_y_sin_duracion_se_estima_por_ritmo_de_habla() -> None:
+    texto = " ".join(["palabra"] * 300)
+    segmentos = segmentos_desde_transcripcion(texto, 0)
 
-    assert fallo.value.codigo == "PROC_TRANSCRIPCION_SIN_COORDENADAS"
+    assert all(s.estimado for s in segmentos)
+    assert segmentos[-1].fin == 120, "300 palabras a 150 por minuto son dos minutos"
 
 
 def test_una_transcripcion_vacia_se_reporta_como_tal() -> None:
