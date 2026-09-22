@@ -434,7 +434,8 @@ export function ModalDeCarga({
                   <span className="truncate text-base text-texto">{archivo.name}</span>
                   <span className="text-sm text-texto-tenue">
                     {fuente === null ? 'Formato no admitido' : NOMBRE_DE_FUENTE[fuente]}
-                    {duracion > 0 ? ` · ${formatearTimestamp(duracion)}` : ''} ·{' '}
+                    {/* Solo la de un audio: la de un texto es una cuenta interna para el tope de fichas, no un dato. */}
+                    {fuente === 'audio' && duracion > 0 ? ` · ${formatearTimestamp(duracion)}` : ''} ·{' '}
                     {pesoLegible(archivo.size)}
                   </span>
                 </span>

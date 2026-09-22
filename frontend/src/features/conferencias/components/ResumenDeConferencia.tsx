@@ -33,9 +33,12 @@ export function ResumenDeConferencia({ visible }: PropiedadesResumen) {
         <span className="coordenada text-xs text-texto-tenue">
           {formatearFecha(conferencia.fechaDelEvento)}
         </span>
-        <span className="coordenada text-xs text-texto-tenue">
-          {formatearDuracion(conferencia.duracionEnSegundos)}
-        </span>
+        {/* Una charla que llegó como texto no tiene duración medida: no se enseña ninguna. */}
+        {conferencia.fuente === 'audio' && conferencia.tiemposEstimados !== true ? (
+          <span className="coordenada text-xs text-texto-tenue">
+            {formatearDuracion(conferencia.duracionEnSegundos)}
+          </span>
+        ) : null}
       </div>
 
       <p className="max-w-prose text-base leading-relaxed text-texto-tenue">
