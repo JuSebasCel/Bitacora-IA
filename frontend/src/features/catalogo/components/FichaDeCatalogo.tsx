@@ -128,7 +128,9 @@ export function FichaDeCatalogo({
         </p>
 
         {/* En el pie queda solo la coordenada de verdad: en qué minuto de la charla se dijo. */}
-        <p className="coordenada text-xs text-texto-tenue">{formatearTimestamp(ficha.segundoInicio)}</p>
+        {conferencia.tiemposEstimados === true ? null : (
+          <p className="coordenada text-xs text-texto-tenue">{formatearTimestamp(ficha.segundoInicio)}</p>
+        )}
       </div>
     </article>
   )

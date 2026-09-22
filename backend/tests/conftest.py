@@ -135,11 +135,13 @@ class RepositorioFalso:
         fichas: Sequence[Ficha],
         resumen: str,
         duracion_en_segundos: int,
+        tiempos_estimados: bool = False,
     ) -> None:
         self._quizas_fallar("guardar_resultado_del_analisis")
         self.fichas_guardadas = tuple(fichas)
         self.resumen_guardado = resumen
         self.duracion_guardada = duracion_en_segundos
+        self.tiempos_estimados = tiempos_estimados
         self.estados.append("procesada")
 
     def registrar_temas_propuestos(

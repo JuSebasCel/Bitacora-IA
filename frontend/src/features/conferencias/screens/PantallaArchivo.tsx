@@ -1333,7 +1333,9 @@ export function PantallaArchivo({
                 ? `${entrada.conferencia.titulo} · ${nombreDeTema(temas, entrada.ficha.idTema)}`
                 : eje === 'temas'
                   ? entrada.conferencia.titulo
-                  : `${nombreDeTema(temas, entrada.ficha.idTema)} · ${formatearTimestamp(entrada.ficha.segundoInicio)}`
+                  : entrada.conferencia.tiemposEstimados === true
+                    ? nombreDeTema(temas, entrada.ficha.idTema)
+                    : `${nombreDeTema(temas, entrada.ficha.idTema)} · ${formatearTimestamp(entrada.ficha.segundoInicio)}`
             }
             activa={entrada.ficha.id === idFicha}
             onClick={() => setIdFicha(entrada.ficha.id)}
@@ -1412,10 +1414,10 @@ export function PantallaArchivo({
                     </span>
                     {formatearTimestamp(activa.ficha.segundoInicio)}
                   </button>
-                ) : (
+                ) : activa.conferencia.tiemposEstimados === true ? null : (
                   <span className="coordenada">{formatearTimestamp(activa.ficha.segundoInicio)}</span>
                 )}
-                <span aria-hidden="true">·</span>
+                {activa.conferencia.tiemposEstimados === true ? null : <span aria-hidden="true">·</span>}
                 <span className="min-w-0 truncate">{activa.conferencia.titulo}</span>
               </p>
 

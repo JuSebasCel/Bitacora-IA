@@ -47,6 +47,7 @@ class RepositorioDeConferencias(Protocol):
         fichas: Sequence[Ficha],
         resumen: str,
         duracion_en_segundos: int,
+        tiempos_estimados: bool = False,
     ) -> None: ...
 
     def registrar_temas_propuestos(
@@ -180,6 +181,7 @@ class RepositorioSupabase:
         fichas: Sequence[Ficha],
         resumen: str,
         duracion_en_segundos: int,
+        tiempos_estimados: bool = False,
     ) -> None:
         """
         Borra las fichas anteriores antes de insertar las nuevas.
@@ -207,6 +209,7 @@ class RepositorioSupabase:
                     "estado": "procesada",
                     "resumen": resumen,
                     "duracion_en_segundos": duracion_en_segundos,
+                    "tiempos_estimados": tiempos_estimados,
                 }
             ).eq("id", id_conferencia).execute()
         except Exception as fallo:  # noqa: BLE001

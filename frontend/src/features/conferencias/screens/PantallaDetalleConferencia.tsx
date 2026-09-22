@@ -225,6 +225,7 @@ export function PantallaDetalleConferencia() {
               ocultaPendientes={ocultaPendientes}
               puedeValidar={puedeValidar}
               alValidar={alValidar}
+              tiemposEstimados={resultado.visible.conferencia.tiemposEstimados === true}
             />
           </section>
         </>

@@ -46,16 +46,34 @@ export function tituloSugerido(archivo: File): string {
 }
 
 /*
-  Duración en segundos leída del propio archivo. Solo tiene sentido en audio:
-  una transcripción no dura nada, y devolver 0 es lo correcto y no un fallo.
-
-  Un archivo que el navegador no sepa decodificar tampoco es un error de
-  carga: se resuelve en 0 y el análisis la rellenará cuando lo procese. Por
-  eso esto nunca rechaza.
+  Ritmo de habla con que se estima cuánto dura una transcripción. Es el mismo
+  que usa el backend (`PALABRAS_POR_MINUTO` en `transcripcion/segmentos.py`)
+  para un texto sin marcas de tiempo: si los dos lados estimaran distinto, el
+  tope de fichas que se ofrece aquí no sería el que el análisis aplica.
 */
-export function duracionDeArchivo(archivo: File): Promise<number> {
+const PALABRAS_POR_MINUTO = 150
+
+/*
+  Duración en segundos del archivo. En un audio se lee de sus metadatos; en
+  una transcripción se estima por el número de palabras.
+
+  Antes una transcripción devolvía 0, y eso tenía un costo que no se veía: el
+  tope de fichas se calcula con la duración, y con 0 minutos salía el mínimo,
+  tres fichas, para una charla de quince minutos. Una estimación por palabras
+  no es exacta, pero está en el orden de magnitud correcto, que es lo único
+  que el tope necesita.
+
+  Un archivo que no se pueda leer no es un error de carga: se resuelve en 0 y
+  el análisis la rellenará cuando lo procese. Por eso esto nunca rechaza.
+*/
+export async function duracionDeArchivo(archivo: File): Promise<number> {
   if (fuenteDeArchivo(archivo) !== 'audio') {
-    return Promise.resolve(0)
+    try {
+      const palabras = contarPalabras(await textoDeTranscripcion(archivo))
+      return Math.round((palabras / PALABRAS_POR_MINUTO) * 60)
+    } catch {
+      return 0
+    }
   }
 
   return new Promise((resolver) => {
@@ -72,4 +90,30 @@ export function duracionDeArchivo(archivo: File): Promise<number> {
     audio.preload = 'metadata'
     audio.src = url
   })
+}
+
+function contarPalabras(texto: string): number {
+  return texto.split(/\s+/).filter((palabra) => palabra !== '').length
+}
+
+/*
+  El texto de una transcripción, solo para contar palabras. Un `.docx` es un
+  zip con el cuerpo en `word/document.xml`; basta con quitarle las etiquetas.
+  Un `.pdf` no se sabe leer aquí (tampoco en el backend), y cuenta como vacío.
+*/
+async function textoDeTranscripcion(archivo: File): Promise<string> {
+  const nombre = archivo.name.toLowerCase()
+
+  if (nombre.endsWith('.docx')) {
+    const { default: JSZip } = await import('jszip')
+    const zip = await JSZip.loadAsync(await archivo.arrayBuffer())
+    const xml = (await zip.file('word/document.xml')?.async('string')) ?? ''
+    return xml.replace(/<\/w:p>/g, ' ').replace(/<[^>]+>/g, '')
+  }
+
+  if (nombre.endsWith('.pdf')) {
+    return ''
+  }
+
+  return archivo.text()
 }

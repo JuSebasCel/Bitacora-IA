@@ -320,7 +320,11 @@ def procesar_conferencia(
             raise ErrorDeBitacora("PROC_SIN_FICHAS")
 
         repositorio.guardar_resultado_del_analisis(
-            id_conferencia, fichas, resumen_de(fichas, vocabulario), duracion
+            id_conferencia,
+            fichas,
+            resumen_de(fichas, vocabulario),
+            duracion,
+            tiempos_estimados=all(segmento.estimado for segmento in segmentos),
         )
         """
         Las propuestas de tema se registran DESPUÉS de guardar las fichas: si

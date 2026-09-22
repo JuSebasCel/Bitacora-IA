@@ -136,6 +136,12 @@ export type Conferencia = {
    * pidio como si el tope se perdio por el camino.
    */
   readonly maximoDeFichas: number | null
+  /**
+   * Los minutos de sus fichas son una estimación, no un dato: la charla llegó
+   * como texto sin marcas de tiempo. La interfaz no los enseña, porque un
+   * minuto que parece medido y no lo es resulta peor que no dar ninguno.
+   */
+  readonly tiemposEstimados?: boolean
   /** Cuenta que cargó la conferencia y decide con quién se comparte. */
   readonly idDueno: string
   readonly estado: EstadoDeProcesamiento

@@ -46,6 +46,8 @@ type PropiedadesListadoDeFichas = {
    */
   puedeValidar?: boolean
   alValidar?: (idFicha: string) => void
+  /** La charla llegó como texto sin marcas: el minuto de cada ficha no es un dato. */
+  tiemposEstimados?: boolean
 }
 
 export function ListadoDeFichas({
@@ -54,6 +56,7 @@ export function ListadoDeFichas({
   ocultaPendientes = false,
   puedeValidar = false,
   alValidar,
+  tiemposEstimados = false,
 }: PropiedadesListadoDeFichas) {
   /*
     Llegar a cero fichas no siempre significa lo mismo, y decir lo mismo en
@@ -90,7 +93,7 @@ export function ListadoDeFichas({
           className="grid grid-cols-1 gap-3 rounded-md bg-fondo p-4 sm:grid-cols-[6rem_1fr] sm:gap-5"
         >
           <span className="coordenada text-xs text-texto-tenue">
-            {formatearTimestamp(ficha.segundoInicio)}
+            {tiemposEstimados ? '' : formatearTimestamp(ficha.segundoInicio)}
           </span>
 
           <div className="flex min-w-0 flex-col gap-2.5">

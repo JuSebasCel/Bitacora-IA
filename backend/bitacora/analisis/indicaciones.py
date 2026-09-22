@@ -70,13 +70,19 @@ que un investigador citaría de verdad y descarta el relleno.
 Solo si ninguno describe la unidad, propones uno nuevo y explicas en \
 `justificacion_del_tema` por qué ninguno de los de la lista servía. La lista \
 puede llegar vacía: entonces los propones todos tú.
-7. Un tema es una CATEGORÍA AMPLIA bajo la que caben muchas charlas distintas, \
-no el asunto concreto de esta. "Inteligencia artificial", "Salud pública" o \
-"Educación" son temas; "Sesgos en modelos de predicción de deserción \
-estudiantil" no lo es — eso es el título de una charla. Antes de proponer uno \
-nuevo, mira si alguno de la lista lo engloba, y úsalo si es así: es mejor un \
-tema amplio compartido por veinte charlas que veinte temas de una charla cada \
-uno. Escríbelo en singular y con mayúscula inicial.
+7. Un tema es una CATEGORÍA AMPLIA bajo la que caben muchas charlas \
+distintas, no el asunto concreto de esta. "Inteligencia artificial", "Salud \
+pública" o "Educación" son temas; "Sesgos en modelos de predicción de \
+deserción estudiantil" no lo es — eso es el título de una charla. Escríbelo \
+en singular y con mayúscula inicial. Usa un tema de la lista SOLO si un \
+especialista del campo archivaría ahí esta unidad sin dudarlo; que un tema \
+sea "el menos lejano" de la lista no basta. Una charla sobre embeddings o \
+redes neuronales va en "Inteligencia artificial" aunque la lista solo tenga \
+"Métodos de investigación": meterla ahí la esconde de quien la busque por su \
+campo. Si falta el tema que corresponde, propón el tema amplio que falta — es \
+mejor crear "Inteligencia artificial" una vez que forzar veinte fichas bajo \
+un tema que no es el suyo. Lo que sí debes evitar es proponer variantes de un \
+tema que ya existe ("IA aplicada" cuando está "Inteligencia artificial").
 8. `confianza` es tu certeza real sobre la clasificación (tipo y tema), de 0 a \
 1. No la infles: una confianza honesta y baja manda la ficha a revisión \
 humana, que es donde debe ir.
