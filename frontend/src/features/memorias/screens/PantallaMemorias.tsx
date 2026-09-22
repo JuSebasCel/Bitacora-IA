@@ -288,6 +288,7 @@ export function PantallaMemorias(): ReactElement {
       <PanelDeGenerarMemoria
         abierto={panelAbierto}
         anclaEn={botonQueAbrio}
+        centrado={memorias.length === 0}
         alCerrar={cerrarPanel}
         {...(idConferenciaPreseleccionada === undefined ? {} : { idConferenciaPreseleccionada })}
         generar={generar}

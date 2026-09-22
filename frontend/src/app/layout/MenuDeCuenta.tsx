@@ -126,7 +126,21 @@ export function MenuDeCuenta({
         </button>
       )}
 
-      <Modal abierto={abierto} alCerrar={cerrar} titulo="Tu cuenta" ancho="angosto" anclaje="disparador" anclaEn={boton}>
+      {/*
+        Hacia la derecha, como todo lo que se abre desde el dock. Alineado por
+        la derecha con su botón —lo que hace un modal anclado por defecto— la
+        ventana nacía dentro del dock y acababa pegada al borde izquierdo de
+        la pantalla, tapada por él.
+      */}
+      <Modal
+        abierto={abierto}
+        alCerrar={cerrar}
+        titulo="Tu cuenta"
+        ancho="angosto"
+        anclaje="disparador"
+        anclaEn={boton}
+        crecerHacia="derecha"
+      >
         <div id={idDelPanel} className="flex flex-col gap-5 pb-1">
           {disparador === 'logo' ? (
             <div className="flex items-center gap-3 px-1">

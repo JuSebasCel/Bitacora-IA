@@ -21,6 +21,8 @@ export type PropsPanelDeGenerarMemoria = {
   idConferenciaPreseleccionada?: string
   /** El botón que lo abrió: el modal crece desde él. */
   anclaEn?: RefObject<HTMLElement | null>
+  /** Abrirlo en mitad de la pantalla en vez de colgado del botón. */
+  centrado?: boolean
   /** Se pasa desde la pantalla que ya tiene montado `useMemorias()`, para que el listado se actualice sin un segundo estado desincronizado. */
   generar: (
     idConferencia: string,
@@ -55,6 +57,7 @@ export function PanelDeGenerarMemoria({
   alCerrar,
   idConferenciaPreseleccionada,
   anclaEn,
+  centrado = false,
   generar,
   alGenerar,
 }: PropsPanelDeGenerarMemoria): ReactElement {
@@ -129,11 +132,13 @@ export function PanelDeGenerarMemoria({
       titulo="Generar memoria"
       ancho="angosto"
       /*
-        Anclado a su botón y no en mitad de la pantalla: es un formulario de
-        tres elecciones, y centrado sobre un velo parecía un paso mucho más
-        grande de lo que es.
+        Anclado a su botón cuando ya hay memorias: el botón vive arriba, y el
+        panel cuelga de él sin taparlas. Sin ninguna memoria, el botón está a
+        media pantalla y un panel colgado de ahí nace abajo, como si se fuera
+        a salir; entonces se abre centrado, que es donde se mira cuando la
+        pantalla está vacía. Sigue creciendo desde el botón en los dos casos.
       */
-      {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
+      {...(anclaEn === undefined ? {} : { anclaje: centrado ? ('centro' as const) : ('disparador' as const), anclaEn })}
     >
       <form
         noValidate

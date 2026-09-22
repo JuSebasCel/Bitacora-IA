@@ -233,6 +233,8 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
         ancho="angosto"
         anclaje="disparador"
         anclaEn={boton}
+        /* Desde el dock se abre hacia la derecha: ver la nota en `MenuDeCuenta`. */
+        crecerHacia="derecha"
       >
         {total === 0 ? (
           <p className="pb-2 text-base text-texto-tenue">Nada nuevo por ahora.</p>
