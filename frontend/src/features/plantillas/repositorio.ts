@@ -1,4 +1,5 @@
 import { supabase } from '@/shared/supabase/cliente'
+import type { TonoDePlantilla } from './tono'
 import { codigoDeErrorDeSupabase, resultadoDeLista } from '@/shared/supabase/consultas'
 import type { ResultadoDeConsulta } from '@/shared/supabase/consultas'
 import type { MarcadorDeDocx, Plantilla } from './data'
@@ -36,6 +37,7 @@ type FilaDePlantilla = {
   readonly ruta_archivo_original: string | null
   readonly marcadores: readonly MarcadorDeDocx[] | null
   readonly actualizada_el: string
+  readonly tono?: TonoDePlantilla | null
 }
 
 /*
@@ -63,6 +65,7 @@ function plantillaDesdeFila(fila: FilaDePlantilla): Plantilla | null {
     rutaArchivoOriginal: fila.ruta_archivo_original ?? '',
     marcadores: fila.marcadores ?? [],
     actualizadaEl: fila.actualizada_el,
+    ...(fila.tono === null || fila.tono === undefined ? {} : { tono: fila.tono }),
   }
 }
 
@@ -77,6 +80,7 @@ function filaDesdePlantilla(plantilla: Plantilla): Record<string, unknown> {
     contenido: null,
     ruta_archivo_original: plantilla.rutaArchivoOriginal,
     marcadores: plantilla.marcadores,
+    ...(plantilla.tono === undefined ? {} : { tono: plantilla.tono }),
   }
 }
 

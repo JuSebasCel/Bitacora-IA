@@ -510,12 +510,23 @@
     papel.
   */
   /*
-    Los `[[marcadores]]` dentro de la hoja. El fondo en forma de píldora lo
-    dibuja `VistaPreviaDeDocx` como capa aparte, porque `::highlight` no
-    admite radios ni relleno; aquí solo va el color del texto.
+    Los `[[campos]]` dentro de la hoja, como los controles de contenido de
+    Word: un recuadro fino con un tinte suave y el borde inferior discontinuo,
+    el nombre en azul de tinta y los corchetes atenuados. Antes era una
+    píldora azul con sombra, que se veía como una etiqueta pegada encima del
+    documento y no como un hueco dentro de él.
+
+    Colores fijos y no tokens: la hoja es papel blanco en los dos temas, y un
+    color que siguiera al tema se perdería sobre ella en el oscuro. El recuadro
+    lo dibuja `VistaPreviaDeDocx` como capa aparte, porque `::highlight` no
+    admite bordes ni radio; aquí va el color del texto.
   */
   ::highlight(marcadores-de-plantilla) {
-    color: var(--bitacora-ilustracion-texto);
+    color: #1d4ed8;
+  }
+
+  ::highlight(corchetes-de-plantilla) {
+    color: #93a3c4;
   }
 
   .vista-previa-docx section.docx {
@@ -525,16 +536,10 @@
   .pildora-de-marcador {
     position: absolute;
     z-index: -1;
-    border-radius: 9999px;
-    background: var(--bitacora-ilustracion);
-    /*
-      Un borde fino del mismo azul, más hondo, y una sombra corta: la píldora
-      se lee como una pieza puesta sobre la hoja, un hueco por rellenar, y no
-      como texto pintado con rotulador.
-    */
-    box-shadow:
-      inset 0 0 0 1px color-mix(in oklch, var(--bitacora-ilustracion-texto) 22%, transparent),
-      0 1px 3px oklch(0 0 0 / 0.14);
+    border-radius: 3px;
+    background: rgb(29 78 216 / 0.07);
+    box-shadow: inset 0 0 0 1px rgb(29 78 216 / 0.16);
+    border-bottom: 1.5px dashed rgb(29 78 216 / 0.55);
     pointer-events: none;
   }
 

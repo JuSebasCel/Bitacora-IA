@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { TonoDePlantilla } from './tono'
 import { ContextoSesion } from '@/features/auth/session/contexto'
 import type { CodigoError } from '@/shared/errors'
 import type { MarcadorDeDocx, Plantilla } from './data'
@@ -65,6 +66,7 @@ export type ValorDePlantillas = {
   ) => Promise<ResultadoPlantilla>
   readonly renombrarPlantilla: (id: string, nombre: string) => ResultadoPlantilla
   readonly actualizarMarcadoresDeDocx: (id: string, marcadores: readonly MarcadorDeDocx[]) => void
+  readonly cambiarTono: (id: string, tono: TonoDePlantilla) => void
   readonly eliminar: (id: string) => Promise<void>
 }
 
@@ -248,6 +250,13 @@ export function usePlantillas(): ValorDePlantillas {
     [conPlantilla],
   )
 
+  const cambiarTono = useCallback(
+    (id: string, tono: TonoDePlantilla): void => {
+      conPlantilla(id, (plantilla) => ({ ...plantilla, tono, actualizadaEl: new Date().toISOString() }))
+    },
+    [conPlantilla],
+  )
+
   /*
     Se borra la fila antes que el archivo. Al revés, un fallo en el borrado de
     la fila dejaría una plantilla en el listado apuntando a un `.docx` que ya
@@ -278,6 +287,7 @@ export function usePlantillas(): ValorDePlantillas {
     crearDesdeDocx,
     renombrarPlantilla,
     actualizarMarcadoresDeDocx,
+    cambiarTono,
     eliminar,
   }
 }

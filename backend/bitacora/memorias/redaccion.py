@@ -89,8 +89,11 @@ tesis.
 4. Respeta el `formato`: `parrafo` es prosa corrida; `lista_vinetas` y \
 `lista_numerada` son elementos cortos, uno por línea, sin viñetas ni números \
 delante —el documento los pone—.
-5. Escribe en español, en tercera persona y en tono formal. No repitas el \
-nombre del hueco como título: el título ya está en la plantilla.
+5. Escribe en español con el `tono` que trae la entrada, en todos los \
+huecos por igual. Si no trae ninguno, en tercera persona y en tono formal. \
+El tono cambia cómo se dice, nunca qué se dice: la regla 1 sigue mandando. \
+No repitas el nombre del hueco como título: el título ya está en la \
+plantilla.
 6. Respeta la `extension`: `breve` es una o dos frases; `media`, un párrafo; \
 `extensa`, entre dos y cuatro párrafos. El hueco tiene un sitio fijo en la \
 hoja, y pasarse lo desborda.
@@ -110,6 +113,7 @@ class Redactor(Protocol):
         charla: DatosDeLaCharla,
         fichas: Sequence[FichaParaRedactar],
         huecos: Sequence[Hueco],
+        tono: str = "",
     ) -> dict[str, str | None]: ...
 
 
@@ -127,10 +131,12 @@ def redactor_de(cliente: ClienteDeOpenAI, modelo: str) -> Redactor:
         charla: DatosDeLaCharla,
         fichas: Sequence[FichaParaRedactar],
         huecos: Sequence[Hueco],
+        tono: str = "",
     ) -> dict[str, str | None]:
         hay_citas = any(hueco.modo == "cita" for hueco in huecos)
 
         entrada = {
+            "tono": tono,
             "charla": {
                 "titulo": charla.titulo,
                 "ponente": charla.ponente,

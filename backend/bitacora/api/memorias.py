@@ -40,6 +40,8 @@ class HuecoPedido(BaseModel):
 class PedidoDeRedaccion(BaseModel):
     id_conferencia: str = Field(min_length=1)
     huecos: list[HuecoPedido]
+    """El tono de la plantilla, ya como frase. Vacío = el de siempre."""
+    tono: str = Field(default="", max_length=800)
 
 
 class RespuestaDeRedaccion(BaseModel):
@@ -76,6 +78,7 @@ def redactar(cuerpo: PedidoDeRedaccion, usuario: Usuario) -> RespuestaDeRedaccio
             )
             for hueco in cuerpo.huecos
         ],
+        tono=cuerpo.tono.strip(),
     )
 
     return RespuestaDeRedaccion(secciones=secciones)

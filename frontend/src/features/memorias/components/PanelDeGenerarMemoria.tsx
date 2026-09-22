@@ -1,4 +1,5 @@
 import type { FormEvent, ReactElement, RefObject } from 'react'
+import { instruccionDeTono } from '@/features/plantillas/tono'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useSession } from '@/features/auth/session'
@@ -26,6 +27,7 @@ export type PropsPanelDeGenerarMemoria = {
     idPlantilla: string,
     nombre: string,
     huecos?: readonly HuecoParaRedactar[],
+    tono?: string,
   ) => Promise<ResultadoMemoria>
   alGenerar: (memoria: Memoria) => void
 }
@@ -108,7 +110,7 @@ export function PanelDeGenerarMemoria({
     if (!listo || generando) return
 
     setGenerando(true)
-    const resultado = await generar(idConferencia, idPlantilla, nombre, huecos)
+    const resultado = await generar(idConferencia, idPlantilla, nombre, huecos, instruccionDeTono(plantilla?.tono))
     setGenerando(false)
 
     if (!resultado.ok) {

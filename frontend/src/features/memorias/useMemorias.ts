@@ -93,6 +93,7 @@ export function useMemorias(idUsuario: string): ValorDeMemorias {
       idPlantilla: string,
       nombre: string,
       huecos: readonly HuecoParaRedactar[] = [],
+      tono = '',
     ): Promise<ResultadoMemoria> => {
       /*
         Se valida ANTES de redactar: un nombre vacío o una conferencia sin
@@ -116,7 +117,7 @@ export function useMemorias(idUsuario: string): ValorDeMemorias {
       let secciones: SeccionesRedactadas | undefined
 
       if (huecos.length > 0 && hayBackend()) {
-        const redactadas = await redactarSecciones(idConferencia, huecos)
+        const redactadas = await redactarSecciones(idConferencia, huecos, tono)
 
         if (!redactadas.ok) {
           return { ok: false, codigo: redactadas.codigo }

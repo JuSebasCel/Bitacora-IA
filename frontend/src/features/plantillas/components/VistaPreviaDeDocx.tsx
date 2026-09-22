@@ -12,6 +12,8 @@ export type PropsVistaPreviaDeDocx = {
 }
 
 const NOMBRE_DEL_RESALTE = 'marcadores-de-plantilla'
+/* Los `[[` y `]]` de cada campo, aparte: se atenúan para que se lea el nombre. */
+const NOMBRE_DE_LOS_CORCHETES = 'corchetes-de-plantilla'
 
 /*
   Resalta cada `[[marcador]]` de la hoja ya pintada, sin tocarla.
@@ -52,30 +54,49 @@ function marcadoresEn(contenedor: HTMLElement): Range[] {
     return null
   }
 
+  function rangoEntre(desde: number, hasta: number): Range | null {
+    const inicio = ubicar(desde, false)
+    const fin = ubicar(hasta, true)
+    if (inicio === null || fin === null) {
+      return null
+    }
+    const rango = new Range()
+    rango.setStart(inicio[0], inicio[1])
+    rango.setEnd(fin[0], fin[1])
+    return rango
+  }
+
   const rangos: Range[] = []
+  const corchetes: Range[] = []
 
   for (const coincidencia of texto.matchAll(/\[\[[^[\]]+\]\]/g)) {
-    const inicio = ubicar(coincidencia.index, false)
-    const fin = ubicar(coincidencia.index + coincidencia[0].length, true)
+    const desde = coincidencia.index
+    const hasta = desde + coincidencia[0].length
+    const rango = rangoEntre(desde, hasta)
 
-    if (inicio !== null && fin !== null) {
-      const rango = new Range()
-      rango.setStart(inicio[0], inicio[1])
-      rango.setEnd(fin[0], fin[1])
+    if (rango !== null) {
       rangos.push(rango)
+      for (const corchete of [rangoEntre(desde, desde + 2), rangoEntre(hasta - 2, hasta)]) {
+        if (corchete !== null) corchetes.push(corchete)
+      }
     }
   }
 
   if (typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined') {
     CSS.highlights.set(NOMBRE_DEL_RESALTE, new Highlight(...rangos))
+    CSS.highlights.set(NOMBRE_DE_LOS_CORCHETES, new Highlight(...corchetes))
   }
 
   return rangos
 }
 
-/* Aire de la píldora alrededor del texto, en píxeles de la hoja a tamaño real. */
-const HOLGURA_HORIZONTAL = 8
-const HOLGURA_VERTICAL = 3
+/*
+  Aire del recuadro alrededor del texto, en píxeles de la hoja a tamaño real.
+  Poco a propósito: es un campo dentro de un párrafo y no puede empujar ni
+  tapar las letras de al lado, como hacía la píldora de antes.
+*/
+const HOLGURA_HORIZONTAL = 3
+const HOLGURA_VERTICAL = 1
 
 /*
   Una píldora detrás de cada marcador, como capa aparte dentro de la hoja.
@@ -193,6 +214,7 @@ export function VistaPreviaDeDocx({
     return () => {
       if (resaltarMarcadores && typeof CSS !== 'undefined' && 'highlights' in CSS) {
         CSS.highlights.delete(NOMBRE_DEL_RESALTE)
+        CSS.highlights.delete(NOMBRE_DE_LOS_CORCHETES)
       }
     }
   }, [blob, resaltarMarcadores])

@@ -70,6 +70,7 @@ export function PantallaEditorDePlantilla(): ReactElement {
       plantilla={plantilla}
       alRenombrar={(nombre) => mutadores.renombrarPlantilla(plantilla.id, nombre)}
       alCambiarMarcadores={(marcadores) => mutadores.actualizarMarcadoresDeDocx(plantilla.id, marcadores)}
+      alCambiarTono={(tono) => mutadores.cambiarTono(plantilla.id, tono)}
       alEliminar={async () => {
         setBorrando(true)
         await mutadores.eliminar(plantilla.id)

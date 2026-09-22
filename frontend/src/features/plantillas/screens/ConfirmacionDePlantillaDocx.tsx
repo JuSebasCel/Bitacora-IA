@@ -1,4 +1,6 @@
 import type { ReactElement } from 'react'
+import { PRESETS_DE_TONO, TONO_POR_DEFECTO } from '../tono'
+import type { TonoDePlantilla } from '../tono'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
@@ -46,6 +48,8 @@ export type PropsConfirmacionDePlantillaDocx = {
   plantilla: PlantillaDesdeDocx
   alRenombrar: (nombre: string) => void
   alCambiarMarcadores: (marcadores: readonly MarcadorDeDocx[]) => void
+  /** Opcional para que las pantallas de prueba no tengan que pasarlo. */
+  alCambiarTono?: (tono: TonoDePlantilla) => void
   alEliminar: () => void | Promise<void>
 }
 
@@ -106,6 +110,7 @@ export function ConfirmacionDePlantillaDocx({
   plantilla,
   alRenombrar,
   alCambiarMarcadores,
+  alCambiarTono,
   alEliminar,
 }: PropsConfirmacionDePlantillaDocx): ReactElement {
   const { archivo, codigoDeError } = useDocxDePlantilla(plantilla.rutaArchivoOriginal)
@@ -280,6 +285,10 @@ export function ConfirmacionDePlantillaDocx({
               </span>
             )}
           </div>
+
+          {alCambiarTono === undefined || plantilla.marcadores.length === 0 ? null : (
+            <SelectorDeTono tono={plantilla.tono ?? TONO_POR_DEFECTO} alCambiar={alCambiarTono} />
+          )}
 
           {plantilla.marcadores.length === 0 ? (
             /*
@@ -511,6 +520,56 @@ function CampoConfigurable({
   diseñó la plantilla, y lo único que decide la app es si aparece o cuántas
   veces. Se lista para que se sepa que se reconoció.
 */
+/*
+  El tono de toda la plantilla, arriba de los campos: vale para todos ellos, y
+  es lo primero que se decide sobre cómo va a sonar la memoria. Desplegable y
+  no una fila de pastillas: son seis opciones y el panel ya está lleno. Con
+  "Personalizado", un campo para escribir la instrucción; se guarda al salir
+  de él, no con cada letra.
+*/
+function SelectorDeTono({
+  tono,
+  alCambiar,
+}: {
+  tono: TonoDePlantilla
+  alCambiar: (tono: TonoDePlantilla) => void
+}): ReactElement {
+  const [propio, setPropio] = useState(tono.propio)
+  const elegido = PRESETS_DE_TONO.find((preset) => preset.valor === tono.preset)
+
+  return (
+    <div className="flex flex-col gap-2 rounded-[20px] bg-fondo p-3">
+      <SelectorDeOpciones
+        completo
+        rotulo="Tono de la redacción"
+        icono="record_voice_over"
+        etiquetaAccesible="Tono de la redacción"
+        valor={tono.preset}
+        opciones={PRESETS_DE_TONO.map((preset) => ({
+          valor: preset.valor,
+          etiqueta: preset.etiqueta,
+          icono: preset.icono,
+        }))}
+        alCambiar={(preset) => alCambiar({ preset, propio })}
+      />
+
+      {tono.preset === 'personalizado' ? (
+        <textarea
+          value={propio}
+          onChange={(cambio) => setPropio(cambio.target.value)}
+          onBlur={() => alCambiar({ preset: 'personalizado', propio })}
+          rows={3}
+          placeholder="Ej.: cercano pero profesional, en primera persona del plural, sin tecnicismos."
+          aria-label="Instrucción de tono"
+          className={`${CAMPO} resize-none py-3 text-sm leading-relaxed`}
+        />
+      ) : (
+        <p className="px-2 text-sm leading-relaxed text-texto-tenue">{elegido?.instruccion}</p>
+      )}
+    </div>
+  )
+}
+
 function SeccionDeWord({ marcador }: { marcador: Exclude<MarcadorDeDocx, MarcadorSimpleDeDocx> }): ReactElement {
   return (
     <li className="flex items-center gap-3 rounded-[20px] px-4 py-3">

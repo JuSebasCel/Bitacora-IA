@@ -1,3 +1,4 @@
+import type { TonoDePlantilla } from '../tono'
 /*
   Tipos del dominio de plantillas.
 
@@ -123,6 +124,8 @@ export type PlantillaDesdeDocx = {
   readonly rutaArchivoOriginal: string
   readonly marcadores: readonly MarcadorDeDocx[]
   readonly actualizadaEl: string
+  /** Con qué tono se redactan sus memorias. Ausente = el de siempre (ver `tono.ts`). */
+  readonly tono?: TonoDePlantilla
 }
 
 export type Plantilla = PlantillaDesdeDocx

@@ -77,10 +77,12 @@ export function huecosPorRevisar(plantilla: Plantilla, secciones: SeccionesRedac
 export async function redactarSecciones(
   idConferencia: string,
   huecos: readonly HuecoParaRedactar[],
+  tono = '',
 ): Promise<ResultadoDeConsulta<SeccionesRedactadas>> {
   const resultado = await pedirAlBackend<{ secciones: SeccionesRedactadas }>('/memorias/redactar', {
     id_conferencia: idConferencia,
     huecos,
+    tono,
   })
 
   return resultado.ok ? { ok: true, datos: resultado.datos.secciones } : resultado
