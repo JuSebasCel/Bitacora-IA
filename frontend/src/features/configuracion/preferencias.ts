@@ -32,6 +32,24 @@ const POR_DEFECTO: Preferencias = {
 let actuales: Preferencias = POR_DEFECTO
 /* De qué cuenta son las que hay en memoria: al cambiar de sesión se vuelven a leer. */
 let cargadasDe: string | null = null
+/*
+  Si ya llegaron las de la cuenta. Casi nadie lo necesita —los valores por
+  defecto sirven mientras tanto—, salvo el recorrido guiado: con el valor por
+  defecto (`tutorialVisto: false`) se abriría a quien ya lo vio, durante el
+  instante que tarda la lectura.
+*/
+let leidas = false
+const oyentesDeLectura = new Set<() => void>()
+
+export function usePreferenciasLeidas(): boolean {
+  return useSyncExternalStore(
+    (oyente) => {
+      oyentesDeLectura.add(oyente)
+      return () => oyentesDeLectura.delete(oyente)
+    },
+    () => leidas,
+  )
+}
 const oyentes = new Set<() => void>()
 
 function publicar(siguientes: Preferencias): void {
@@ -61,9 +79,11 @@ async function cargar(idUsuario: string): Promise<void> {
     const usuario = respuesta?.data?.session?.user
 
     publicar(usuario === undefined ? POR_DEFECTO : desdeMetadatos(usuario.user_metadata))
+    leidas = usuario !== undefined
   } catch {
     /* Sin sesión legible se quedan las de por defecto, que son válidas. */
   }
+  oyentesDeLectura.forEach((oyente) => oyente())
 }
 
 export function usePreferencias(): Preferencias {

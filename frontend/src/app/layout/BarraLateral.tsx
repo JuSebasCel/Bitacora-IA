@@ -133,7 +133,9 @@ export function BarraLateral({
         */}
         <div className="flex h-10 items-center justify-between gap-1">
           {usuario === null ? null : (
-            <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} disparador="logo" />
+            <div data-recorrido="cuenta">
+              <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} disparador="logo" />
+            </div>
           )}
 
           <button
@@ -148,7 +150,7 @@ export function BarraLateral({
           </button>
         </div>
 
-        <div className="mt-1 flex h-10 items-center">
+        <div data-recorrido="avisos" className="mt-1 flex h-10 w-fit items-center">
           {usuario === null ? null : <CampanaDeAvisos idUsuario={usuario.id} />}
         </div>
 
@@ -162,6 +164,7 @@ export function BarraLateral({
             <Link
               key={seccion.ruta}
               to={seccion.ruta}
+              data-recorrido={seccion.ruta.slice(1)}
               onClick={alNavegar}
               aria-current={esSeccionActiva(seccion, ubicacion.pathname) ? 'page' : undefined}
               className={clasesDeItem(esSeccionActiva(seccion, ubicacion.pathname))}
@@ -180,6 +183,7 @@ export function BarraLateral({
             <Link
               key={accion.ruta}
               to={accion.ruta}
+              data-recorrido={`accion-${accion.etiqueta.toLowerCase().replaceAll(' ', '-')}`}
               onClick={alNavegar}
               className={`${FILA} text-xl font-normal text-nav-tenue`}
             >

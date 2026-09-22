@@ -14,6 +14,7 @@ import type { AjustesDeIa, PropositoDeClave } from '../contextoApiKey'
 import { useApiKey } from '../useApiKey'
 import { cambiarPreferencia, usePreferencias } from '../preferencias'
 import { cambiarCierreDelSitio, useCierreDelSitio } from '../cierreDelSitio'
+import { iniciarRecorrido } from '@/app/recorrido/recorridoGuiado'
 
 const ID_CAMPO_API_KEY = 'config-api-key'
 
@@ -286,6 +287,17 @@ function SeccionDePreferencias(): ReactElement {
         valor={avisarAlTerminar ? 'avisar' : 'callar'}
         alCambiar={(valor) => void cambiarPreferencia('avisarAlTerminar', valor === 'avisar')}
       />
+
+      <button
+        type="button"
+        onClick={() => iniciarRecorrido()}
+        className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-full bg-acento-tenue px-4 text-sm text-texto transition-colors hover:bg-ilustracion"
+      >
+        <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">
+          tour
+        </span>
+        Ver el recorrido guiado
+      </button>
     </section>
   )
 }

@@ -27,6 +27,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "docx-preview": "^0.4.0",
     "docx-templates": "^4.15.0",
+    "driver.js": "^1.8.0",
     "jszip": "^3.10.1",
     "material-symbols": "^0.47.4",
     "motion": "^13.1.0",

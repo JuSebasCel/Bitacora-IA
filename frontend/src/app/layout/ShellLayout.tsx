@@ -3,6 +3,7 @@ import { Outlet } from 'react-router'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
 import { useSession } from '@/features/auth/session'
 import { useAvisoDeAnalisis } from '@/features/conferencias/useAvisoDeAnalisis'
+import { useRecorridoInicial } from '@/app/recorrido/useRecorridoInicial'
 import { despertarBackend } from '@/shared/api/backend'
 import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
@@ -35,6 +36,7 @@ export function ShellLayout() {
 
   const { usuario } = useSession()
   useAvisoDeAnalisis(usuario?.id ?? '')
+  useRecorridoInicial()
 
   /*
     Plegar el dock es una preferencia de quien mira, igual que el tema, así
