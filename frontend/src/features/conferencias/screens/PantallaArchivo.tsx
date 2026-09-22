@@ -1060,14 +1060,15 @@ export function PantallaArchivo({
 
   const activa: FichaDelCatalogo | undefined = fichasListadas.find((e) => e.ficha.id === idFicha)
   /*
-    Solo sobre las propias: el audio vive en la carpeta del dueño, que un
-    invitado no puede leer, y editar una ficha ajena lo impide RLS. Ofrecer
-    cualquiera de las dos cosas a un invitado sería prometer algo que falla.
+    Editar una ficha, solo sobre las propias: RLS lo impide en las ajenas, y
+    ofrecerlo sería prometer algo que falla. Escuchar, en cambio, también en
+    las compartidas: quien aceptó una conferencia puede leer su audio (ver la
+    migración `audio_compartido`), y solo las aceptadas enseñan fichas.
   */
   const activaEsPropia =
     activa !== undefined &&
     visibles.find((visible) => visible.conferencia.id === activa.conferencia.id)?.procedencia === 'propia'
-  const puedeEscuchar = activaEsPropia && activa.conferencia.fuente === 'audio'
+  const puedeEscuchar = activa !== undefined && activa.conferencia.fuente === 'audio'
 
   /* En columnas, la de eventos se aparta al bajar al tercer nivel. En completa se ocultan todas menos la del nivel. */
   const enCompleta = vista === 'completa'

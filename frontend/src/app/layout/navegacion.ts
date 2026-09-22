@@ -56,6 +56,11 @@ export const SECCIONES_DE_NAVEGACION: readonly SeccionDeNavegacion[] = [
   */
   { etiqueta: 'Plantillas', ruta: '/plantillas' },
   { etiqueta: 'Memorias', ruta: '/memorias' },
+  /*
+    Al final: no es un paso del trabajo sino el sitio donde queda lo que se
+    subió, para volver a la fuente cuando una ficha se queda corta.
+  */
+  { etiqueta: 'Almacén', ruta: '/almacen' },
 ]
 
 /*

@@ -59,6 +59,14 @@ const PASOS: readonly DriveStep[] = [
     },
   },
   {
+    element: '[data-recorrido="almacen"]',
+    popover: {
+      title: 'Almacén',
+      description:
+        'Los archivos de cada conferencia en su carpeta: escucha el audio completo o relee la transcripción cuando una ficha se te quede corta.',
+    },
+  },
+  {
     element: '[data-recorrido="avisos"]',
     popover: {
       title: 'Avisos',

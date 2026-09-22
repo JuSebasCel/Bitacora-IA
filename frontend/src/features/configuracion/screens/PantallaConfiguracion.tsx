@@ -15,6 +15,8 @@ import { useApiKey } from '../useApiKey'
 import { cambiarPreferencia, usePreferencias } from '../preferencias'
 import { cambiarCierreDelSitio, useCierreDelSitio } from '../cierreDelSitio'
 import { iniciarRecorrido } from '@/app/recorrido/recorridoGuiado'
+import { ConfirmacionEnSitio } from '@/shared/ui/ConfirmacionEnSitio'
+import { eliminarComparticion } from '../comparticiones/repositorio'
 
 const ID_CAMPO_API_KEY = 'config-api-key'
 
@@ -376,6 +378,82 @@ function CupoDeHoy({ ajustes }: { ajustes: AjustesDeIa }): ReactElement {
   )
 }
 
+const ESTADO_DE_LA_INVITACION = {
+  pendiente: 'Sin responder',
+  aceptada: 'La aceptó',
+  rechazada: 'La rechazó',
+} as const
+
+/*
+  Lo que compartiste, con quién, y la forma de retirarlo. Antes compartir no
+  tenía vuelta atrás desde la interfaz: la invitación existía y no había un
+  sitio donde verla ni quitarla. Retirarla corta las fichas y el audio en la
+  siguiente consulta del invitado (los dos dependen de la misma fila).
+*/
+function SeccionLoQueCompartiste({
+  visibles,
+  alCambiar,
+}: {
+  visibles: readonly ConferenciaVisible[]
+  alCambiar: () => void
+}): ReactElement {
+  const [porQuitar, setPorQuitar] = useState<string | null>(null)
+  const filas = visibles
+    .filter((visible) => visible.procedencia === 'propia')
+    .flatMap((visible) =>
+      visible.conferencia.comparticiones.map((comparticion) => ({ conferencia: visible.conferencia, comparticion })),
+    )
+
+  return (
+    <section aria-label="Lo que compartiste" className="flex flex-col gap-4 rounded-[24px] bg-panel p-6">
+      <h2 className="font-titulo text-xl leading-tight font-semibold text-texto">Lo que compartiste</h2>
+
+      {filas.length === 0 ? (
+        <p className="rounded-[20px] bg-fondo p-4 text-sm text-texto-tenue">
+          No has compartido ninguna conferencia todavía.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {filas.map(({ conferencia, comparticion }) => {
+            const clave = `${conferencia.id}:${comparticion.idInvitado}`
+            const quien = comparticion.invitadoNombre || comparticion.invitadoCorreo || 'Alguien'
+
+            return (
+              <li key={clave} className="flex items-center justify-between gap-4 rounded-[20px] bg-fondo px-5 py-4">
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <p className="truncate text-base font-medium text-texto">{conferencia.titulo}</p>
+                  <p className="truncate text-sm text-texto-tenue">
+                    {quien} · {ESTADO_DE_LA_INVITACION[comparticion.estado]}
+                  </p>
+                </div>
+
+                {porQuitar === clave ? (
+                  <ConfirmacionEnSitio
+                    nombre={`el acceso de ${quien}`}
+                    alCancelar={() => setPorQuitar(null)}
+                    alConfirmar={() => {
+                      setPorQuitar(null)
+                      void eliminarComparticion(conferencia.id, comparticion.idInvitado).then(alCambiar)
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPorQuitar(clave)}
+                    className="h-9 shrink-0 cursor-pointer rounded-full bg-acento-tenue px-4 text-sm text-texto transition-colors hover:bg-ilustracion"
+                  >
+                    Quitar acceso
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function SeccionCompartidasConmigo({ visibles }: { visibles: readonly ConferenciaVisible[] }): ReactElement {
   const compartidas = visibles.filter((visible) => visible.procedencia === 'compartida')
 
@@ -421,7 +499,7 @@ function SeccionCompartidasConmigo({ visibles }: { visibles: readonly Conferenci
 export function PantallaConfiguracion(): ReactElement {
   const { usuario } = useSession()
   const idUsuario = usuario?.id ?? ''
-  const { visibles } = useConferenciasVisibles(idUsuario)
+  const { visibles, recargar } = useConferenciasVisibles(idUsuario)
   const ubicacion = useLocation()
   const { ajustes } = useApiKey()
 
@@ -472,6 +550,7 @@ export function PantallaConfiguracion(): ReactElement {
           <ComoConseguirUnaClave />
         </>
       )}
+      <SeccionLoQueCompartiste visibles={visibles} alCambiar={recargar} />
       <SeccionCompartidasConmigo visibles={visibles} />
     </div>
   )

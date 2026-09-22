@@ -430,12 +430,12 @@ describe('ShellLayout', () => {
 
 describe('SECCIONES_DE_NAVEGACION', () => {
   /* El dock dejó de llevar iconos: la jerarquía es tipográfica, así que ya no se exige uno. */
-  it('define tres secciones con ruta única, sin Configuración', () => {
-    expect(SECCIONES_DE_NAVEGACION).toHaveLength(3)
+  it('define cuatro secciones con ruta única, sin Configuración', () => {
+    expect(SECCIONES_DE_NAVEGACION).toHaveLength(4)
     expect(SECCIONES_DE_NAVEGACION.some((seccion) => seccion.ruta === '/configuracion')).toBe(false)
 
     const rutas = SECCIONES_DE_NAVEGACION.map((seccion) => seccion.ruta)
-    expect(new Set(rutas).size).toBe(3)
+    expect(new Set(rutas).size).toBe(4)
 
     for (const seccion of SECCIONES_DE_NAVEGACION) {
       expect(seccion.etiqueta.trim().length).toBeGreaterThan(0)

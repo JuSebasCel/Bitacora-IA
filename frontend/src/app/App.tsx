@@ -9,6 +9,7 @@ import { RutaPublica } from '@/app/RutaPublica'
 import { SoloEscritorio } from '@/app/SoloEscritorio'
 import { PantallaConferencias, PantallaDetalleConferencia } from '@/features/conferencias/screens'
 import { PantallaConfiguracion } from '@/features/configuracion/screens'
+import { PantallaAlmacen } from '@/features/almacen/PantallaAlmacen'
 import { PantallaDetalleMemoria, PantallaMemorias } from '@/features/memorias/screens'
 import { PantallaEditorDePlantilla, PantallaPlantillas } from '@/features/plantillas/screens'
 import { ProveedorDeTema } from '@/shared/tema'
@@ -61,6 +62,7 @@ export function App(): ReactElement {
                 <Route path="/memorias/:idMemoria" element={<PantallaDetalleMemoria />} />
                 <Route path="/plantillas" element={<PantallaPlantillas />} />
                 <Route path="/plantillas/:idPlantilla" element={<PantallaEditorDePlantilla />} />
+                <Route path="/almacen" element={<PantallaAlmacen />} />
                 <Route path="/configuracion" element={<PantallaConfiguracion />} />
               </Route>
               </Route>
