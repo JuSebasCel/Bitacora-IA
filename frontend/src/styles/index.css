@@ -472,9 +472,14 @@
       var(--ease-rebote-suave);
   }
 
+  /*
+    1.08 y no el 1.2 de la referencia: con el dock de 240px, "Cargar
+    conferencia" al 120% se salía por la derecha. Al 108% queda dentro, con
+    aire antes del borde.
+  */
   .item-de-dock:hover {
     color: var(--bitacora-nav-activo);
-    transform: scale(1.2);
+    transform: scale(1.08);
   }
 
   /*

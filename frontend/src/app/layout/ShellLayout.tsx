@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router'
-import { ChatEnCamino } from '@/features/chat/components'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
 import { useSession } from '@/features/auth/session'
 import { useAvisoDeAnalisis } from '@/features/conferencias/useAvisoDeAnalisis'
 import { despertarBackend } from '@/shared/api/backend'
-import { Modal } from '@/shared/ui'
 import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
 
@@ -29,7 +27,6 @@ function comoElemento(nodo: Element | null): HTMLElement | null {
 */
 export function ShellLayout() {
   const [cajonAbierto, setCajonAbierto] = useState(false)
-  const [chatAbierto, setChatAbierto] = useState(false)
 
   /* Una vez por sesión en el armazón: despierta al backend antes de que haga falta (ver `despertarBackend`). */
   useEffect(() => {
@@ -38,7 +35,6 @@ export function ShellLayout() {
 
   const { usuario } = useSession()
   useAvisoDeAnalisis(usuario?.id ?? '')
-  const botonDelChat = useRef<HTMLElement | null>(null)
 
   /*
     Plegar el dock es una preferencia de quien mira, igual que el tema, así
@@ -153,35 +149,12 @@ export function ShellLayout() {
   return (
     <ProveedorDeApiKey>
       <div className="flex h-dvh overflow-hidden bg-fondo font-sans text-texto">
-        {/*
-          El chat todavía no está listo para usarse: se construyó sobre el
-          mundo de fixtures y le falta el backend real. Se abre con la forma
-          que va a tener —la tarjeta de la referencia, anclada a su botón y
-          creciendo desde él hacia la derecha del dock— y dice que se está
-          trabajando en él. El panel viejo (`PanelDeChat`) sigue en el código.
-        */}
-        <Modal
-          abierto={chatAbierto}
-          alCerrar={() => setChatAbierto(false)}
-          titulo="Chat"
-          ancho="angosto"
-          anclaje="disparador"
-          anclaEn={botonDelChat}
-          crecerHacia="derecha"
-          sinMarco
-        >
-          <ChatEnCamino alCerrar={() => setChatAbierto(false)} />
-        </Modal>
 
         <BarraLateral
           id={ID_DE_NAVEGACION}
           abierta={cajonAbierto}
           alNavegar={cerrarCajon}
           refDelCajon={refDelCajon}
-          alAbrirChat={(boton) => {
-            botonDelChat.current = boton
-            setChatAbierto(true)
-          }}
           plegada={dockPlegado}
           alPlegar={() => setDockPlegado(true)}
         />

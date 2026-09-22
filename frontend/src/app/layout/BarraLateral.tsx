@@ -14,8 +14,6 @@ type PropiedadesBarraLateral = {
   alNavegar: () => void
   /** El shell lo enfoca al abrir el cajón y recorre lo enfocable de dentro. */
   refDelCajon: RefObject<HTMLElement | null>
-  /** El chat es una sección del dock pero se abre como modal, no como ruta. Recibe el botón, para crecer desde él. */
-  alAbrirChat: (boton: HTMLElement) => void
   /** Solo en escritorio: el dock plegado se va del todo y deja el ancho al contenido. */
   plegada: boolean
   alPlegar: () => void
@@ -36,13 +34,20 @@ type PropiedadesBarraLateral = {
   más a la que se navega.
 */
 
-/* 40px de alto, 8px de padding, line-height clavado en 24px. */
-const FILA = 'item-de-dock flex h-10 w-full items-center px-2 text-left leading-6'
+/*
+  36px de alto, 8px de padding, line-height clavado en 24px.
+
+  Más pequeño que el de la referencia (40px de fila, 24 → 28px de letra, 280
+  de ancho): a ese tamaño el dock se comía la pantalla y saturaba. Se bajó
+  todo en la misma proporción —fila 36, letra 20 → 24, ancho 240— para que
+  la jerarquía siga siendo la misma, solo que más callada.
+*/
+const FILA = 'item-de-dock flex h-9 w-full items-center px-2 text-left leading-6'
 
 function clasesDeItem(activo: boolean): string {
   return activo
-    ? `${FILA} text-[28px] font-semibold text-nav-activo`
-    : `${FILA} text-2xl font-normal text-nav-tenue`
+    ? `${FILA} text-2xl font-semibold text-nav-activo`
+    : `${FILA} text-xl font-normal text-nav-tenue`
 }
 
 export function BarraLateral({
@@ -50,7 +55,6 @@ export function BarraLateral({
   abierta,
   alNavegar,
   refDelCajon,
-  alAbrirChat,
   plegada,
   alPlegar,
 }: PropiedadesBarraLateral): ReactElement {
@@ -87,7 +91,7 @@ export function BarraLateral({
         se lea.
       */
       style={{ width: plegada ? 0 : undefined }}
-      className={`${visibilidad} dock-entra fixed inset-y-0 left-0 z-30 w-70 shrink-0 flex-col border-r border-filete bg-fondo transition-[width] duration-500 ease-(--ease-entrada) focus:outline-none md:sticky md:z-auto md:h-dvh ${
+      className={`${visibilidad} dock-entra fixed inset-y-0 left-0 z-30 w-60 shrink-0 flex-col border-r border-filete bg-fondo transition-[width] duration-500 ease-(--ease-entrada) focus:outline-none md:sticky md:z-auto md:h-dvh ${
         plegada ? 'overflow-hidden border-transparent' : 'overflow-x-hidden overflow-y-auto'
       }`}
     >
@@ -105,7 +109,7 @@ export function BarraLateral({
         Aquí dentro, con el ancho fijo, el contenido se queda quieto mientras
         el dock se cierra sobre él.
       */}
-      <div className="flex w-full min-w-[calc(17.5rem-1px)] flex-1 flex-col p-4">
+      <div className="flex w-full min-w-[calc(15rem-1px)] flex-1 flex-col p-4">
         {/*
         La cuenta vive aquí, no en una barra superior. Esa barra solo repetía
         el nombre de la sección —que el dock y el título de la pantalla ya
@@ -121,8 +125,16 @@ export function BarraLateral({
           cortaban en "Sebastia...", teniendo el dock 280px. Arriba ocupan una
           franja que igual estaba vacia y la cuenta se queda con todo el ancho.
         */}
-        <div className="flex h-10 items-center justify-between">
-          {usuario === null ? null : <CampanaDeAvisos idUsuario={usuario.id} />}
+        {/*
+          Arriba, el logo de la app: abre el menú de la cuenta (Configuración,
+          tema, cerrar sesión). Sustituye a la tarjeta con avatar, nombre y
+          correo, que ocupaba medio dock para decir quién eres, algo que no
+          hace falta leer cada vez. La tarjeta sigue en `MenuDeCuenta`.
+        */}
+        <div className="flex h-10 items-center justify-between gap-1">
+          {usuario === null ? null : (
+            <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} disparador="logo" />
+          )}
 
           <button
             type="button"
@@ -136,23 +148,16 @@ export function BarraLateral({
           </button>
         </div>
 
-        {/*
-          La cuenta sobre su propia superficie: el bloque gris la separa de la
-          navegacion, que es tipografia suelta sobre el fondo. Sin el, el
-          nombre y el correo se leian como un item mas de la lista.
-        */}
-        {usuario === null ? null : (
-          <div className="mt-1 rounded-[20px] bg-panel p-1">
-            <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} />
-          </div>
-        )}
+        <div className="mt-1 flex h-10 items-center">
+          {usuario === null ? null : <CampanaDeAvisos idUsuario={usuario.id} />}
+        </div>
 
         {/*
         Sin el nombre del producto: el avatar ya ancla la identidad arriba, y
         repetir la marca en cada pantalla no orienta a nadie que ya está
         dentro. La referencia tampoco lo pone.
       */}
-        <div className="mt-2 flex flex-col">
+        <div className="mt-3 flex flex-col">
           {SECCIONES_DE_NAVEGACION.map((seccion) => (
             <Link
               key={seccion.ruta}
@@ -166,7 +171,7 @@ export function BarraLateral({
           ))}
         </div>
 
-        <p className="mt-6 flex h-10 items-center px-2 text-base leading-6 text-nav-tenue">
+        <p className="mt-5 flex h-9 items-center px-2 text-sm leading-6 text-nav-tenue">
           Acciones
         </p>
 
@@ -176,27 +181,27 @@ export function BarraLateral({
               key={accion.ruta}
               to={accion.ruta}
               onClick={alNavegar}
-              className={`${FILA} text-2xl font-normal text-nav-tenue`}
+              className={`${FILA} text-xl font-normal text-nav-tenue`}
             >
               {accion.etiqueta}
             </Link>
           ))}
 
           {/*
-          El chat cierra este bloque y no el de secciones: no es un sitio
-          donde se esté, es algo que se hace sobre todo lo demás. Por eso
-          tampoco queda nunca "activo" — sigue siendo un botón que abre un
-          panel, no una ruta.
-        */}
+            El chat, bloqueado: se ve dónde va a estar, pero no se abre. El
+            panel que decía "en camino" se quitó; un clic que solo lleva a
+            un aviso de que no hay nada es peor que no poder hacer clic.
+          */}
           <button
             type="button"
-            onClick={(evento) => {
-              alNavegar()
-              alAbrirChat(evento.currentTarget)
-            }}
-            className={clasesDeItem(false)}
+            disabled
+            aria-disabled="true"
+            className="flex h-9 w-full cursor-not-allowed items-center gap-2 px-2 text-left text-xl leading-6 text-nav-tenue opacity-40"
           >
             Chat
+            <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-base">
+              lock
+            </span>
           </button>
         </div>
       </div>

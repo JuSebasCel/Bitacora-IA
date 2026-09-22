@@ -80,7 +80,7 @@ function panelDeCuenta(): HTMLElement {
   orden concreto de los ítems.
 */
 function ultimoEnlaceDeNavegacion(): HTMLElement {
-  const enfocables = barraDeNavegacion().querySelectorAll<HTMLElement>('a[href], button')
+  const enfocables = barraDeNavegacion().querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
   const ultimo = enfocables[enfocables.length - 1]
 
   if (ultimo === undefined) {
@@ -145,14 +145,11 @@ describe('ShellLayout', () => {
     )
   })
 
-  /* El chat era un icono sin etiqueta en la barra superior; ahora se llama por su nombre. */
-  it('abre el chat desde el dock', async () => {
-    const usuario = userEvent.setup()
+  /* El chat se ve en el dock, bloqueado: no se abre hasta que exista de verdad. */
+  it('muestra el chat en el dock, deshabilitado', () => {
     montarShell()
 
-    await usuario.click(within(barraDeNavegacion()).getByRole('button', { name: 'Chat' }))
-
-    expect(screen.getByRole('dialog', { name: /chat/i })).toBeInTheDocument()
+    expect(within(barraDeNavegacion()).getByRole('button', { name: /chat/i })).toBeDisabled()
   })
 
   /*
@@ -219,24 +216,17 @@ describe('ShellLayout', () => {
     también el nombre y el correo: con el círculo suelto, esa franja se leía
     vacía. Las iniciales siguen dentro del disco.
   */
-  it('la cabecera del dock muestra iniciales, nombre y correo', () => {
-    montarShell()
-
-    const cuenta = botonDeCuenta()
-
-    expect(cuenta).toHaveTextContent('VA')
-    expect(cuenta).toHaveTextContent(NOMBRE_DE_PRUEBA)
-    expect(cuenta).toHaveTextContent('valentina.alcantara@labanfora.org')
-  })
-
-  /* El menú ya no los repite: quien los enseña es el disparador. */
-  it('el menú de cuenta no repite el nombre ni el correo', async () => {
+  /* El dock abre la cuenta desde el logo de la app, y la cuenta se nombra al abrir el menú. */
+  it('la cabecera del dock es el logo, y el menú dice de quién es la cuenta', async () => {
     const usuario = userEvent.setup()
     montarShell()
 
+    expect(botonDeCuenta()).toHaveTextContent('Menti Vault')
+
     await usuario.click(botonDeCuenta())
 
-    expect(within(panelDeCuenta()).queryByText(NOMBRE_DE_PRUEBA)).not.toBeInTheDocument()
+    expect(within(panelDeCuenta()).getByText(NOMBRE_DE_PRUEBA)).toBeInTheDocument()
+    expect(within(panelDeCuenta()).getByText('valentina.alcantara@labanfora.org')).toBeInTheDocument()
   })
 
   it('el menú de cuenta ofrece un atajo a Configuración', async () => {

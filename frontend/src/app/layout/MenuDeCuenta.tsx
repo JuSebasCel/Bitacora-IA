@@ -6,6 +6,7 @@ import type { UsuarioSesion } from '@/features/auth/session'
 import { useApiKey } from '@/features/configuracion/useApiKey'
 import { useTema, type Tema } from '@/shared/tema'
 import { Modal } from '@/shared/ui'
+import { MarcaDeMenti } from '@/shared/ui/Logo'
 import { inicialesDe } from './inicialesDe'
 
 const OPCIONES_DE_TEMA: ReadonlyArray<{ valor: Tema; etiqueta: string; icono: string }> = [
@@ -26,13 +27,25 @@ const FILA =
   Lleva lo que se hace con la cuenta y nada más: el aviso de la clave si
   falta, el tema, Configuración y cerrar sesión. El nombre y el correo no se
   repiten dentro: ya están en la tarjeta que lo abre.
+
+  Tiene dos disparadores. La `tarjeta` con avatar, nombre y correo es el que
+  tuvo el dock hasta ahora; el `logo` es el actual, más pequeño, que deja el
+  dock para navegar. Con el logo, el nombre y el correo sí van dentro del
+  menú, porque ya no hay tarjeta que los diga. La tarjeta se conserva para
+  volver a ella si hace falta.
+
+  Perfil y Apariencia aparecen deshabilitados: son pantallas que vienen, y
+  dejarlas a la vista (en gris, sin reaccionar) dice dónde van a estar sin
+  prometer una fecha.
 */
 export function MenuDeCuenta({
   usuario,
   cerrarSesion,
+  disparador = 'tarjeta',
 }: {
   usuario: UsuarioSesion
   cerrarSesion: () => void
+  disparador?: 'tarjeta' | 'logo'
 }): ReactElement {
   const { tema, establecerTema } = useTema()
   /* Con las claves compartidas por la administración, a nadie le falta una. */
@@ -48,50 +61,83 @@ export function MenuDeCuenta({
 
   return (
     <>
-      <button
-        ref={boton}
-        type="button"
-        onClick={() => setAbierto(true)}
-        aria-haspopup="dialog"
-        aria-expanded={abierto}
-        aria-controls={idDelPanel}
-        aria-label={
-          apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
-        }
-        className="flex w-full cursor-pointer items-center gap-3 rounded-[20px] p-2 text-left transition-colors hover:bg-acento-tenue"
-      >
-        {/*
-          Dos círculos concéntricos, como la referencia: un aro gris de 40px que
-          lo despega del fondo y, dentro, el disco con las iniciales.
-        */}
-        <span aria-hidden="true" className="relative flex min-w-0 flex-1 items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-acento-tenue">
-            <span className="flex size-9 items-center justify-center rounded-full bg-acento text-sm font-semibold text-acento-contraste">
-              {inicialesDe(usuario.nombre, usuario.correo)}
+      {disparador === 'logo' ? (
+        <button
+          ref={boton}
+          type="button"
+          onClick={() => setAbierto(true)}
+          aria-haspopup="dialog"
+          aria-expanded={abierto}
+          aria-controls={idDelPanel}
+          aria-label={
+            apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
+          }
+          className="relative flex cursor-pointer items-center gap-2 rounded-full p-1.5 pr-3 text-texto transition-colors hover:bg-acento-tenue"
+        >
+          <MarcaDeMenti tamano={26} />
+          <span className="font-titulo text-lg leading-none font-semibold tracking-tight">Menti Vault</span>
+          {apiKeyFaltante ? (
+            <span aria-hidden="true" className="absolute top-1 left-6 size-2.5 rounded-full bg-pendiente ring-2 ring-fondo" />
+          ) : null}
+        </button>
+      ) : (
+        <button
+          ref={boton}
+          type="button"
+          onClick={() => setAbierto(true)}
+          aria-haspopup="dialog"
+          aria-expanded={abierto}
+          aria-controls={idDelPanel}
+          aria-label={
+            apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
+          }
+          className="flex w-full cursor-pointer items-center gap-3 rounded-[20px] p-2 text-left transition-colors hover:bg-acento-tenue"
+        >
+          {/*
+            Dos círculos concéntricos, como la referencia: un aro gris de 40px que
+            lo despega del fondo y, dentro, el disco con las iniciales.
+          */}
+          <span aria-hidden="true" className="relative flex min-w-0 flex-1 items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-acento-tenue">
+              <span className="flex size-9 items-center justify-center rounded-full bg-acento text-sm font-semibold text-acento-contraste">
+                {inicialesDe(usuario.nombre, usuario.correo)}
+              </span>
             </span>
-          </span>
 
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-semibold text-texto">{nombreVisible}</span>
-            <span className="truncate text-xs text-texto-tenue">{usuario.correo}</span>
-          </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-semibold text-texto">{nombreVisible}</span>
+              <span className="truncate text-xs text-texto-tenue">{usuario.correo}</span>
+            </span>
 
-          <AnimatePresence>
-            {apiKeyFaltante ? (
-              <motion.span
-                initial={reducirMovimiento ? false : { opacity: 0, scale: 0.4 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.4 }}
-                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute top-0 left-8 size-2.5 rounded-full bg-pendiente ring-2 ring-fondo"
-              />
-            ) : null}
-          </AnimatePresence>
-        </span>
-      </button>
+            <AnimatePresence>
+              {apiKeyFaltante ? (
+                <motion.span
+                  initial={reducirMovimiento ? false : { opacity: 0, scale: 0.4 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.4 }}
+                  transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute top-0 left-8 size-2.5 rounded-full bg-pendiente ring-2 ring-fondo"
+                />
+              ) : null}
+            </AnimatePresence>
+          </span>
+        </button>
+      )}
 
       <Modal abierto={abierto} alCerrar={cerrar} titulo="Tu cuenta" ancho="angosto" anclaje="disparador" anclaEn={boton}>
         <div id={idDelPanel} className="flex flex-col gap-5 pb-1">
+          {disparador === 'logo' ? (
+            <div className="flex items-center gap-3 px-1">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-acento text-sm font-semibold text-acento-contraste">
+                {inicialesDe(usuario.nombre, usuario.correo)}
+              </span>
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-semibold text-texto">{nombreVisible}</span>
+                <span className="truncate text-xs text-texto-tenue">{usuario.correo}</span>
+              </span>
+            </div>
+          ) : null}
+
           {apiKeyFaltante ? (
             <Link
               to="/configuracion#config-api-key"
@@ -135,6 +181,25 @@ export function MenuDeCuenta({
           </div>
 
           <div className="flex flex-col">
+            {[
+              { etiqueta: 'Perfil', icono: 'person' },
+              { etiqueta: 'Apariencia', icono: 'palette' },
+            ].map((fila) => (
+              <span
+                key={fila.etiqueta}
+                aria-disabled="true"
+                className="flex h-12 w-full cursor-not-allowed items-center gap-3 rounded-2xl px-3 text-base text-texto-tenue opacity-50"
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl">
+                  {fila.icono}
+                </span>
+                {fila.etiqueta}
+                <span aria-hidden="true" className="material-symbols-rounded icono-contorno ml-auto text-base">
+                  lock
+                </span>
+              </span>
+            ))}
+
             <Link to="/configuracion" onClick={cerrar} className={`${FILA} text-texto`}>
               <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl text-texto-tenue">
                 settings
