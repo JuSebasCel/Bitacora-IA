@@ -72,10 +72,12 @@ export function MenuDeCuenta({
           aria-label={
             apiKeyFaltante ? `Cuenta de ${nombreVisible}, falta configurar la API key` : `Cuenta de ${nombreVisible}`
           }
-          className="relative flex cursor-pointer items-center gap-2 rounded-full p-1.5 pr-3 text-texto transition-colors hover:bg-acento-tenue"
+          className="relative flex max-w-full min-w-0 cursor-pointer items-center gap-2 rounded-full p-1.5 pr-3 text-texto transition-colors hover:bg-acento-tenue"
         >
-          <MarcaDeMenti tamano={26} />
-          <span className="font-titulo text-lg leading-none font-semibold tracking-tight">Menti Vault</span>
+          <span className="shrink-0">
+            <MarcaDeMenti tamano={24} />
+          </span>
+          <span className="truncate font-titulo text-base leading-none font-semibold tracking-tight">Menti Vault</span>
           {apiKeyFaltante ? (
             <span aria-hidden="true" className="absolute top-1 left-6 size-2.5 rounded-full bg-pendiente ring-2 ring-fondo" />
           ) : null}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useConferenciasVisibles } from '@/features/conferencias/components'
 import { invitacionesPendientes, respuestasSinVer } from '@/features/conferencias/query'
-import { responderComparticion } from '@/features/configuracion/comparticiones/repositorio'
+import { marcarRespuestaVista, responderComparticion } from '@/features/configuracion/comparticiones/repositorio'
 import { Modal } from '@/shared/ui'
 
 /*
@@ -21,9 +21,11 @@ import { Modal } from '@/shared/ui'
   El panel es el modal anclado del sistema: crece desde la propia campana, con
   el velo y el desenfoque, en vez del flotante suelto de antes.
 
-  Lo ya leído se recuerda en memoria y no en la base: marcar la fila obligaría
-  a escribir sobre la compartición cada vez que se abre la campana, y un aviso
-  visto no es un hecho del dominio que merezca un viaje.
+  Descartar una respuesta con la ✕ se guarda en la base
+  (`comparticiones.respuesta_vista_por_dueno`). Antes se guardaba solo en la
+  memoria de la página, y al recargar —o al volver a montarse la campana—
+  reaparecían avisos que ya se habían quitado. Abrir la campana, en cambio,
+  solo la calla (se recuerda en el navegador): mirar no es descartar.
 */
 
 /* Cada cuánto vuelve a sonar mientras haya algo sin mirar: lo bastante espaciado para no volverse ruido. */
@@ -236,12 +238,17 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
           <p className="pb-2 text-base text-texto-tenue">Nada nuevo por ahora.</p>
         ) : null}
 
+        {/*
+          Cada aviso sobre el fondo de la página, más hondo que el del panel,
+          con un filete: sobre el mismo gris tenue del panel se fundían con él
+          y todo el contenido se leía como una sola mancha blanda.
+        */}
         {invitaciones.length === 0 ? null : (
           <section className="flex flex-col gap-2">
             <h3 className="px-1 text-sm font-medium text-texto-tenue">Te compartieron</h3>
 
             {invitaciones.map((conferencia) => (
-              <div key={conferencia.id} className="flex flex-col gap-3 rounded-[20px] bg-acento-tenue p-4">
+              <div key={conferencia.id} className="flex flex-col gap-3 rounded-[20px] bg-fondo p-4 shadow-[inset_0_0_0_1px_var(--bitacora-filete)]">
                 <div className="flex min-w-0 flex-col">
                   <p className="text-base leading-snug text-texto">{conferencia.titulo}</p>
                   <p className="truncate text-sm text-texto-tenue">
@@ -262,7 +269,7 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
                     type="button"
                     disabled={respondiendo.has(conferencia.id)}
                     onClick={() => void responder(conferencia.id, false)}
-                    className="h-10 flex-1 cursor-pointer rounded-full text-sm text-texto transition-colors hover:bg-ilustracion disabled:opacity-50"
+                    className="h-10 flex-1 cursor-pointer rounded-full bg-acento-tenue text-sm text-texto transition-colors hover:bg-ilustracion disabled:opacity-50"
                   >
                     Rechazar
                   </button>
@@ -279,7 +286,7 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
             {respuestas.map((respuesta) => (
               <div
                 key={`${respuesta.conferencia.id}:${respuesta.idInvitado}`}
-                className="flex items-center gap-3 rounded-[20px] bg-acento-tenue p-4"
+                className="flex items-center gap-3 rounded-[20px] bg-fondo p-4 shadow-[inset_0_0_0_1px_var(--bitacora-filete)]"
               >
                 <span
                   aria-hidden="true"
@@ -297,11 +304,12 @@ export function CampanaDeAvisos({ idUsuario }: { idUsuario: string }): ReactElem
                 <button
                   type="button"
                   aria-label="Descartar el aviso"
-                  onClick={() =>
+                  onClick={() => {
                     setVistas((antes) =>
                       new Set(antes).add(`${respuesta.conferencia.id}:${respuesta.idInvitado}`),
                     )
-                  }
+                    void marcarRespuestaVista(respuesta.conferencia.id, respuesta.idInvitado).then(recargar)
+                  }}
                   className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-texto-tenue transition-colors hover:bg-ilustracion hover:text-texto"
                 >
                   <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-lg">

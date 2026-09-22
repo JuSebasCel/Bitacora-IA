@@ -110,6 +110,8 @@ export type Comparticion = {
   */
   readonly invitadoNombre: string
   readonly invitadoCorreo: string
+  /** El dueño ya descartó el aviso de que le contestaron: no vuelve a la campana. */
+  readonly respuestaVista?: boolean
   /** Cuando el invitado contesto, en ISO. `null` mientras siga pendiente. */
   readonly respondidaEl: string | null
   /** Fecha ISO en que el dueño compartió la conferencia. */

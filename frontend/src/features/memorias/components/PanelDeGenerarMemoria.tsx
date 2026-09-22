@@ -128,7 +128,12 @@ export function PanelDeGenerarMemoria({
       alCerrar={alCerrar}
       titulo="Generar memoria"
       ancho="angosto"
-      {...(anclaEn === undefined ? {} : { anclaEn })}
+      /*
+        Anclado a su botón y no en mitad de la pantalla: es un formulario de
+        tres elecciones, y centrado sobre un velo parecía un paso mucho más
+        grande de lo que es.
+      */
+      {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
     >
       <form
         noValidate

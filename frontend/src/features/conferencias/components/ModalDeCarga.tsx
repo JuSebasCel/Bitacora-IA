@@ -41,9 +41,9 @@ import { usePreferencias } from '@/features/configuracion/preferencias'
   Lo que hará la IA no se explica en un recuadro: el formulario ya no pide
   tema ni resumen, y un párrafo que lo justificara era texto que nadie leía.
 
-  Es un modal centrado y no anclado porque se abre desde tres sitios —el dock,
-  la cabecera y el pie de la columna— y anclarlo lo haría nacer en un lugar
-  distinto cada vez, una vez pegado al borde izquierdo de la pantalla.
+  Se abre desde tres sitios —el dock, la cabecera y el pie de la columna—,
+  pero siempre crece desde el botón de la cabecera y queda colgado de él: así
+  nace en el mismo lugar venga de donde venga.
 */
 
 /* Las dos familias juntas: la extensión decide cuál es, no un control aparte. */
@@ -373,20 +373,13 @@ export function ModalDeCarga({
         alCerrar={alCerrar}
         titulo="Cargar conferencia"
         /*
-          Ancho y centrado. Angosto y pegado a su botón se veía como un menú
-          desplegable al que le habían metido un formulario; centrado se lee
-          como lo que es, un paso aparte. Sigue creciendo desde el botón.
+          Anclado a su botón, como los demás modales de la cabecera, y ancho:
+          a 440px el formulario no cabía y se partía en una columna larga
+          que se salía por abajo; a 720px caben las tres pastillas de evento,
+          ponente y fecha en un solo renglón.
         */
         ancho="normal"
-        /*
-          Aquí dentro hay un archivo elegido, un título escrito, un evento, un
-          ponente y una fecha. Un clic fuera se lleva las cinco cosas, y el
-          velo ocupa toda la pantalla: es el sitio más fácil del mundo donde
-          resbalar. Se sale con la X o con Escape.
-        */
-        cerrarAlPulsarElVelo={false}
-        anclaje="centro"
-        {...(anclaEn === undefined ? {} : { anclaEn })}
+        {...(anclaEn === undefined ? {} : { anclaje: 'disparador' as const, anclaEn })}
         {...(limites === undefined ? {} : { limites })}
       >
         <form

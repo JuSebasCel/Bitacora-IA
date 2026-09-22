@@ -131,10 +131,17 @@ export function BarraLateral({
           correo, que ocupaba medio dock para decir quién eres, algo que no
           hace falta leer cada vez. La tarjeta sigue en `MenuDeCuenta`.
         */}
-        <div className="flex h-10 items-center justify-between gap-1">
+        <div className="flex h-10 items-center gap-0.5">
           {usuario === null ? null : (
-            <div data-recorrido="cuenta">
+            <div data-recorrido="cuenta" className="min-w-0 flex-1">
               <MenuDeCuenta usuario={usuario} cerrarSesion={cerrarSesion} disparador="logo" />
+            </div>
+          )}
+
+          {/* La campana en el mismo renglón que el logo: sola en uno aparte se veía suelta. */}
+          {usuario === null ? null : (
+            <div data-recorrido="avisos" className="shrink-0">
+              <CampanaDeAvisos idUsuario={usuario.id} />
             </div>
           )}
 
@@ -150,9 +157,6 @@ export function BarraLateral({
           </button>
         </div>
 
-        <div data-recorrido="avisos" className="mt-1 flex h-10 w-fit items-center">
-          {usuario === null ? null : <CampanaDeAvisos idUsuario={usuario.id} />}
-        </div>
 
         {/*
         Sin el nombre del producto: el avatar ya ancla la identidad arriba, y

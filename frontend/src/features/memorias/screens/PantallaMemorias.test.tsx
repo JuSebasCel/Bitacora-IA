@@ -144,7 +144,7 @@ describe('PantallaMemorias', () => {
   it('con ?conferencia= en la URL, el panel se abre solo y preselecciona esa conferencia', async () => {
     montar('/memorias?conferencia=cnf-alc-01')
 
-    const dialogo = screen.getByRole('dialog', { name: 'Generar memoria' })
+    const dialogo = await screen.findByRole('dialog', { name: 'Generar memoria' })
     expect(dialogo).toBeInTheDocument()
     /* La pastilla lleva puesto su valor: el título de la conferencia preseleccionada. */
     await waitFor(() => expect(screen.getByRole('button', { name: /^Conferencia: Modelos de lenguaje/ })).toBeInTheDocument())

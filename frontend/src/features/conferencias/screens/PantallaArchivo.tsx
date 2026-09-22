@@ -1753,7 +1753,11 @@ export function PantallaArchivo({
         titulo="Filtros y orden"
         anclaje="disparador"
         anclaEn={botonDeFiltros}
-        ancho="angosto"
+        /*
+          Ancho y no angosto: con 440px cada grupo de pastillas se partía en
+          dos o tres renglones y el panel entero se salía por abajo.
+        */
+        ancho="normal"
         limites={marco}
       >
         {/*
@@ -1846,8 +1850,6 @@ export function PantallaArchivo({
         ancho="angosto"
         anclaEn={botonDeDetalle}
         limites={marco}
-        /* Lleva título, ponente, fecha y descripción escritos: un clic fuera no los tira. */
-        cerrarAlPulsarElVelo={false}
       >
         {conferenciaEnDetalle === undefined ? null : (
           <>

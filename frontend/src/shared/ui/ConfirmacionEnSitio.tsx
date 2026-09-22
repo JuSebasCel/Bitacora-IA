@@ -23,12 +23,23 @@ export type PropsConfirmacionEnSitio = {
   nombre: string
   alConfirmar: () => void
   alCancelar: () => void
+  /**
+   * Ocupa el ancho de su renglón en vez de medir lo que su texto. Para
+   * listas estrechas (las opciones de un selector): a su ancho natural la
+   * pregunta no cabía y se salía del panel. Así, el nombre se recorta.
+   */
+  completo?: boolean
 }
 
 const BOTON =
   'flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-acento-contraste'
 
-export function ConfirmacionEnSitio({ nombre, alConfirmar, alCancelar }: PropsConfirmacionEnSitio): ReactElement {
+export function ConfirmacionEnSitio({
+  nombre,
+  alConfirmar,
+  alCancelar,
+  completo = false,
+}: PropsConfirmacionEnSitio): ReactElement {
   const reducirMovimiento = useReducedMotion()
 
   return (
@@ -36,7 +47,8 @@ export function ConfirmacionEnSitio({ nombre, alConfirmar, alCancelar }: PropsCo
       role="group"
       aria-label={`¿Borrar ${nombre}?`}
       initial={reducirMovimiento ? false : { scale: 1, y: 0 }}
-      animate={{ scale: 1.06, y: -2 }}
+      /* A lo ancho del renglón no crece de lado: se saldría del panel. Solo se alza. */
+      animate={completo ? { scale: 1, y: -1 } : { scale: 1.06, y: -2 }}
       transition={{ duration: 0.3, ease: [0.38, 0.49, 0, 1.2] }}
       onKeyDown={(tecla) => {
         if (tecla.key === 'Escape') {
@@ -44,7 +56,9 @@ export function ConfirmacionEnSitio({ nombre, alConfirmar, alCancelar }: PropsCo
           alCancelar()
         }
       }}
-      className="flex items-center gap-1 rounded-full bg-error px-1 py-0.5 text-sm text-acento-contraste shadow-[0_4px_12px_rgb(0_0_0/0.25)]"
+      className={`flex items-center gap-1 rounded-full bg-error px-1 py-0.5 text-sm text-acento-contraste shadow-[0_4px_12px_rgb(0_0_0/0.25)] ${
+        completo ? 'w-full min-w-0' : ''
+      }`}
     >
       <button
         type="button"
@@ -57,7 +71,9 @@ export function ConfirmacionEnSitio({ nombre, alConfirmar, alCancelar }: PropsCo
         </span>
       </button>
 
-      <span className="max-w-48 truncate px-1">¿Borrar «{nombre}»?</span>
+      <span className={`truncate px-1 ${completo ? 'min-w-0 flex-1 text-center' : 'max-w-48'}`}>
+        ¿Borrar «{nombre}»?
+      </span>
 
       <button
         type="button"

@@ -120,6 +120,7 @@ export function Modal({
 }: PropsModal): ReactElement | null {
   const ventanaRef = useRef<HTMLDivElement>(null)
   const veloRef = useRef<HTMLDivElement>(null)
+  const pulsadoEnElVelo = useRef(false)
   const alCerrarRef = useRef(alCerrar)
 
   /* Sobrevive a `abierto`: al cerrar hay que seguir en el DOM lo que dure la salida. */
@@ -304,8 +305,18 @@ export function Modal({
   return createPortal(
     <div
       ref={veloRef}
+      /*
+        Se cierra solo si el clic EMPIEZA y termina en el velo. Un `click` se
+        dispara sobre el ancestro común de donde se presionó y donde se soltó:
+        al seleccionar texto dentro del modal y soltar fuera, ese ancestro es
+        el velo, y el modal se cerraba a mitad de un gesto que no era de salir.
+      */
+      onPointerDown={(evento) => {
+        pulsadoEnElVelo.current = evento.target === evento.currentTarget
+      }}
       onClick={(evento) => {
-        if (cerrarAlPulsarElVelo && evento.target === evento.currentTarget) alCerrar()
+        if (cerrarAlPulsarElVelo && pulsadoEnElVelo.current && evento.target === evento.currentTarget) alCerrar()
+        pulsadoEnElVelo.current = false
       }}
       className={`velo-de-modal fixed inset-0 z-50 p-4 ${cerrando ? '' : 'velo-entra'} ${
         anclaje === 'centro' ? 'flex items-center justify-center' : ''

@@ -114,7 +114,7 @@ export function respuestasSinVer(
         continue
       }
 
-      if (yaVistas(conferencia.id, comparticion.idInvitado)) {
+      if (comparticion.respuestaVista === true || yaVistas(conferencia.id, comparticion.idInvitado)) {
         continue
       }
 

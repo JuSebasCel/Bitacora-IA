@@ -168,8 +168,9 @@ export function SelectorDeOpciones<T extends string>({
 
             if (porBorrar === opcion.valor) {
               return (
-                <div key={opcion.valor} className="flex h-12 items-center px-2">
+                <div key={opcion.valor} className="flex h-12 items-center px-1">
                   <ConfirmacionEnSitio
+                    completo
                     nombre={opcion.etiqueta}
                     alCancelar={() => setPorBorrar(null)}
                     alConfirmar={() => {

@@ -40,6 +40,7 @@ export type FilaDeComparticion = {
   readonly respondida_el?: string | null
   readonly invitado_nombre?: string | null
   readonly invitado_correo?: string | null
+  readonly respuesta_vista_por_dueno?: boolean | null
 }
 
 export type FilaDeConferencia = {
@@ -147,6 +148,7 @@ export function mapearComparticion(fila: FilaDeComparticion): Comparticion {
     respondidaEl: fila.respondida_el ?? null,
     invitadoNombre: fila.invitado_nombre ?? '',
     invitadoCorreo: fila.invitado_correo ?? '',
+    ...(fila.respuesta_vista_por_dueno === true ? { respuestaVista: true } : {}),
     privacidad: mapearPrivacidad(fila.privacidad),
   }
 }

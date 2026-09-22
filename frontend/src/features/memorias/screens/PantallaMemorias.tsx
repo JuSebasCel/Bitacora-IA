@@ -69,13 +69,28 @@ export function PantallaMemorias(): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const idConferenciaPreseleccionada = searchParams.get('conferencia') ?? undefined
-  const [panelAbierto, setPanelAbierto] = useState(idConferenciaPreseleccionada !== undefined)
-  /* El botón que lo abrió, para que el modal crezca desde él. Desde el dock no hay botón aquí: aparece en el centro. */
+  const [panelAbierto, setPanelAbierto] = useState(false)
+  /* El botón que lo abrió, para que el modal crezca desde él y se quede colgado de él. */
   const botonQueAbrio = useRef<HTMLElement | null>(null)
   const abrirPanelDesde = (boton: HTMLElement): void => {
     botonQueAbrio.current = boton
     setPanelAbierto(true)
   }
+  /*
+    Los dos botones de "Generar memoria" de la pantalla: el de la cabecera
+    (con memorias) y el del estado vacío (sin ninguna). Cuando el panel se
+    pide desde fuera —el dock, o el detalle de una conferencia—, crece desde
+    el que esté a la vista.
+  */
+  const botonDeCabecera = useRef<HTMLSpanElement>(null)
+  const botonDelVacio = useRef<HTMLSpanElement>(null)
+  /*
+    Pedido desde fuera y todavía sin abrir. Se espera a que termine de cargar:
+    mientras está el esqueleto no hay ningún botón del que crecer, y abrirlo
+    entonces lo sacaba en el centro con solo un fundido —la primera vez desde
+    el dock se veía distinto que la segunda—.
+  */
+  const [aperturaPendiente, setAperturaPendiente] = useState(idConferenciaPreseleccionada !== undefined)
   const [vista, setVista] = useState<Vista>(vistaRecordada)
 
   function cambiarVista(siguiente: Vista): void {
@@ -98,12 +113,27 @@ export function PantallaMemorias(): ReactElement {
       return
     }
 
-    setPanelAbierto(true)
+    setAperturaPendiente(true)
 
     const siguiente = new URLSearchParams(searchParams)
     siguiente.delete(PARAMETRO_DE_CREACION)
     setSearchParams(siguiente, { replace: true })
   }, [searchParams, setSearchParams])
+
+  const cargandoPantalla = cargandoMemorias || carga === 'cargando'
+
+  useEffect(() => {
+    if (!aperturaPendiente || cargandoPantalla) {
+      return
+    }
+
+    const boton = botonDeCabecera.current ?? botonDelVacio.current
+    if (boton !== null) {
+      botonQueAbrio.current = boton
+    }
+    setAperturaPendiente(false)
+    setPanelAbierto(true)
+  }, [aperturaPendiente, cargandoPantalla])
 
   const criterios = useMemo(() => leerCriteriosDeMemorias(searchParams), [searchParams])
 
@@ -164,9 +194,11 @@ export function PantallaMemorias(): ReactElement {
 
             <SelectorDeVista opciones={VISTAS} valor={vista} alCambiar={cambiarVista} />
 
-            <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
-              Generar memoria
-            </BotonPildora>
+            <span ref={botonDeCabecera} className="inline-flex">
+              <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
+                Generar memoria
+              </BotonPildora>
+            </span>
           </div>
         )}
       </div>
@@ -244,9 +276,11 @@ export function PantallaMemorias(): ReactElement {
             icono="book_2"
             mensaje="Elige una conferencia procesada y una plantilla guardada para generar tu primera memoria"
           >
-            <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
-              Generar memoria
-            </BotonPildora>
+            <span ref={botonDelVacio} className="inline-flex">
+              <BotonPildora variante="primario" icono="add" onClick={(evento) => abrirPanelDesde(evento.currentTarget)}>
+                Generar memoria
+              </BotonPildora>
+            </span>
           </EstadoVacioIlustrado>
         )}
       </div>
