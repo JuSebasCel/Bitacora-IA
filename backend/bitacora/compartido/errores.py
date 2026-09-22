@@ -50,6 +50,8 @@ CodigoError = Literal[
     "MEM_DOCX_DEMASIADO_GRANDE",
     "MEM_PDF_SIN_CONVERSOR",
     "MEM_PDF_FALLO",
+    # Plantillas: proponer que va en cada campo.
+    "PLANT_SIN_CAMPOS",
     # Agente conversacional sobre el catálogo.
     "CHAT_MENSAJE_VACIO",
     "CHAT_CONVERSACION_NO_ENCONTRADA",
@@ -61,6 +63,10 @@ CodigoError = Literal[
 ]
 
 _MENSAJES: Final[dict[str, str]] = {
+    "PLANT_SIN_CAMPOS": (
+        "Esta plantilla no tiene ningun campo que configurar. Marcalos en Word con "
+        "[[Nombre]] y vuelve a subirla."
+    ),
     "MEM_SIN_HUECOS": (
         "Esta plantilla no tiene ningún marcador que rellenar. Márcalos en Word con "
         "[[Nombre]] y vuelve a subirla."
@@ -183,6 +189,7 @@ _ESTADOS_HTTP: Final[dict[str, int]] = {
     "CHAT_CONVERSACION_NO_ENCONTRADA": 404,
     "CHAT_MENSAJE_VACIO": 422,
     "MEM_SIN_HUECOS": 422,
+    "PLANT_SIN_CAMPOS": 422,
     "MEM_DOCX_VACIO": 422,
     "MEM_DOCX_DEMASIADO_GRANDE": 413,
     "MEM_PDF_SIN_CONVERSOR": 503,

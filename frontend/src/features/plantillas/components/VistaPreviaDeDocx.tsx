@@ -9,6 +9,13 @@ export type PropsVistaPreviaDeDocx = {
   resaltarMarcadores?: boolean
   /** Acercar y alejar la hoja: botones en la esquina y Control + rueda. Para leer una plantilla, no para una miniatura. */
   conZoom?: boolean
+  /**
+   * Los campos de la plantilla en el orden en que aparecen en el documento,
+   * para poder decir cuál se pulsó. Con `alPulsarCampo`, cada campo de la
+   * hoja se vuelve pulsable y se configura ahí mismo.
+   */
+  idsDeCampos?: readonly string[]
+  alPulsarCampo?: (id: string, caja: DOMRect) => void
 }
 
 const NOMBRE_DEL_RESALTE = 'marcadores-de-plantilla'
@@ -118,10 +125,15 @@ const HOLGURA_VERTICAL = 1
   Un marcador que Word partió en varios tramos da un rectángulo por tramo; se
   unen los de cada renglón para que salga una sola píldora por línea.
 */
-function dibujarPildoras(contenedor: HTMLElement, rangos: readonly Range[]): void {
+function dibujarPildoras(
+  contenedor: HTMLElement,
+  rangos: readonly Range[],
+  idsDeCampos: readonly string[] = [],
+  alPulsarCampo?: (id: string, caja: DOMRect) => void,
+): void {
   contenedor.querySelectorAll('.pildora-de-marcador').forEach((pildora) => pildora.remove())
 
-  for (const rango of rangos) {
+  for (const [indiceDelRango, rango] of rangos.entries()) {
     const hoja = rango.startContainer.parentElement?.closest<HTMLElement>('section.docx')
     if (hoja === null || hoja === undefined || hoja.offsetWidth === 0 || hoja.offsetHeight === 0) {
       continue
@@ -154,6 +166,32 @@ function dibujarPildoras(contenedor: HTMLElement, rangos: readonly Range[]): voi
       pildora.style.top = `${(renglon.top - caja.top) / escalaY - HOLGURA_VERTICAL}px`
       pildora.style.width = `${renglon.width / escalaX + HOLGURA_HORIZONTAL * 2}px`
       pildora.style.height = `${renglon.height / escalaY + HOLGURA_VERTICAL * 2}px`
+
+      /*
+        Pulsar el campo en la hoja lo configura ahí mismo. El id sale del
+        orden: los rangos salen de recorrer el documento de principio a fin,
+        que es el mismo orden en que se reconocieron los campos al subirlo.
+        Sin lista de ids, la píldora sigue siendo decorativa y no intercepta
+        el ratón, para no estorbar a quien solo está leyendo la hoja.
+      */
+      const idDelCampo = idsDeCampos[indiceDelRango]
+
+      if (idDelCampo !== undefined && alPulsarCampo !== undefined) {
+        pildora.dataset.campo = idDelCampo
+        pildora.style.pointerEvents = 'auto'
+        pildora.style.cursor = 'pointer'
+        /*
+          Por encima del texto, no detrás: en reposo la píldora vive en
+          `z-index: -1` para no taparlo, pero ahí tampoco recibe el clic —el
+          texto se lo lleva—. Su fondo es un tinte del 7 %, así que por
+          delante no esconde nada.
+        */
+        pildora.style.zIndex = '1'
+        pildora.addEventListener('click', () => {
+          alPulsarCampo(idDelCampo, pildora.getBoundingClientRect())
+        })
+      }
+
       hoja.appendChild(pildora)
     }
   }
@@ -170,6 +208,8 @@ export function VistaPreviaDeDocx({
   blob,
   resaltarMarcadores = false,
   conZoom = false,
+  idsDeCampos,
+  alPulsarCampo,
 }: PropsVistaPreviaDeDocx): ReactElement | null {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const [fallo, setFallo] = useState(false)
@@ -202,9 +242,11 @@ export function VistaPreviaDeDocx({
         setPintada(true)
         if (resaltarMarcadores) {
           const rangos = marcadoresEn(contenedor)
-          dibujarPildoras(contenedor, rangos)
+          dibujarPildoras(contenedor, rangos, idsDeCampos, alPulsarCampo)
           /* Con las fuentes de Word ya cargadas el texto se mueve: se vuelven a medir. */
-          void document.fonts?.ready.then(() => dibujarPildoras(contenedor, rangos))
+          void document.fonts?.ready.then(() =>
+            dibujarPildoras(contenedor, rangos, idsDeCampos, alPulsarCampo),
+          )
         }
       })
       .catch(() => {
@@ -217,7 +259,7 @@ export function VistaPreviaDeDocx({
         CSS.highlights.delete(NOMBRE_DE_LOS_CORCHETES)
       }
     }
-  }, [blob, resaltarMarcadores])
+  }, [blob, resaltarMarcadores, idsDeCampos, alPulsarCampo])
 
   if (blob === null) {
     return null

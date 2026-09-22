@@ -1,7 +1,13 @@
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  conInstruccionesPropuestas,
+  proponerInstrucciones,
+  sePuedenProponerInstrucciones,
+} from '../instrucciones'
 import { PRESETS_DE_TONO, TONO_POR_DEFECTO } from '../tono'
 import type { TonoDePlantilla } from '../tono'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { mensajeDeError } from '@/shared/errors'
 import {
@@ -119,11 +125,22 @@ export function ConfirmacionDePlantillaDocx({
   const [nombreAlEditar, setNombreAlEditar] = useState<string | null>(null)
   const [urlDeDescarga, setUrlDeDescarga] = useState<string | null>(null)
   const [borradoAbierto, setBorradoAbierto] = useState(false)
+  /* La propuesta de la IA para los campos sin instrucción: en curso, o el fallo de la última. */
+  const [proponiendo, setProponiendo] = useState(false)
+  /* El campo que se pulsó en la hoja, con la caja de su píldora para colocar el panel. */
+  const [campoEnLaHoja, setCampoEnLaHoja] = useState<{ id: string; caja: DOMRect } | null>(null)
+  const [errorDeLaPropuesta, setErrorDeLaPropuesta] = useState<string | null>(null)
   const botonDeBorrado = useRef<HTMLButtonElement>(null)
   const pantalla = useRef<HTMLDivElement>(null)
   useCrecerDesdeOrigen(pantalla, plantilla.id)
 
   const campos = plantilla.marcadores.filter((marcador): marcador is MarcadorSimpleDeDocx => marcador.tipo === 'simple')
+  /*
+    Los campos simples en el orden del documento, que es el que la vista
+    previa recorre al resaltarlos: así sabe cuál se pulsó.
+  */
+  const idsDeCampos = useMemo(() => campos.map((campo) => campo.id), [campos])
+  const campoPulsado = campos.find((campo) => campo.id === campoEnLaHoja?.id)
   const listos = campos.filter(tieneInstruccion).length
 
   /*
@@ -145,6 +162,37 @@ export function ConfirmacionDePlantillaDocx({
 
     return () => URL.revokeObjectURL(url)
   }, [archivo])
+
+  /*
+    Rellena de una vez los campos que están sin instrucción, leyendo el nombre
+    y el texto que rodea a cada uno. Lo propuesto queda editable y no pisa lo
+    que alguien ya escribió (ver `instrucciones.ts`).
+  */
+  async function proponerLoQueFalta(): Promise<void> {
+    if (proponiendo) {
+      return
+    }
+
+    setProponiendo(true)
+    setErrorDeLaPropuesta(null)
+
+    const resultado = await proponerInstrucciones(plantilla.nombre, plantilla.marcadores)
+    setProponiendo(false)
+
+    if (!resultado.ok) {
+      setErrorDeLaPropuesta(mensajeDeError(resultado.codigo))
+      return
+    }
+
+    if (resultado.datos.length === 0) {
+      setErrorDeLaPropuesta('La IA no propuso nada para estos campos. Escríbelos a mano.')
+      return
+    }
+
+    alCambiarMarcadores(conInstruccionesPropuestas(plantilla.marcadores, resultado.datos))
+    /* Se abre el primero para que se lea lo que propuso antes de darlo por bueno. */
+    setAbierto(resultado.datos[0]?.id ?? null)
+  }
 
   function cambiarMarcador(id: string, cambio: Partial<MarcadorSimpleDeDocx>): void {
     alCambiarMarcadores(
@@ -268,7 +316,18 @@ export function ConfirmacionDePlantillaDocx({
           aria-label="Vista previa"
           className="flex min-h-[28rem] min-w-0 flex-1 flex-col rounded-[24px] bg-panel p-4">
           <div className="min-h-0 flex-1">
-            <VistaPreviaDeDocx blob={archivo} resaltarMarcadores conZoom />
+            {/*
+              Los campos de la hoja se pulsan y se configuran ahí mismo. Con
+              una plantilla de muchos campos, encontrar en la lista de la
+              derecha cuál es "Detalle 3" costaba más que leer el documento.
+            */}
+            <VistaPreviaDeDocx
+              blob={archivo}
+              resaltarMarcadores
+              conZoom
+              idsDeCampos={idsDeCampos}
+              alPulsarCampo={(id, caja) => setCampoEnLaHoja({ id, caja })}
+            />
           </div>
         </section>
 
@@ -285,6 +344,35 @@ export function ConfirmacionDePlantillaDocx({
               </span>
             )}
           </div>
+
+          {/*
+            El atajo va arriba del todo y solo mientras quede algo sin
+            configurar: es lo primero que se hace con una plantilla recién
+            subida, y deja de tener sentido en cuanto está lista.
+          */}
+          {sePuedenProponerInstrucciones(plantilla.marcadores) ? (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => void proponerLoQueFalta()}
+                disabled={proponiendo}
+                className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-acento text-sm font-medium text-acento-contraste transition-opacity disabled:cursor-default disabled:opacity-60"
+              >
+                <span aria-hidden="true" className="material-symbols-rounded icono-relleno text-lg">
+                  auto_awesome
+                </span>
+                {proponiendo
+                  ? 'Escribiendo las instrucciones…'
+                  : `Proponer lo que falta (${campos.length - listos})`}
+              </button>
+
+              {errorDeLaPropuesta === null ? null : (
+                <p role="alert" className="px-2 text-sm text-error">
+                  {errorDeLaPropuesta}
+                </p>
+              )}
+            </div>
+          ) : null}
 
           {alCambiarTono === undefined || plantilla.marcadores.length === 0 ? null : (
             <SelectorDeTono tono={plantilla.tono ?? TONO_POR_DEFECTO} alCambiar={alCambiarTono} />
@@ -325,6 +413,21 @@ export function ConfirmacionDePlantillaDocx({
           )}
         </section>
       </div>
+
+      {campoEnLaHoja === null || campoPulsado === undefined ? null : (
+        <PanelSobreLaHoja
+          caja={campoEnLaHoja.caja}
+          alCerrar={() => setCampoEnLaHoja(null)}
+          titulo={nombreDeMarcador(campoPulsado.textoOriginal)}
+        >
+          <CampoConfigurable
+            marcador={campoPulsado}
+            abierto
+            alAlternar={() => setCampoEnLaHoja(null)}
+            alCambiar={(cambio) => cambiarMarcador(campoPulsado.id, cambio)}
+          />
+        </PanelSobreLaHoja>
+      )}
 
       <ModalDeConfirmacion
         abierto={borradoAbierto}
@@ -583,5 +686,76 @@ function SeccionDeWord({ marcador }: { marcador: Exclude<MarcadorDeDocx, Marcado
         </span>
       </span>
     </li>
+  )
+}
+
+/*
+  La configuración de un campo, flotando junto a él sobre la hoja.
+
+  Va en un portal sobre `document.body` y no dentro de la hoja: la hoja está
+  escalada por el zoom y tiene su propio desplazamiento, así que un panel
+  dentro de ella heredaría la escala y se cortaría en sus bordes.
+
+  Se coloca a la derecha de la píldora, o a su izquierda si ahí no cabe, y
+  siempre dentro de la pantalla. Se cierra con Escape o pulsando fuera —no
+  con un botón de guardar, porque no hay nada que guardar: cada cambio se
+  escribe solo, como en la lista de la derecha.
+*/
+const ANCHO_DEL_PANEL = 360
+const AIRE = 12
+
+function PanelSobreLaHoja({
+  caja,
+  titulo,
+  alCerrar,
+  children,
+}: {
+  caja: DOMRect
+  titulo: string
+  alCerrar: () => void
+  children: ReactNode
+}): ReactElement {
+  const panel = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function alPulsarFuera(evento: MouseEvent): void {
+      if (!panel.current?.contains(evento.target as Node)) {
+        alCerrar()
+      }
+    }
+
+    function alTeclear(evento: KeyboardEvent): void {
+      if (evento.key === 'Escape') {
+        evento.stopPropagation()
+        alCerrar()
+      }
+    }
+
+    document.addEventListener('mousedown', alPulsarFuera)
+    document.addEventListener('keydown', alTeclear, true)
+
+    return () => {
+      document.removeEventListener('mousedown', alPulsarFuera)
+      document.removeEventListener('keydown', alTeclear, true)
+    }
+  }, [alCerrar])
+
+  const cabeALaDerecha = caja.right + AIRE + ANCHO_DEL_PANEL <= window.innerWidth - AIRE
+  const izquierda = cabeALaDerecha
+    ? caja.right + AIRE
+    : Math.max(AIRE, caja.left - AIRE - ANCHO_DEL_PANEL)
+  const arriba = Math.max(AIRE, Math.min(caja.top - AIRE, window.innerHeight - 420 - AIRE))
+
+  return createPortal(
+    <div
+      ref={panel}
+      role="dialog"
+      aria-label={`Configurar ${titulo}`}
+      style={{ left: izquierda, top: arriba, width: ANCHO_DEL_PANEL }}
+      className="elevacion sin-barra-de-scroll fixed z-[60] max-h-[70vh] overflow-y-auto rounded-[24px] bg-panel p-2"
+    >
+      {children}
+    </div>,
+    document.body,
   )
 }
