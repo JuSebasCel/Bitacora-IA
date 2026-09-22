@@ -28,6 +28,24 @@ export function hayBackend(): boolean {
   return URL_BASE.length > 0
 }
 
+/*
+  Despierta al backend sin esperar respuesta.
+
+  En el plan gratuito de Render el servidor se duerme tras 15 minutos sin
+  tráfico y tarda cerca de un minuto en arrancar. Se llama al entrar a la
+  app: ese minuto pasa mientras la persona mira sus conferencias, y no
+  cuando pulsa "Analizar" o pide un PDF, que es donde se notaría.
+*/
+export function despertarBackend(): void {
+  if (!hayBackend()) {
+    return
+  }
+
+  void fetch(`${URL_BASE}/salud`).catch(() => {
+    /* Si no responde, las acciones que lo necesitan ya saben decirlo. */
+  })
+}
+
 async function tokenDeSesion(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   return data.session?.access_token ?? null

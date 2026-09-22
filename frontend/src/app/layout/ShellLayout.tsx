@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router'
 import { ChatEnCamino } from '@/features/chat/components'
 import { ProveedorDeApiKey } from '@/features/configuracion/ProveedorDeApiKey'
+import { despertarBackend } from '@/shared/api/backend'
 import { Modal } from '@/shared/ui'
 import { BarraLateral } from './BarraLateral'
 import { BarraSuperior } from './BarraSuperior'
@@ -27,6 +28,11 @@ function comoElemento(nodo: Element | null): HTMLElement | null {
 export function ShellLayout() {
   const [cajonAbierto, setCajonAbierto] = useState(false)
   const [chatAbierto, setChatAbierto] = useState(false)
+
+  /* Una vez por sesión en el armazón: despierta al backend antes de que haga falta (ver `despertarBackend`). */
+  useEffect(() => {
+    despertarBackend()
+  }, [])
   const botonDelChat = useRef<HTMLElement | null>(null)
 
   /*

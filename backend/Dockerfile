@@ -34,6 +34,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 8000
 
-# Detrás de Caddy (ver despliegue/docker-compose.yml): las cabeceras del
-# proxy se aceptan para que las URLs y los registros vean la dirección real.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# El puerto sale de `PORT` si el proveedor lo fija (Render lo hace), y si
+# no, 8000. Detrás de un proxy (Render, o Caddy en despliegue/): se aceptan
+# sus cabeceras para que las URLs y los registros vean la dirección real.
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]

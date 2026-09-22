@@ -6,33 +6,43 @@ Tres piezas, las tres en plan gratuito y sin tarjeta:
 |---|---|---|
 | Base de datos, sesiones, archivos | Supabase | Ya está en producción. |
 | Frontend | Vercel | La app de React, con tu dominio. |
-| Backend | **Koyeb** | La API de IA, construida desde `backend/Dockerfile`. |
+| Backend | **Render** | La API de IA, construida desde `backend/Dockerfile`. |
 
-`tudominio.com` apunta a Vercel. El backend queda en una dirección de Koyeb
-(`https://<algo>.koyeb.app`) que solo usa el frontend, así que no necesita
+`tudominio.com` apunta a Vercel. El backend queda en una dirección de Render
+(`https://<algo>.onrender.com`) que solo usa el frontend, así que no necesita
 subdominio propio. En toda la guía, cambia `tudominio.com` por el tuyo.
+
+(Koyeb se descartó: desde que se unió a Mistral, en febrero de 2026, las
+cuentas nuevas ya no tienen plan gratuito.)
 
 Oracle Cloud (sección 1, más abajo) queda como alternativa con más memoria,
 pero pide una tarjeta que acepte su verificación.
 
 ---
 
-## 0. El backend en Koyeb (sin tarjeta)
+## 0. El backend en Render (sin tarjeta)
 
-Plan gratuito: 512 MB de RAM, 0,1 CPU, un servicio. Se duerme tras una hora
-sin tráfico y despierta en segundos, así que un análisis de una hora de
-audio (unos 10 minutos de trabajo) no se corta.
+Plan gratuito: 512 MB de RAM, 750 horas al mes (un mes tiene como mucho 744:
+alcanza para tenerlo despierto todo el mes). Se duerme tras **15 minutos sin
+tráfico** y tarda **cerca de un minuto** en despertar. Dos cosas en el código
+ya lo tienen en cuenta:
 
-1. Crea la cuenta en <https://www.koyeb.com> entrando con **GitHub**.
-2. **Create Service → Web Service → GitHub**, y elige el repositorio
-   `Menti-Vault`, rama `dev`.
-3. **Builder**: `Dockerfile`, con **Work directory** `backend` (ahí está el
+- Mientras hay un análisis en curso, el backend se llama a sí mismo cada 5
+  minutos (`bitacora/api/despierto.py`), así que no se duerme a mitad de un
+  análisis aunque se cierre la pestaña.
+- Al entrar a la app, el frontend le da un aviso para que vaya despertando
+  (`despertarBackend`): el minuto de arranque pasa mientras se navega, no al
+  pulsar "Analizar".
+
+1. Crea la cuenta en <https://render.com> entrando con **GitHub**. No pide
+   tarjeta.
+2. **New → Web Service**, conecta el repositorio `Menti-Vault` y elige la
+   rama `dev`.
+3. **Language**: `Docker`. **Root Directory**: `backend` (ahí está el
    `Dockerfile`).
-4. **Instance**: `Free`. **Region**: Washington, D.C. o Frankfurt (las únicas
-   del plan gratuito).
-5. **Exposed ports**: `8000`, protocolo HTTP, ruta `/`.
-6. **Health check**: HTTP en la ruta `/docs`.
-7. **Environment variables** (marca como *Secret* las dos últimas):
+4. **Instance Type**: `Free`. **Region**: la más cercana (por ejemplo,
+   Virginia u Ohio).
+5. **Environment Variables**:
 
    | Variable | Valor |
    |---|---|
@@ -41,17 +51,21 @@ audio (unos 10 minutos de trabajo) no se corta.
    | `SUPABASE_ANON_KEY` | La anon key de Supabase. |
    | `BITACORA_SECRETO_DEL_SERVIDOR` | **El mismo** de `backend/.env` en tu computador. |
 
-8. **Deploy**. La primera construcción tarda varios minutos (instala
-   LibreOffice). Cuando diga *Healthy*, copia la dirección pública del
-   servicio (`https://….koyeb.app`) y comprueba que `…/docs` abre.
+6. En **Advanced → Health Check Path**: `/salud`.
+7. **Deploy Web Service**. La primera construcción tarda varios minutos
+   (instala LibreOffice). Cuando diga *Live*, copia la dirección
+   (`https://….onrender.com`) y comprueba que `…/docs` abre.
 
-Esa dirección es el `VITE_API_URL` del frontend (sección 4).
+Esa dirección es el `VITE_API_URL` del frontend (sección 4). Cada `git push`
+a `dev` vuelve a desplegar solo.
 
-Cada `git push` a `dev` vuelve a desplegar solo.
+**Si algo falla**: la pestaña *Logs* del servicio. Con 512 MB, lo más justo
+es la conversión de una memoria a PDF; si falla, la memoria se sigue
+pudiendo descargar en Word.
 
-**Si algo falla**: la pestaña *Logs* del servicio. Lo que más probablemente
-se quede corto con 512 MB es la conversión de una memoria a PDF; si pasa, la
-memoria se sigue pudiendo descargar en Word.
+**Render puede reiniciar un servicio gratuito en cualquier momento.** Si
+pasa a mitad de un análisis, la conferencia se queda en "procesando". La
+transcripción ya está guardada, así que volver a analizarla no gasta audio.
 
 ---
 
@@ -204,7 +218,7 @@ cd ~/Menti-Vault && git pull && cd despliegue && docker compose up -d --build
    |---|---|
    | `VITE_SUPABASE_URL` | La de Supabase. |
    | `VITE_SUPABASE_ANON_KEY` | La anon key de Supabase. |
-   | `VITE_API_URL` | La dirección del backend: `https://….koyeb.app` (o `https://api.tudominio.com` si usaste Oracle). |
+   | `VITE_API_URL` | La dirección del backend: `https://….onrender.com` (o `https://api.tudominio.com` si usaste Oracle). |
 
 4. **Deploy**. En **Settings → Git**, la rama de producción debería ser
    `main`; mientras el trabajo siga en `dev`, cambia esa rama a `dev` o une

@@ -17,6 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, status
 from pydantic import BaseModel
 
 from bitacora.analisis.pipeline import ESTADOS_PROCESABLES, procesar_sin_propagar
+from bitacora.api.despierto import mientras_trabaja
 from bitacora.api.dependencias import (
     Usuario,
     analizador_para,
@@ -37,6 +38,12 @@ unos 1.500 tokens, que con las instrucciones y la respuesta dejan cada
 petición cómodamente por debajo de 8.000 tokens por minuto.
 """
 CARACTERES_POR_VENTANA_EN_GROQ = 5000
+
+
+def _procesar_sin_dormirse(*argumentos: object) -> None:
+    """El análisis en segundo plano, con el servidor despierto hasta que termine (ver `despierto.py`)."""
+    with mientras_trabaja():
+        procesar_sin_propagar(*argumentos)  # type: ignore[arg-type]
 
 
 router = APIRouter(prefix="/conferencias", tags=["conferencias"])
@@ -119,7 +126,7 @@ def procesar(
     caracteres_por_ventana = CARACTERES_POR_VENTANA_EN_GROQ if es_de_groq(clave_de_texto) else CARACTERES_POR_VENTANA
 
     tareas.add_task(
-        procesar_sin_propagar,
+        _procesar_sin_dormirse,
         id_conferencia,
         repositorio,
         transcriptor_de(usuario, cliente_de_voz),
