@@ -133,19 +133,24 @@ export function PantallaDetalleMemoria(): ReactElement {
     }
   }, [cargandoOrigen, memoria, conferenciaVisible, plantilla, rutaDelDocx, archivo, errorDelDocx, temas, fichasVisiblesTodas])
 
-  if (cargandoOrigen) {
+  /*
+    El contenedor que crece desde la tarjeta es el mismo mientras carga y con
+    la memoria ya leída. Antes, la carga y el error salían por su cuenta y la
+    animación solo arrancaba al llegar el contenido: se veía el esqueleto a
+    pantalla completa y, encima, la pantalla creciendo desde la tarjeta —el
+    parpadeo—.
+  */
+  if (cargandoOrigen || memoria === undefined) {
     return (
-      <div className="flex flex-col gap-5 border-t border-filete-fuerte pt-5">
-        <Esqueleto filas={4} etiqueta="Cargando la memoria" />
-      </div>
-    )
-  }
-
-  if (memoria === undefined) {
-    return (
-      <div className="flex flex-col gap-5 border-t border-filete-fuerte pt-5">
-        <PanelDeError mensaje={mensajeDeError('MEM_NO_ENCONTRADA')} />
-        <EnlaceDeRegreso />
+      <div ref={pantalla} className="flex min-h-0 flex-1 flex-col gap-6">
+        {cargandoOrigen ? (
+          <Esqueleto filas={4} etiqueta="Cargando la memoria" />
+        ) : (
+          <div className="flex flex-col gap-5">
+            <PanelDeError mensaje={mensajeDeError('MEM_NO_ENCONTRADA')} />
+            <EnlaceDeRegreso />
+          </div>
+        )}
       </div>
     )
   }

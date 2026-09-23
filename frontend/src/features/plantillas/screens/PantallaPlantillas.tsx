@@ -183,7 +183,7 @@ export function PantallaPlantillas(): ReactElement {
     )
 
   return (
-    <div data-escena-de-aterrizaje className="flex min-h-0 flex-1 flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/*
           Solo el título, como en Memorias y en la referencia. La línea que
