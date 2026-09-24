@@ -19,11 +19,14 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from bitacora.api.dependencias import Usuario, cliente_de_openai, redactor_para
+from bitacora.api.dependencias import Usuario, cliente_para, rastreador_para, redactor_para
+from bitacora.api.procesamiento import CARACTERES_POR_VENTANA_EN_GROQ
+from bitacora.analisis.chunking import CARACTERES_POR_VENTANA
 from bitacora.compartido.errores import ErrorDeBitacora
+from bitacora.compartido.ia import es_de_groq
 from bitacora.memorias.pdf import convertir_a_pdf
 from bitacora.memorias.redaccion import Hueco
-from bitacora.memorias.repositorio import leer_material
+from bitacora.memorias.repositorio import leer_material, leer_tramos_de_la_transcripcion
 
 router = APIRouter(prefix="/memorias", tags=["memorias"])
 
@@ -62,23 +65,44 @@ def redactar(cuerpo: PedidoDeRedaccion, usuario: Usuario) -> RespuestaDeRedaccio
         raise ErrorDeBitacora("MEM_SIN_HUECOS")
 
     charla, fichas = leer_material(usuario.cliente, cuerpo.id_conferencia)
-    redactar_con = redactor_para(usuario, cliente_de_openai(usuario, "fichas"))
+    clave = usuario.clave_de_openai("fichas")
+    cliente = cliente_para(usuario, clave, "fichas")
 
-    secciones = redactar_con(
+    huecos = [
+        Hueco(
+            id=hueco.id,
+            nombre=hueco.nombre.strip(),
+            instruccion=hueco.instruccion.strip(),
+            formato=hueco.formato,
+            modo=hueco.modo,
+            extension=hueco.extension,
+        )
+        for hueco in cuerpo.huecos
+    ]
+
+    """
+    Antes de redactar se busca en la transcripción completa lo que pide cada
+    hueco. Las fichas son lo citable de la charla, y una plantilla pide
+    además datos que nadie citaría —un correo, un teléfono, la modalidad—:
+    estaban dichos y la memoria salía sin ellos. Ver `rastreo.py`.
+
+    Si no hay transcripción a mano, no hay tramos y la redacción sigue como
+    antes, solo con las fichas.
+    """
+    tramos = leer_tramos_de_la_transcripcion(
+        usuario.cliente,
+        cuerpo.id_conferencia,
+        CARACTERES_POR_VENTANA_EN_GROQ if es_de_groq(clave) else CARACTERES_POR_VENTANA,
+    )
+
+    extractos = rastreador_para(usuario, cliente)(huecos, tramos) if tramos else {}
+
+    secciones = redactor_para(usuario, cliente)(
         charla,
         fichas,
-        [
-            Hueco(
-                id=hueco.id,
-                nombre=hueco.nombre.strip(),
-                instruccion=hueco.instruccion.strip(),
-                formato=hueco.formato,
-                modo=hueco.modo,
-                extension=hueco.extension,
-            )
-            for hueco in cuerpo.huecos
-        ],
+        huecos,
         tono=cuerpo.tono.strip(),
+        extractos=extractos,
     )
 
     return RespuestaDeRedaccion(secciones=secciones)

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol, Sequence
+from typing import Any, Literal, Mapping, Protocol, Sequence
 
 from bitacora.compartido.ia import (
     TEMPERATURA_DETERMINISTA,
@@ -77,9 +77,15 @@ extraídas de la transcripción.
 
 Reglas:
 
-1. Escribe SOLO con lo que está en los datos y las fichas. No añadas \
-contexto, cifras ni afirmaciones que no estén ahí, aunque las sepas. Una \
-memoria que dice algo que el ponente no dijo es peor que una memoria corta.
+1. Escribe SOLO con lo que está en los datos, las fichas y los `extractos` \
+de cada hueco. No añadas contexto, cifras ni afirmaciones que no estén ahí, \
+aunque las sepas. Una memoria que dice algo que el ponente no dijo es peor \
+que una memoria corta.
+1b. Los `extractos` de un hueco son trozos de la transcripción que se \
+buscaron para él: son lo primero que hay que mirar, y mandan sobre las \
+fichas. Las fichas recogen lo citable de la charla; un correo, un teléfono o \
+una fecha casi nunca son una ficha y sí están ahí. Un dato que venga en un \
+extracto se copia tal cual, sin adornarlo.
 2. Si un hueco pide algo que el material no contiene —una tesis que la charla \
 no planteó, cifras que no dio—, devuelve `null` en su `texto`. No lo \
 rellenes con generalidades para que no quede vacío.
@@ -114,6 +120,7 @@ class Redactor(Protocol):
         fichas: Sequence[FichaParaRedactar],
         huecos: Sequence[Hueco],
         tono: str = "",
+        extractos: Mapping[str, Sequence[str]] | None = None,
     ) -> dict[str, str | None]: ...
 
 
@@ -132,6 +139,7 @@ def redactor_de(cliente: ClienteDeOpenAI, modelo: str) -> Redactor:
         fichas: Sequence[FichaParaRedactar],
         huecos: Sequence[Hueco],
         tono: str = "",
+        extractos: Mapping[str, Sequence[str]] | None = None,
     ) -> dict[str, str | None]:
         hay_citas = any(hueco.modo == "cita" for hueco in huecos)
 
@@ -158,6 +166,7 @@ def redactor_de(cliente: ClienteDeOpenAI, modelo: str) -> Redactor:
                     "formato": hueco.formato,
                     "modo": hueco.modo,
                     "extension": hueco.extension,
+                    "extractos": list((extractos or {}).get(hueco.id, ())),
                 }
                 for hueco in huecos
             ],

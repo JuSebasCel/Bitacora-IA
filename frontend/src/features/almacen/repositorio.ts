@@ -16,13 +16,25 @@ const BUCKET = 'audio-conferencias'
 const TRANSCRIPCION_GUARDADA = 'transcripcion-guardada.json'
 const VIGENCIA_DE_LA_FIRMA_S = 60 * 60
 
-export type TipoDeArchivo = 'audio' | 'texto' | 'docx' | 'pdf' | 'transcripcion-automatica' | 'otro'
+/*
+  Subcarpeta de las diapositivas y documentos que acompañan a la charla. Va
+  aparte del audio porque el backend elige el archivo que va a transcribir
+  listando la carpeta: un PDF suelto ahí se intentaría transcribir.
+*/
+export const CARPETA_DE_APOYO = 'apoyo'
+
+/** Lo que se sabe leer como apoyo (ver `backend/bitacora/memorias/material.py`). */
+export const EXTENSIONES_DE_APOYO = ['.pdf', '.pptx', '.docx', '.txt', '.md'] as const
+
+export type TipoDeArchivo = 'audio' | 'texto' | 'docx' | 'pdf' | 'pptx' | 'transcripcion-automatica' | 'otro'
 
 export type ArchivoDelAlmacen = {
   readonly nombre: string
   readonly ruta: string
   readonly tipo: TipoDeArchivo
   readonly bytes: number
+  /** Diapositivas o documentos que acompañan a la charla, no su fuente. */
+  readonly esApoyo?: boolean
 }
 
 function tipoDe(nombre: string): TipoDeArchivo {
@@ -33,7 +45,29 @@ function tipoDe(nombre: string): TipoDeArchivo {
   if (/\.(txt|md|vtt|srt)$/.test(minusculas)) return 'texto'
   if (minusculas.endsWith('.docx')) return 'docx'
   if (minusculas.endsWith('.pdf')) return 'pdf'
+  if (minusculas.endsWith('.pptx')) return 'pptx'
   return 'otro'
+}
+
+async function listarCarpeta(carpeta: string, esApoyo: boolean): Promise<readonly ArchivoDelAlmacen[]> {
+  const { data, error } = await supabase.storage.from(BUCKET).list(carpeta)
+
+  if (error !== null || data === null) {
+    return []
+  }
+
+  return (
+    data
+      /* Las carpetas vienen en el listado sin `metadata`: no son archivos. */
+      .filter((objeto) => objeto.name !== '.emptyFolderPlaceholder' && objeto.metadata !== null)
+      .map((objeto) => ({
+        nombre: objeto.name,
+        ruta: `${carpeta}/${objeto.name}`,
+        tipo: tipoDe(objeto.name),
+        bytes: Number((objeto.metadata as { size?: number } | null)?.size ?? 0),
+        esApoyo,
+      }))
+  )
 }
 
 export async function listarArchivos(
@@ -41,23 +75,31 @@ export async function listarArchivos(
   idConferencia: string,
 ): Promise<ResultadoDeConsulta<readonly ArchivoDelAlmacen[]>> {
   const carpeta = `${idDueno}/${idConferencia}`
-  const { data, error } = await supabase.storage.from(BUCKET).list(carpeta)
 
-  if (error !== null || data === null) {
-    return { ok: false, codigo: 'DATOS_SIN_PERMISO' }
+  const [propios, apoyo] = await Promise.all([
+    listarCarpeta(carpeta, false),
+    listarCarpeta(`${carpeta}/${CARPETA_DE_APOYO}`, true),
+  ])
+
+  return { ok: true, datos: [...propios, ...apoyo] }
+}
+
+/** Sube una diapositiva o documento de apoyo a la carpeta de la conferencia. */
+export async function subirMaterialDeApoyo(
+  idDueno: string,
+  idConferencia: string,
+  archivo: File,
+): Promise<ResultadoDeConsulta<null>> {
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(`${idDueno}/${idConferencia}/${CARPETA_DE_APOYO}/${archivo.name}`, archivo, { upsert: true })
+
+  if (error !== null) {
+    console.error('[almacen] no se pudo subir el material de apoyo:', error.message)
+    return { ok: false, codigo: 'CARGA_ARCHIVO_RECHAZADO' }
   }
 
-  return {
-    ok: true,
-    datos: data
-      .filter((objeto) => objeto.name !== '.emptyFolderPlaceholder')
-      .map((objeto) => ({
-        nombre: objeto.name,
-        ruta: `${carpeta}/${objeto.name}`,
-        tipo: tipoDe(objeto.name),
-        bytes: Number((objeto.metadata as { size?: number } | null)?.size ?? 0),
-      })),
-  }
+  return { ok: true, datos: null }
 }
 
 /** Una dirección temporal para reproducir o abrir el archivo sin descargarlo entero antes. */

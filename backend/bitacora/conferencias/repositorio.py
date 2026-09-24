@@ -33,6 +33,13 @@ de fuentes: no es el audio.
 """
 NOMBRE_DE_LA_TRANSCRIPCION_GUARDADA = "transcripcion-guardada.json"
 
+"""
+Subcarpeta con las diapositivas y documentos de apoyo de la charla. Va en una
+subcarpeta y no junto al audio porque el archivo fuente se elige listando la
+carpeta: un PDF suelto ahí se habría intentado transcribir.
+"""
+CARPETA_DE_APOYO = "apoyo"
+
 
 class RepositorioDeConferencias(Protocol):
     def obtener_conferencia(self, id_conferencia: str) -> Conferencia: ...
@@ -59,6 +66,8 @@ class RepositorioDeConferencias(Protocol):
     def descargar_fuente(self, conferencia: Conferencia) -> tuple[str, bytes]: ...
 
     def leer_transcripcion_guardada(self, conferencia: Conferencia) -> tuple[Segmento, ...] | None: ...
+
+    def listar_material_de_apoyo(self, conferencia: Conferencia) -> tuple[tuple[str, bytes], ...]: ...
 
     def guardar_transcripcion(self, conferencia: Conferencia, segmentos: Sequence[Segmento]) -> None: ...
 
@@ -286,12 +295,19 @@ class RepositorioSupabase:
         except Exception as fallo:  # noqa: BLE001
             raise traducir_fallo_de_datos(fallo) from fallo
 
+        """
+        Las carpetas también vienen en el listado, con `metadata` en nulo: la
+        de material de apoyo se llamaría "apoyo" y, ordenando por nombre,
+        habría salido antes que el audio y se habría intentado transcribir
+        una carpeta.
+        """
         nombres = [
             str(objeto.get("name"))
             for objeto in objetos
             if isinstance(objeto, dict)
             and objeto.get("name")
             and objeto.get("name") != NOMBRE_DE_LA_TRANSCRIPCION_GUARDADA
+            and objeto.get("metadata") is not None
         ]
 
         if not nombres:
@@ -308,6 +324,32 @@ class RepositorioSupabase:
             raise ErrorDeBitacora("PROC_ARCHIVO_ILEGIBLE", "archivo vacío")
 
         return nombre, bytes(contenido)
+
+    def listar_material_de_apoyo(self, conferencia: Conferencia) -> tuple[tuple[str, bytes], ...]:
+        """
+        Las diapositivas y documentos que acompañan a la charla, de
+        `{dueño}/{conferencia}/apoyo/`. Cualquier fallo cuenta como que no hay
+        material: es un extra, no puede impedir que se escriba la memoria.
+        """
+        carpeta = f"{conferencia.id_dueno}/{conferencia.id}/{CARPETA_DE_APOYO}"
+
+        try:
+            almacen = self._cliente.storage.from_(BUCKET_DE_AUDIO)
+            objetos = almacen.list(carpeta) or []
+
+            archivos: list[tuple[str, bytes]] = []
+
+            for objeto in objetos:
+                nombre = str(objeto.get("name")) if isinstance(objeto, dict) else ""
+
+                if not nombre or objeto.get("metadata") is None:
+                    continue
+
+                archivos.append((nombre, bytes(almacen.download(f"{carpeta}/{nombre}"))))
+
+            return tuple(archivos)
+        except Exception:  # noqa: BLE001
+            return ()
 
     def leer_transcripcion_guardada(self, conferencia: Conferencia) -> tuple[Segmento, ...] | None:
         """

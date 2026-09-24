@@ -7,7 +7,7 @@ import type { Conferencia } from '@/features/conferencias/data'
 import { formatearFecha, formatearTimestamp } from '@/features/conferencias/data'
 import { VistaPreviaDeDocx } from '@/features/plantillas/components/VistaPreviaDeDocx'
 import { EstadoVacioIlustrado, Esqueleto } from '@/shared/ui'
-import { descargar, direccionDe, listarArchivos } from './repositorio'
+import { EXTENSIONES_DE_APOYO, descargar, direccionDe, listarArchivos, subirMaterialDeApoyo } from './repositorio'
 import type { ArchivoDelAlmacen, TipoDeArchivo } from './repositorio'
 
 /*
@@ -29,6 +29,7 @@ const ICONO: Record<TipoDeArchivo, string> = {
   texto: 'description',
   docx: 'article',
   pdf: 'picture_as_pdf',
+  pptx: 'slideshow',
   'transcripcion-automatica': 'subtitles',
   otro: 'draft',
 }
@@ -38,6 +39,7 @@ const NOMBRE_DEL_TIPO: Record<TipoDeArchivo, string> = {
   texto: 'Transcripción',
   docx: 'Documento de Word',
   pdf: 'PDF',
+  pptx: 'Presentación',
   'transcripcion-automatica': 'Transcripción del análisis',
   otro: 'Archivo',
 }
@@ -174,22 +176,45 @@ export function PantallaAlmacen(): ReactElement {
   )
 }
 
+/* El archivo que se subió primero; después la transcripción del análisis y el material de apoyo. */
+function ordenados(archivos: readonly ArchivoDelAlmacen[]): readonly ArchivoDelAlmacen[] {
+  const peso = (archivo: ArchivoDelAlmacen): number =>
+    archivo.esApoyo === true ? 2 : archivo.tipo === 'transcripcion-automatica' ? 1 : 0
+
+  return [...archivos].sort((a, b) => peso(a) - peso(b))
+}
+
 function ContenidoDeCarpeta({ conferencia }: { conferencia: Conferencia }): ReactElement {
   const [archivos, setArchivos] = useState<readonly ArchivoDelAlmacen[] | null>(null)
   const [error, setError] = useState(false)
   const [rutaAbierta, setRutaAbierta] = useState<string | null>(null)
+  const [subiendo, setSubiendo] = useState(false)
+
+  async function adjuntar(elegidos: FileList | null): Promise<void> {
+    const archivos = [...(elegidos ?? [])]
+
+    if (archivos.length === 0 || subiendo) {
+      return
+    }
+
+    setSubiendo(true)
+    await Promise.all(archivos.map((archivo) => subirMaterialDeApoyo(conferencia.idDueno, conferencia.id, archivo)))
+    const resultado = await listarArchivos(conferencia.idDueno, conferencia.id)
+    setSubiendo(false)
+
+    if (resultado.ok) {
+      setArchivos(ordenados(resultado.datos))
+    }
+  }
 
   useEffect(() => {
     let vivo = true
     void listarArchivos(conferencia.idDueno, conferencia.id).then((resultado) => {
       if (!vivo) return
       if (resultado.ok) {
-        /* El archivo que se subió primero, la transcripción del análisis después. */
-        const ordenados = [...resultado.datos].sort(
-          (a, b) => Number(a.tipo === 'transcripcion-automatica') - Number(b.tipo === 'transcripcion-automatica'),
-        )
-        setArchivos(ordenados)
-        setRutaAbierta(ordenados[0]?.ruta ?? null)
+        const lista = ordenados(resultado.datos)
+        setArchivos(lista)
+        setRutaAbierta(lista[0]?.ruta ?? null)
       } else {
         setError(true)
       }
@@ -208,6 +233,33 @@ function ContenidoDeCarpeta({ conferencia }: { conferencia: Conferencia }): Reac
         <p className="text-sm text-texto-tenue">
           {conferencia.ponente} · {conferencia.evento} · {formatearFecha(conferencia.fechaDelEvento)}
         </p>
+      </div>
+
+      {/*
+        El material de apoyo: diapositivas y documentos de la charla. La
+        memoria los lee igual que la transcripción, y de ahí salen los datos
+        que se mostraron en pantalla y nadie dijo en voz alta (un correo, una
+        cifra, el nombre de una institución).
+      */}
+      <div className="flex flex-wrap items-center gap-3 rounded-[20px] bg-fondo px-5 py-4">
+        <span aria-hidden="true" className="material-symbols-rounded icono-contorno text-xl text-texto-tenue">
+          slideshow
+        </span>
+        <p className="min-w-0 flex-1 text-sm leading-relaxed text-texto-tenue">
+          Adjunta las diapositivas o documentos de la charla y la IA los usará al escribir sus memorias. Se
+          lee el texto que contienen: lo que solo esté como imagen no se recupera.
+        </p>
+
+        <label className="shrink-0 cursor-pointer rounded-full bg-acento-tenue px-4 py-2 text-sm text-texto transition-colors hover:bg-ilustracion">
+          {subiendo ? 'Subiendo…' : 'Adjuntar material'}
+          <input
+            type="file"
+            multiple
+            accept={EXTENSIONES_DE_APOYO.join(',')}
+            className="sr-only"
+            onChange={(cambio) => void adjuntar(cambio.target.files)}
+          />
+        </label>
       </div>
 
       {error ? (
@@ -277,7 +329,7 @@ function VisorDeArchivo({
     let vivo = true
 
     async function cargar(): Promise<void> {
-      if (archivo.tipo === 'audio' || archivo.tipo === 'pdf') {
+      if (archivo.tipo === 'audio' || archivo.tipo === 'pdf' || archivo.tipo === 'pptx') {
         const url = await direccionDe(archivo.ruta)
         if (vivo) (url === null ? setFallo(true) : setDireccion(url))
         return
@@ -331,6 +383,16 @@ function VisorDeArchivo({
           <div className="rounded-[24px] bg-fondo p-5">
             <audio controls preload="metadata" src={direccion} className="w-full" />
           </div>
+        )
+      ) : archivo.tipo === 'pptx' ? (
+        direccion === null ? null : (
+          <a
+            href={direccion}
+            download={archivo.nombre}
+            className="w-fit rounded-full bg-acento-tenue px-4 py-2 text-sm text-texto transition-colors hover:bg-ilustracion"
+          >
+            Descargar {archivo.nombre}
+          </a>
         )
       ) : archivo.tipo === 'pdf' ? (
         direccion === null ? null : (

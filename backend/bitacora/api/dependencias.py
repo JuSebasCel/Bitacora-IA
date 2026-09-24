@@ -44,6 +44,7 @@ from bitacora.compartido.ia import (
 from bitacora.conferencias.repositorio import RepositorioSupabase
 from bitacora.conferencias.tipos import Segmento
 from bitacora.analisis.condensacion import Condensador, condensador_de
+from bitacora.memorias.rastreo import Rastreador, rastreador_de
 from bitacora.memorias.redaccion import Redactor, redactor_de
 from bitacora.plantillas.instrucciones import Proponente, proponente_de
 from bitacora.transcripcion.openai import transcribir
@@ -172,6 +173,11 @@ def agente_para(
 def redactor_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Redactor:
     """El modelo de análisis: escribir una memoria es leer discurso, no conversar."""
     return redactor_de(cliente, contexto.configuracion.modelo_de_analisis)
+
+
+def rastreador_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Rastreador:
+    """Buscar datos en la transcripción es leer discurso: el mismo modelo del análisis."""
+    return rastreador_de(cliente, contexto.configuracion.modelo_de_analisis)
 
 
 def proponente_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Proponente:

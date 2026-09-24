@@ -1,5 +1,5 @@
 """
-Lo que la redacción necesita leer: la conferencia y sus fichas.
+Lo que la redacción necesita leer: la conferencia, sus fichas y su transcripción.
 
 Con el cliente de la persona que pide, igual que el resto del backend: RLS
 decide qué conferencias puede usar para una memoria, y una que no le
@@ -10,9 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from bitacora.analisis.chunking import agrupar_en_ventanas, renderizar_ventana
+from bitacora.memorias.material import texto_de_material
 from bitacora.compartido.datos import ClienteSupabase, traducir_fallo_de_datos
 from bitacora.conferencias.repositorio import RepositorioSupabase
 from bitacora.memorias.redaccion import DatosDeLaCharla, FichaParaRedactar
+from bitacora.transcripcion.lectura import texto_de_archivo
+from bitacora.transcripcion.segmentos import segmentos_desde_transcripcion
 
 
 def leer_material(
@@ -51,3 +55,64 @@ def leer_material(
     )
 
     return charla, tuple(ficha for ficha in fichas if ficha.texto)
+
+
+def leer_tramos_de_la_transcripcion(
+    cliente: ClienteSupabase, id_conferencia: str, caracteres_por_tramo: int
+) -> tuple[str, ...]:
+    """
+    La transcripción completa, partida en tramos del tamaño que acepta el
+    proveedor. Es lo que `rastreo.py` recorre para encontrar los datos que las
+    fichas no recogen.
+
+    Se prefiere la transcripción que guardó el análisis: ya está transcrita y
+    con sus tiempos. Si no la hay —una charla que llegó como texto y aún no se
+    analizó— se lee el archivo original. Y si tampoco se puede, se devuelven
+    cero tramos: la memoria se escribe solo con las fichas, como antes, en vez
+    de fallar.
+    """
+    repositorio = RepositorioSupabase(cliente)
+
+    try:
+        conferencia = repositorio.obtener_conferencia(id_conferencia)
+        segmentos = repositorio.leer_transcripcion_guardada(conferencia)
+
+        if segmentos is None and conferencia.fuente == "transcripcion":
+            nombre, contenido = repositorio.descargar_fuente(conferencia)
+            segmentos = segmentos_desde_transcripcion(
+                texto_de_archivo(nombre, contenido), conferencia.duracion_en_segundos
+            )
+
+        if not segmentos:
+            return _tramos_de_apoyo(repositorio, conferencia, caracteres_por_tramo)
+
+        ventanas = agrupar_en_ventanas(segmentos, caracteres_por_ventana=caracteres_por_tramo)
+
+        return (
+            *_tramos_de_apoyo(repositorio, conferencia, caracteres_por_tramo),
+            *(renderizar_ventana(ventana) for ventana in ventanas),
+        )
+    except Exception:  # noqa: BLE001
+        return ()
+
+
+def _tramos_de_apoyo(
+    repositorio: RepositorioSupabase, conferencia: Any, caracteres_por_tramo: int
+) -> tuple[str, ...]:
+    """
+    Las diapositivas van PRIMERO, antes de la transcripción.
+
+    El rastreo se detiene en cuanto cubre todos los huecos, y los datos duros
+    —correo, teléfono, nombre del evento— están casi siempre en una lámina y
+    casi nunca dichos en voz alta. Empezar por ahí suele resolver la memoria
+    en una o dos llamadas.
+    """
+    tramos: list[str] = []
+
+    for nombre, contenido in repositorio.listar_material_de_apoyo(conferencia):
+        texto = texto_de_material(nombre, contenido)
+
+        for inicio in range(0, len(texto), caracteres_por_tramo):
+            tramos.append(f"MATERIAL DE APOYO «{nombre}»\n{texto[inicio : inicio + caracteres_por_tramo]}")
+
+    return tuple(tramos)

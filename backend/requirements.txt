@@ -11,6 +11,11 @@ supabase~=2.10
 openai~=1.60
 python-dotenv~=1.0
 
+# Texto de los PDF que se adjuntan como material de apoyo de una charla (las
+# diapositivas). Es opcional de verdad: si falta, el PDF se salta y la memoria
+# se escribe con el resto del material (ver `memorias/material.py`).
+pypdf~=6.0
+
 # Prueba. La suite corre sin red ni credenciales (OpenAI y Supabase van
 # mockeados), así que no se separa en un requirements-dev: en un proyecto de
 # este tamaño el segundo archivo solo se desactualiza.

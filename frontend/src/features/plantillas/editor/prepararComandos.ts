@@ -1,6 +1,12 @@
 import type { FormatoDeMarcador, MarcadorDeDocx, RegistroDeDatosDeCampo } from '../data'
 import { resolverCondicionDeMarcador, resolverListaDeMarcador, resolverMarcador } from '../data'
-import { parrafosDelDocumento, reemplazarTextoDeParrafo, serializarDocumento, textoDeParrafo } from './xmlDeDocx'
+import {
+  NS_W,
+  parrafosDelDocumento,
+  reemplazarTextoDeParrafo,
+  serializarDocumento,
+  textoDeParrafo,
+} from './xmlDeDocx'
 
 /*
   Traduce las marcas `[[...]]` que el usuario escribió en Word a comandos
@@ -55,6 +61,28 @@ function nombreDeVariable(id: string): string {
 export type ComandosPreparados = {
   readonly documentXml: string
   readonly datos: Record<string, unknown>
+}
+
+/*
+  La fila de tabla que contiene al párrafo, si vive dentro de una. Se sube por
+  los ancestros en vez de usar `closest`, que no distingue el espacio de
+  nombres: en un `.docx` todo son `w:tr`, `w:tc`, `w:p`.
+*/
+function filaDeTablaDe(parrafo: Element): Element | null {
+  for (let padre = parrafo.parentElement; padre !== null; padre = padre.parentElement) {
+    if (padre.localName === 'tr' && padre.namespaceURI === NS_W) {
+      return padre
+    }
+  }
+
+  return null
+}
+
+/** Lo que queda escrito en una fila: si está vacía, la fila ya no dice nada. */
+function textoDeFila(fila: Element): string {
+  return Array.from(fila.getElementsByTagNameNS(NS_W, 't'))
+    .map((nodo) => nodo.textContent ?? '')
+    .join('')
 }
 
 export function prepararComandos(
@@ -173,9 +201,25 @@ export function prepararComandos(
         "Cifras de impacto: [[Cifras]]", dejar "Cifras de impacto:" sin nada
         detrás es peor que no dejar nada. Solo si ningún otro marcador del
         mismo párrafo trajo texto, para no llevarse contenido por arrastre.
+
+        Dentro de una tabla se lleva la FILA entera. El rótulo suele estar en
+        la celda de al lado ("Teléfono:" | "[[TELEFONO]]"), así que quitar
+        solo el párrafo dejaba una fila con el rótulo y una celda vacía, que
+        es exactamente lo que se quería evitar. La fila se va solo si ninguna
+        de sus celdas quedó con texto: una fila con dos campos y uno lleno se
+        conserva.
       */
       if (pideQuitarse && !tieneContenido) {
-        parrafo.parentNode?.removeChild(parrafo)
+        const fila = filaDeTablaDe(parrafo)
+
+        if (fila !== null) {
+          parrafo.parentNode?.removeChild(parrafo)
+          if (textoDeFila(fila).trim() === '') {
+            fila.parentNode?.removeChild(fila)
+          }
+        } else {
+          parrafo.parentNode?.removeChild(parrafo)
+        }
       } else {
         reemplazarTextoDeParrafo(doc, parrafo, nuevoTexto)
       }
