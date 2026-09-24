@@ -52,6 +52,18 @@ MODELOS_GROQ_TRANSCRIPCION_POR_DEFECTO = "whisper-large-v3-turbo,whisper-large-v
 MODELOS_GROQ_FICHAS_POR_DEFECTO = "openai/gpt-oss-120b,llama-3.3-70b-versatile,openai/gpt-oss-20b"
 MODELOS_GROQ_CHAT_POR_DEFECTO = "openai/gpt-oss-20b,openai/gpt-oss-120b,llama-3.1-8b-instant"
 
+"""
+Los que aceptan imágenes: leen el texto de una diapositiva adjuntada como
+foto o captura (`memorias/vision.py`). Los de fichas y chat no lo hacen, y
+pedírselo devuelve un error del proveedor, no una respuesta peor.
+"""
+MODELOS_GROQ_VISION_POR_DEFECTO = (
+    "meta-llama/llama-4-scout-17b-16e-instruct,meta-llama/llama-4-maverick-17b-128e-instruct"
+)
+
+"""Con una clave de OpenAI, el modelo con visión más barato de su catálogo."""
+MODELO_DE_VISION_DE_OPENAI = "gpt-4o-mini"
+
 
 @dataclass(frozen=True)
 class Configuracion:
@@ -75,6 +87,8 @@ class Configuracion:
     modelos_groq_transcripcion: tuple[str, ...] = tuple(MODELOS_GROQ_TRANSCRIPCION_POR_DEFECTO.split(","))
     modelos_groq_fichas: tuple[str, ...] = tuple(MODELOS_GROQ_FICHAS_POR_DEFECTO.split(","))
     modelos_groq_chat: tuple[str, ...] = tuple(MODELOS_GROQ_CHAT_POR_DEFECTO.split(","))
+    modelos_groq_vision: tuple[str, ...] = tuple(MODELOS_GROQ_VISION_POR_DEFECTO.split(","))
+    modelo_de_vision: str = MODELO_DE_VISION_DE_OPENAI
     """
     El secreto que habilita leer las claves compartidas de la administración.
     Vacío, el backend solo usa las claves de cada quien (ver la migración
@@ -126,6 +140,10 @@ def leer_configuracion(entorno: Mapping[str, str]) -> Configuracion:
             _opcional(entorno, "BITACORA_MODELOS_GROQ_FICHAS", MODELOS_GROQ_FICHAS_POR_DEFECTO)
         ),
         modelos_groq_chat=_lista(_opcional(entorno, "BITACORA_MODELOS_GROQ_CHAT", MODELOS_GROQ_CHAT_POR_DEFECTO)),
+        modelos_groq_vision=_lista(
+            _opcional(entorno, "BITACORA_MODELOS_GROQ_VISION", MODELOS_GROQ_VISION_POR_DEFECTO)
+        ),
+        modelo_de_vision=_opcional(entorno, "OPENAI_MODELO_VISION", MODELO_DE_VISION_DE_OPENAI),
         secreto_del_servidor=_opcional(entorno, "BITACORA_SECRETO_DEL_SERVIDOR", ""),
     )
 

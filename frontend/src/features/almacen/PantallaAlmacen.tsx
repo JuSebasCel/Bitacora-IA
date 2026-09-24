@@ -30,6 +30,7 @@ const ICONO: Record<TipoDeArchivo, string> = {
   docx: 'article',
   pdf: 'picture_as_pdf',
   pptx: 'slideshow',
+  imagen: 'image',
   'transcripcion-automatica': 'subtitles',
   otro: 'draft',
 }
@@ -40,6 +41,7 @@ const NOMBRE_DEL_TIPO: Record<TipoDeArchivo, string> = {
   docx: 'Documento de Word',
   pdf: 'PDF',
   pptx: 'Presentación',
+  imagen: 'Imagen',
   'transcripcion-automatica': 'Transcripción del análisis',
   otro: 'Archivo',
 }
@@ -246,8 +248,8 @@ function ContenidoDeCarpeta({ conferencia }: { conferencia: Conferencia }): Reac
           slideshow
         </span>
         <p className="min-w-0 flex-1 text-sm leading-relaxed text-texto-tenue">
-          Adjunta las diapositivas o documentos de la charla y la IA los usará al escribir sus memorias. Se
-          lee el texto que contienen: lo que solo esté como imagen no se recupera.
+          Adjunta las diapositivas o documentos de la charla y la IA los usará al escribir sus memorias. De
+          un PDF o un PowerPoint se lee su texto; de una foto o una captura, lo lee un modelo con visión.
         </p>
 
         <label className="shrink-0 cursor-pointer rounded-full bg-acento-tenue px-4 py-2 text-sm text-texto transition-colors hover:bg-ilustracion">
@@ -329,7 +331,7 @@ function VisorDeArchivo({
     let vivo = true
 
     async function cargar(): Promise<void> {
-      if (archivo.tipo === 'audio' || archivo.tipo === 'pdf' || archivo.tipo === 'pptx') {
+      if (['audio', 'pdf', 'pptx', 'imagen'].includes(archivo.tipo)) {
         const url = await direccionDe(archivo.ruta)
         if (vivo) (url === null ? setFallo(true) : setDireccion(url))
         return
@@ -393,6 +395,10 @@ function VisorDeArchivo({
           >
             Descargar {archivo.nombre}
           </a>
+        )
+      ) : archivo.tipo === 'imagen' ? (
+        direccion === null ? null : (
+          <img src={direccion} alt={archivo.nombre} className="max-h-[70vh] w-fit rounded-[24px] bg-fondo" />
         )
       ) : archivo.tipo === 'pdf' ? (
         direccion === null ? null : (

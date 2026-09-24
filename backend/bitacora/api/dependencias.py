@@ -45,6 +45,7 @@ from bitacora.conferencias.repositorio import RepositorioSupabase
 from bitacora.conferencias.tipos import Segmento
 from bitacora.analisis.condensacion import Condensador, condensador_de
 from bitacora.memorias.rastreo import Rastreador, rastreador_de
+from bitacora.memorias.vision import LectorDeImagenes, lector_de_imagenes
 from bitacora.memorias.redaccion import Redactor, redactor_de
 from bitacora.plantillas.instrucciones import Proponente, proponente_de
 from bitacora.transcripcion.openai import transcribir
@@ -173,6 +174,20 @@ def agente_para(
 def redactor_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Redactor:
     """El modelo de análisis: escribir una memoria es leer discurso, no conversar."""
     return redactor_de(cliente, contexto.configuracion.modelo_de_analisis)
+
+
+def lector_de_imagenes_para(contexto: ContextoDeUsuario, clave: ClaveDeOpenAI) -> LectorDeImagenes:
+    """
+    Cliente propio, con su cadena de modelos con visión: los de fichas no
+    aceptan imágenes, así que no sirve el mismo cliente del resto de la
+    memoria.
+    """
+    ajustes = contexto.configuracion
+    de_groq = es_de_groq(clave)
+    cliente = crear_cliente_de_openai(clave, ajustes.modelos_groq_vision if de_groq else ())
+    modelo = ajustes.modelos_groq_vision[0] if de_groq else ajustes.modelo_de_vision
+
+    return lector_de_imagenes(cliente, modelo)
 
 
 def rastreador_para(contexto: ContextoDeUsuario, cliente: ClienteDeOpenAI) -> Rastreador:

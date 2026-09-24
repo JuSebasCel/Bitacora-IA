@@ -23,10 +23,32 @@ const VIGENCIA_DE_LA_FIRMA_S = 60 * 60
 */
 export const CARPETA_DE_APOYO = 'apoyo'
 
-/** Lo que se sabe leer como apoyo (ver `backend/bitacora/memorias/material.py`). */
-export const EXTENSIONES_DE_APOYO = ['.pdf', '.pptx', '.docx', '.txt', '.md'] as const
+/*
+  Lo que se sabe leer como apoyo. Los documentos traen su texto dentro
+  (`backend/bitacora/memorias/material.py`); las imágenes las lee un modelo
+  con visión, que transcribe lo que se ve (`memorias/vision.py`).
+*/
+export const EXTENSIONES_DE_APOYO = [
+  '.pdf',
+  '.pptx',
+  '.docx',
+  '.txt',
+  '.md',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+] as const
 
-export type TipoDeArchivo = 'audio' | 'texto' | 'docx' | 'pdf' | 'pptx' | 'transcripcion-automatica' | 'otro'
+export type TipoDeArchivo =
+  | 'audio'
+  | 'texto'
+  | 'docx'
+  | 'pdf'
+  | 'pptx'
+  | 'imagen'
+  | 'transcripcion-automatica'
+  | 'otro'
 
 export type ArchivoDelAlmacen = {
   readonly nombre: string
@@ -46,6 +68,7 @@ function tipoDe(nombre: string): TipoDeArchivo {
   if (minusculas.endsWith('.docx')) return 'docx'
   if (minusculas.endsWith('.pdf')) return 'pdf'
   if (minusculas.endsWith('.pptx')) return 'pptx'
+  if (/\.(png|jpe?g|webp|gif)$/.test(minusculas)) return 'imagen'
   return 'otro'
 }
 

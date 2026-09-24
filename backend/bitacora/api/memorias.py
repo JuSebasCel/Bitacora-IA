@@ -19,14 +19,24 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from bitacora.api.dependencias import Usuario, cliente_para, rastreador_para, redactor_para
+from bitacora.api.dependencias import (
+    Usuario,
+    cliente_para,
+    lector_de_imagenes_para,
+    rastreador_para,
+    redactor_para,
+)
 from bitacora.api.procesamiento import CARACTERES_POR_VENTANA_EN_GROQ
 from bitacora.analisis.chunking import CARACTERES_POR_VENTANA
 from bitacora.compartido.errores import ErrorDeBitacora
 from bitacora.compartido.ia import es_de_groq
 from bitacora.memorias.pdf import convertir_a_pdf
 from bitacora.memorias.redaccion import Hueco
-from bitacora.memorias.repositorio import leer_material, leer_tramos_de_la_transcripcion
+from bitacora.memorias.repositorio import (
+    leer_imagenes_de_apoyo,
+    leer_material,
+    leer_tramos_de_la_transcripcion,
+)
 
 router = APIRouter(prefix="/memorias", tags=["memorias"])
 
@@ -95,7 +105,17 @@ def redactar(cuerpo: PedidoDeRedaccion, usuario: Usuario) -> RespuestaDeRedaccio
         CARACTERES_POR_VENTANA_EN_GROQ if es_de_groq(clave) else CARACTERES_POR_VENTANA,
     )
 
-    extractos = rastreador_para(usuario, cliente)(huecos, tramos) if tramos else {}
+    """
+    Una diapositiva adjuntada como imagen no tiene texto que sacar: la lee un
+    modelo con visión y lo que devuelve entra como un tramo más, delante de
+    todo. Es justo donde suelen estar el correo y el teléfono de contacto.
+    """
+    imagenes = leer_imagenes_de_apoyo(usuario.cliente, cuerpo.id_conferencia)
+    leidas = lector_de_imagenes_para(usuario, clave)(imagenes) if imagenes else ()
+
+    todos_los_tramos = (*leidas, *tramos)
+
+    extractos = rastreador_para(usuario, cliente)(huecos, todos_los_tramos) if todos_los_tramos else {}
 
     secciones = redactor_para(usuario, cliente)(
         charla,

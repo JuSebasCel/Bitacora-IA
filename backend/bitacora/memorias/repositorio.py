@@ -12,6 +12,7 @@ from typing import Any
 
 from bitacora.analisis.chunking import agrupar_en_ventanas, renderizar_ventana
 from bitacora.memorias.material import texto_de_material
+from bitacora.memorias.vision import es_imagen
 from bitacora.compartido.datos import ClienteSupabase, traducir_fallo_de_datos
 from bitacora.conferencias.repositorio import RepositorioSupabase
 from bitacora.memorias.redaccion import DatosDeLaCharla, FichaParaRedactar
@@ -110,9 +111,31 @@ def _tramos_de_apoyo(
     tramos: list[str] = []
 
     for nombre, contenido in repositorio.listar_material_de_apoyo(conferencia):
+        if es_imagen(nombre):
+            continue
+
         texto = texto_de_material(nombre, contenido)
 
         for inicio in range(0, len(texto), caracteres_por_tramo):
             tramos.append(f"MATERIAL DE APOYO «{nombre}»\n{texto[inicio : inicio + caracteres_por_tramo]}")
 
     return tuple(tramos)
+
+
+def leer_imagenes_de_apoyo(cliente: ClienteSupabase, id_conferencia: str) -> tuple[tuple[str, bytes], ...]:
+    """
+    Las diapositivas adjuntadas como imagen. Van aparte de los tramos de
+    texto porque para leerlas hace falta un modelo con visión, y eso es una
+    decisión del endpoint (qué clave, qué modelo), no del repositorio.
+    """
+    try:
+        repositorio = RepositorioSupabase(cliente)
+        conferencia = repositorio.obtener_conferencia(id_conferencia)
+
+        return tuple(
+            (nombre, contenido)
+            for nombre, contenido in repositorio.listar_material_de_apoyo(conferencia)
+            if es_imagen(nombre)
+        )
+    except Exception:  # noqa: BLE001
+        return ()
