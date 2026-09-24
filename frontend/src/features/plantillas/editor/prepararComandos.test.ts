@@ -41,14 +41,22 @@ describe('prepararComandos', () => {
     expect(Object.values(datos)[0]).toEqual(expect.any(String))
   })
 
-  it('dos marcadores con el mismo texto literal reciben variables distintas', () => {
+  /*
+    Un nombre repetido es un solo campo: se configura una vez y su texto va a
+    todas sus apariciones. Antes cada aparición era un campo aparte, y en una
+    plantilla que repite el nombre del ponente en la portada y en la ficha
+    había que configurarlo dos veces para que dijeran cosas distintas.
+  */
+  it('el mismo nombre repetido es un solo campo y una sola variable', () => {
     const xml = documentoXml([parrafo('[[Nombre]] y también [[Nombre]]')])
     const marcadores = detectarMarcadoresEnDocx(xml)
-    expect(marcadores).toHaveLength(2)
+    expect(marcadores).toHaveLength(1)
 
-    const { datos } = prepararComandos(xml, marcadores)
+    const { documentXml, datos } = prepararComandos(xml, marcadores)
 
-    expect(Object.keys(datos)).toHaveLength(2)
+    expect(Object.keys(datos)).toHaveLength(1)
+    const variable = Object.keys(datos)[0] ?? ''
+    expect(documentXml.match(new RegExp(`\[\[${variable}\]\]`, 'g'))).toHaveLength(2)
   })
 
   it('traduce una sección condicional a IF/END-IF con un booleano', () => {

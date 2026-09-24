@@ -12,8 +12,22 @@ export type ParrafosDeCuerpo = {
   readonly parrafos: readonly Element[]
 }
 
-/** Solo párrafos que son hijos directos de `<w:body>` — los que viven dentro de una tabla quedan fuera a propósito. */
-export function parrafosDeNivelSuperior(documentXml: string): ParrafosDeCuerpo {
+/*
+  Todos los párrafos del cuerpo, en el orden del documento, incluidos los de
+  dentro de una tabla.
+
+  Antes solo se miraban los hijos directos de `<w:body>`, y eso dejaba fuera
+  las tablas: una plantilla real ("REDUCATE 2026") llevaba once de sus
+  catorce campos en celdas, y la app solo reconoció los tres del encabezado,
+  sin decir por qué. Una tabla es la forma normal de maquetar una ficha en
+  Word —dos columnas, rótulo y valor—, así que era justo donde más campos
+  había.
+
+  Se descartan los párrafos anidados dentro de otro párrafo (los de un cuadro
+  de texto incrustado en un run): su texto ya viaja dentro del texto del
+  párrafo que los contiene, y contarlos otra vez duplicaría cada campo.
+*/
+export function parrafosDelDocumento(documentXml: string): ParrafosDeCuerpo {
   const doc = new DOMParser().parseFromString(documentXml, 'application/xml')
 
   if (doc.getElementsByTagName('parsererror').length > 0) {
@@ -25,11 +39,21 @@ export function parrafosDeNivelSuperior(documentXml: string): ParrafosDeCuerpo {
     return { doc, parrafos: [] }
   }
 
-  const parrafos = Array.from(cuerpo.children).filter(
-    (hijo): hijo is Element => hijo.localName === 'p' && hijo.namespaceURI === NS_W,
+  const parrafos = Array.from(cuerpo.getElementsByTagNameNS(NS_W, 'p')).filter(
+    (parrafo) => !anidadoEnOtroParrafo(parrafo),
   )
 
   return { doc, parrafos }
+}
+
+function anidadoEnOtroParrafo(parrafo: Element): boolean {
+  for (let padre = parrafo.parentElement; padre !== null; padre = padre.parentElement) {
+    if (padre.localName === 'p' && padre.namespaceURI === NS_W) {
+      return true
+    }
+  }
+
+  return false
 }
 
 export function textoDeParrafo(parrafo: Element): string {

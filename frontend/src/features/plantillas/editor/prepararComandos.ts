@@ -1,6 +1,6 @@
 import type { FormatoDeMarcador, MarcadorDeDocx, RegistroDeDatosDeCampo } from '../data'
 import { resolverCondicionDeMarcador, resolverListaDeMarcador, resolverMarcador } from '../data'
-import { parrafosDeNivelSuperior, reemplazarTextoDeParrafo, serializarDocumento, textoDeParrafo } from './xmlDeDocx'
+import { parrafosDelDocumento, reemplazarTextoDeParrafo, serializarDocumento, textoDeParrafo } from './xmlDeDocx'
 
 /*
   Traduce las marcas `[[...]]` que el usuario escribió en Word a comandos
@@ -71,9 +71,21 @@ export function prepararComandos(
   */
   secciones?: Readonly<Record<string, string | null>>,
 ): ComandosPreparados {
-  const { doc, parrafos } = parrafosDeNivelSuperior(documentXmlOriginal)
+  const { doc, parrafos } = parrafosDelDocumento(documentXmlOriginal)
   const datos: Record<string, unknown> = {}
   const restantes = [...marcadores]
+  /*
+    Los campos simples se resuelven por su nombre y no por el orden en que
+    aparecen: un mismo `[[NOMBRE_PONENTE]]` puede salir tres veces en el
+    documento y es un único campo (ver `detectarMarcadoresEnDocx.ts`), así
+    que su valor va a las tres. Las secciones `SI`/`REPETIR` sí se siguen
+    consumiendo en orden: cada una abre y cierra un tramo distinto.
+  */
+  const simplesPorNombre = new Map(
+    marcadores.flatMap((marcador) =>
+      marcador.tipo === 'simple' ? [[marcador.textoOriginal.toLowerCase(), marcador] as const] : [],
+    ),
+  )
 
   let dentroDeCondicional = false
   let variableDelRepetibleActivo: string | null = null
@@ -130,9 +142,9 @@ export function prepararComandos(
       let pideQuitarse = false
       let tieneContenido = false
 
-      const nuevoTexto = texto.replace(PATRON_SIMPLE_GLOBAL, () => {
-        const marcador = restantes.shift()
-        if (marcador?.tipo !== 'simple') {
+      const nuevoTexto = texto.replace(PATRON_SIMPLE_GLOBAL, (encontrado) => {
+        const marcador = simplesPorNombre.get(encontrado.toLowerCase())
+        if (marcador === undefined) {
           return ''
         }
         const variable = nombreDeVariable(marcador.id)

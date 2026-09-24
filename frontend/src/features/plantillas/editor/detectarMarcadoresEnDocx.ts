@@ -1,5 +1,5 @@
 import type { MarcadorDeDocx } from '../data'
-import { parrafosDeNivelSuperior, textoDeParrafo } from './xmlDeDocx'
+import { parrafosDelDocumento, textoDeParrafo } from './xmlDeDocx'
 
 /*
   Todo el marcado ocurre en Word, nunca en esta app: se documentan tres
@@ -29,11 +29,12 @@ function idAleatorio(prefijo: string): string {
 }
 
 export function detectarMarcadoresEnDocx(documentXml: string): readonly MarcadorDeDocx[] {
-  const { parrafos } = parrafosDeNivelSuperior(documentXml)
+  const { parrafos } = parrafosDelDocumento(documentXml)
   const marcadores: MarcadorDeDocx[] = []
 
   let dentroDeCondicional = false
   let dentroDeRepetible = false
+  const yaVisto = new Set<string>()
 
   for (const parrafo of parrafos) {
     const texto = textoDeParrafo(parrafo).trim()
@@ -81,6 +82,21 @@ export function detectarMarcadoresEnDocx(documentXml: string): readonly Marcador
 
     for (const coincidencia of texto.matchAll(PATRON_SIMPLE_GLOBAL)) {
       const descripcion = (coincidencia[1] ?? '').trim()
+
+      /*
+        Un mismo nombre es un solo campo, aunque aparezca en varios sitios
+        del documento. Una plantilla real repite `[[NOMBRE_PONENTE]]` en la
+        portada, en la ficha y en el pie: como campos distintos habría que
+        configurarlo tres veces, y la IA escribiría un texto distinto en cada
+        uno. Se queda el primero, y al llenar el documento su valor va a
+        todas sus apariciones (ver `prepararComandos.ts`).
+      */
+      if (yaVisto.has(descripcion.toLowerCase())) {
+        continue
+      }
+
+      yaVisto.add(descripcion.toLowerCase())
+
       marcadores.push({
         tipo: 'simple',
         id: idAleatorio('mar'),
